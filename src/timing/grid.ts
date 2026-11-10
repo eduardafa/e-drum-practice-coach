@@ -4,7 +4,6 @@
  *
  * The metronome adds grid points as it schedules clicks, so grid points are
  * already in the same clock as MIDI event timestamps.
- * See docs/decisions/0002-timing-model.md.
  */
 
 export interface GridPoint {

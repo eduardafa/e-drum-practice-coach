@@ -4,7 +4,6 @@
  *
  * The two clocks drift apart slowly and jitter a bit when sampled, so we
  * keep a smoothed offset instead of trusting any single sample.
- * See docs/decisions/0002-timing-model.md.
  */
 
 export interface ClockSample {

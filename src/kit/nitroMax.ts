@@ -3,7 +3,7 @@
  *
  * The note numbers are the module's factory defaults, which follow
  * General MIDI percussion. They can be changed on the module, so the map is
- * data rather than logic. See docs/decisions/0004-kit-note-map.md.
+ * data rather than logic.
  */
 
 export type PadId =

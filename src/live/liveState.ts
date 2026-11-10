@@ -2,7 +2,6 @@
  * Mutable state shared by the MIDI handler (writer) and the canvas renderer
  * and stats panel (readers). Deliberately outside React: hits arrive faster
  * than React should re-render, and the renderer reads it every frame.
- * See docs/decisions/0003-hot-path-outside-react.md.
  */
 import type { PadId } from "../kit/nitroMax";
 import type { HitScore } from "../timing/grid";

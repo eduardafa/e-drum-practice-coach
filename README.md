@@ -35,8 +35,7 @@ Without a kit: <kbd>Space</kbd> kick, <kbd>S</kbd> snare, <kbd>A</kbd> hi-hat, <
 
 MIDI timestamps and the audio clock are separate clocks. Clicks are scheduled ahead of time on the audio
 clock, converted to `performance.now()` time (including output latency) as they are scheduled, and
-stored as a timing grid. Each MIDI hit is then compared with the nearest grid point. The full reasoning
-is in [docs/decisions/0002-timing-model.md](docs/decisions/0002-timing-model.md).
+stored as a timing grid. Each MIDI hit is then compared with the nearest grid point.
 
 ## Code layout
 
@@ -48,7 +47,6 @@ src/
   kit/      Nitro Max note map and pad layout
   live/     Coach (wiring) and LiveState (shared per-hit state)
   render/   Canvas 2D kit renderer
-docs/decisions/   architecture decision records
 ```
 
 ## Roadmap
