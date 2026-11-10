@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  # Cancel superseded runs on PR branches, but let every push to main finish.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  checks:
+    name: checks (${{ matrix.runner }})
+    # The InstaBox runner is an experiment. It's added only when the repo
+    # variable INSTABOX_ENABLED is "true", and never for pull requests from
+    # forks, so outside code can't run on (or bill) the InstaBox account.
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: >-
+          ${{ fromJSON(
+            vars.INSTABOX_ENABLED == 'true'
+            && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+            && '["ubuntu-latest", "instabox-medium"]'
+            || '["ubuntu-latest"]'
+          ) }}
+    runs-on: ${{ matrix.runner }}
+    # Only the GitHub-hosted job can fail the workflow.
+    continue-on-error: ${{ matrix.runner != 'ubuntu-latest' }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type-check
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+      - name: Runner summary
+        if: always()
+        run: |
+          {
+            echo "### ${{ matrix.runner }}"
+            echo "- CPUs: $(nproc)"
+            echo "- Memory: $(free -h | awk '/Mem:/ {print $2}')"
+            echo "- Node: $(node --version), pnpm: $(pnpm --version)"
+          } >> "$GITHUB_STEP_SUMMARY"

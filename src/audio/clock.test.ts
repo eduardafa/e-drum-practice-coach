@@ -23,6 +23,6 @@ describe("ClockMapper", () => {
   });
 
   it("throws before the first sample", () => {
-    expect(() => new ClockMapper().toPerformanceMs(0)).toThrow();
+    expect(() => new ClockMapper().toPerformanceMs(0)).toThrow("before first update()");
   });
 });

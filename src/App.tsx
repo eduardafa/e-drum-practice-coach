@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { MAX_BPM, MIN_BPM, type MetronomeSettings, type Subdivision } from "./audio/schedule";
+import { isSubdivision, MAX_BPM, MIN_BPM, type MetronomeSettings } from "./audio/schedule";
 import { Coach, DEFAULT_METRONOME } from "./live/coach";
 import type { MidiStatus } from "./midi/connection";
 import { formatDelta, KitRenderer } from "./render/kitRenderer";
@@ -180,7 +180,10 @@ export default function App() {
             <span>Score against</span>
             <select
               value={metronome.subdivision}
-              onChange={(e) => updateMetronome({ subdivision: Number(e.target.value) as Subdivision })}
+              onChange={(e) => {
+                const subdivision = Number(e.target.value);
+                if (isSubdivision(subdivision)) updateMetronome({ subdivision });
+              }}
             >
               <option value={1}>Quarter notes</option>
               <option value={2}>Eighth notes</option>

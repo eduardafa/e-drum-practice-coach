@@ -1,5 +1,7 @@
 # E-drum Practice Coach
 
+[![CI](https://github.com/eduardafa/e-drum-practice-coach/actions/workflows/ci.yml/badge.svg)](https://github.com/eduardafa/e-drum-practice-coach/actions/workflows/ci.yml)
+
 A web app you plug your electronic drum kit into that scores your practice. It reads every hit from an
 **Alesis Nitro Max** over the **Web MIDI API**, lights it up on a drawing of the kit, runs a
 sample-accurate metronome, and tells you how early or late each hit was, in milliseconds.
@@ -22,6 +24,8 @@ Requires Node 26 (see `.nvmrc`), pnpm 12 (pinned in `packageManager`) and Chrome
 pnpm install
 pnpm dev           # http://localhost:5173
 pnpm test          # unit tests
+pnpm lint          # oxlint, including type-aware rules
+pnpm typecheck     # tsc (TypeScript 7)
 pnpm build         # type-check + production build
 ```
 
