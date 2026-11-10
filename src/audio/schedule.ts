@@ -5,6 +5,10 @@
 
 export type Subdivision = 1 | 2 | 3 | 4;
 
+export function isSubdivision(value: unknown): value is Subdivision {
+  return value === 1 || value === 2 || value === 3 || value === 4;
+}
+
 export interface MetronomeSettings {
   bpm: number;
   beatsPerBar: number;
