@@ -68,7 +68,7 @@ export class Metronome {
 
     if (!this.worker) {
       this.worker = new Worker(new URL("./tick.worker.ts", import.meta.url), { type: "module" });
-      this.worker.onmessage = () => this.schedule();
+      this.worker.addEventListener("message", () => this.schedule());
     }
     this.worker.postMessage({ cmd: "start", intervalMs: TICK_MS });
     this.schedule();

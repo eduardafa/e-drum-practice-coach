@@ -5,10 +5,10 @@
  */
 let timer: ReturnType<typeof setInterval> | null = null;
 
-self.onmessage = (e: MessageEvent<{ cmd: "start"; intervalMs: number } | { cmd: "stop" }>) => {
+self.addEventListener("message", (e: MessageEvent<{ cmd: "start"; intervalMs: number } | { cmd: "stop" }>) => {
   if (timer !== null) clearInterval(timer);
   timer = null;
   if (e.data.cmd === "start") {
     timer = setInterval(() => self.postMessage("tick"), e.data.intervalMs);
   }
-};
+});

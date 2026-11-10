@@ -38,6 +38,8 @@ export class MidiConnection {
   private status: MidiStatus = isWebMidiSupported() ? { state: "idle" } : { state: "unsupported" };
   private statusListeners = new Set<(s: MidiStatus) => void>();
   private eventListeners = new Set<(e: TimedMidiEvent) => void>();
+  private readonly handleStateChange = () => this.refresh();
+  private readonly handleMidiMessage = (msg: MIDIMessageEvent) => this.handleMessage(msg);
 
   getStatus(): MidiStatus {
     return this.status;
@@ -67,17 +69,19 @@ export class MidiConnection {
       });
       return;
     }
-    this.access.onstatechange = () => this.refresh();
+    this.access.addEventListener("statechange", this.handleStateChange);
     this.refresh(true);
   }
 
   select(id: string | null): void {
-    if (this.selected) this.selected.onmidimessage = null;
+    if (this.selected) this.selected.removeEventListener("midimessage", this.handleMidiMessage);
     this.selected = null;
     if (this.access && id) {
       const input = this.access.inputs.get(id);
       if (input) {
-        input.onmidimessage = (msg) => this.handleMessage(msg);
+        input.addEventListener("midimessage", this.handleMidiMessage);
+        // Only the onmidimessage setter opens the port implicitly, so open it explicitly.
+        input.open().catch((err: unknown) => console.error("Could not open MIDI input", err));
         this.selected = input;
       }
     }
@@ -88,7 +92,7 @@ export class MidiConnection {
 
   dispose(): void {
     this.select(null);
-    if (this.access) this.access.onstatechange = null;
+    this.access?.removeEventListener("statechange", this.handleStateChange);
     this.access = null;
     this.statusListeners.clear();
     this.eventListeners.clear();
