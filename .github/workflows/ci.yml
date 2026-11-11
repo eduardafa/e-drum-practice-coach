@@ -103,9 +103,11 @@ jobs:
 
       - name: Runner summary
         if: always()
+        env:
+          RUNNER_LABEL: ${{ matrix.runner }}
         run: |
           {
-            echo "### ${{ matrix.runner }}"
+            echo "### $RUNNER_LABEL"
             echo "- CPUs: $(nproc)"
             echo "- Memory: $(free -h | awk '/Mem:/ {print $2}')"
             echo "- Node: $(node --version), pnpm: $(pnpm --version)"
@@ -201,7 +203,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           URL: ${{ steps.deploy.outputs.url }}
           SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          gh pr comment "${{ github.event.pull_request.number }}" --repo "$GITHUB_REPOSITORY" \
+          gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" \
             --edit-last --create-if-none \
             --body "Preview: $URL (commit ${SHA:0:7})"
