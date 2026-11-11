@@ -11,9 +11,10 @@ const SIX_EIGHT = { beats: 6, unit: 8 } as const;
 export const GROOVES: readonly Exercise[] = [
   fromGrid({
     id: "rock-8ths",
-    name: "Rock beat",
+    name: "Money beat",
     category: "groove",
-    description: "Eighth notes on the hi-hat, snare on 2 and 4, kick on 1 and 3. The foundation of most rock and pop.",
+    description:
+      "Also called the basic rock beat: eighth notes on the hi-hat, snare on 2 and 4, kick on 1 and 3. The foundation of most rock and pop.",
     timeSignature: FOUR_FOUR,
     bars: 1,
     tempo: { min: 60, suggested: 80, max: 140 },
