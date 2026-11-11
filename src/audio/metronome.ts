@@ -42,6 +42,10 @@ export class Metronome {
     return this.cursor !== null;
   }
 
+  get currentSettings(): MetronomeSettings {
+    return this.settings;
+  }
+
   setSettings(settings: MetronomeSettings): void {
     this.settings = settings;
   }
@@ -103,6 +107,8 @@ export class Metronome {
 
     const steps = takeStepsUntil(cursor, this.settings, ctx.currentTime + LOOKAHEAD_SEC);
     for (const step of steps) {
+      // A listener may stop the metronome mid-batch (calibration does after its last click).
+      if (!this.cursor) break;
       if (step.beat || this.settings.clickSubdivisions) this.click(ctx, step);
       const performanceTime = this.clock.toPerformanceMs(step.time);
       this.grid.add({
