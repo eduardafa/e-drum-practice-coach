@@ -79,6 +79,10 @@ The full report, including lower severities and config checks, goes to the repos
 
 To ignore a finding, add it to `.trivyignore.yaml` with a reason and an expiry date (at most 90 days).
 
+The `CodeQL` workflow analyses the TypeScript code and the workflow files themselves, with the
+`security-extended` queries, on every pull request, on pushes to `main` and weekly. A pull request can't merge
+if it adds a high or critical CodeQL security alert.
+
 ## How timing works
 
 MIDI timestamps and the audio clock are separate clocks. Clicks are scheduled ahead of time on the audio
