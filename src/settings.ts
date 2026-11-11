@@ -19,6 +19,8 @@ export interface SavedSettings {
   accuracyMode?: AccuracyMode;
   /** How many loops a play-along session lasts. */
   sessionLoops?: number;
+  /** The last tempo used for each exercise, by exercise id. */
+  exerciseTempos?: Record<string, number>;
 }
 
 type UnknownRecord = Record<string, unknown>;
@@ -54,6 +56,16 @@ function parseScoring(value: unknown): ScoringOptions | undefined {
   return undefined;
 }
 
+/** Keeps the tempos of exercises still in the library, within the metronome's range. */
+function parseExerciseTempos(value: unknown): Record<string, number> | undefined {
+  if (!isRecord(value)) return undefined;
+  const tempos: Record<string, number> = {};
+  for (const [id, bpm] of Object.entries(value)) {
+    if (findExercise(id) !== undefined && inRange(bpm, MIN_BPM, MAX_BPM)) tempos[id] = bpm;
+  }
+  return Object.keys(tempos).length > 0 ? tempos : undefined;
+}
+
 /**
  * Validates stored settings. Anything malformed or out of range is dropped
  * so the app falls back to defaults instead of running with bad values.
@@ -69,6 +81,7 @@ export function parseSettings(raw: unknown): SavedSettings {
     exerciseId: typeof raw.exerciseId === "string" && findExercise(raw.exerciseId) ? raw.exerciseId : undefined,
     accuracyMode: isAccuracyMode(raw.accuracyMode) ? raw.accuracyMode : undefined,
     sessionLoops: SESSION_LOOPS.find((n) => n === raw.sessionLoops),
+    exerciseTempos: parseExerciseTempos(raw.exerciseTempos),
   };
 }
 

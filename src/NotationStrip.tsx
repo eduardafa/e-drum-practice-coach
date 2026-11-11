@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { GROOVES, RUDIMENTS } from "./exercises/library";
 import { ticksPerBeat, type Exercise } from "./exercises/types";
 import type { Coach } from "./live/coach";
 import { xAtTick, type StaffLayout } from "./notation/layout";
@@ -27,6 +26,9 @@ interface Props {
   coach: Coach;
   exercise: Exercise | null;
   onSelect: (id: string | null) => void;
+  /** Opens the library browser. */
+  onBrowse: () => void;
+  libraryOpen: boolean;
   session: SessionView | null;
   loops: number;
   onLoopsChange: (loops: number) => void;
@@ -53,7 +55,7 @@ function sessionStatus(session: SessionView): string {
 type Status = "idle" | "loading" | "ready" | "error";
 
 /**
- * The exercise picker and its drum notation, above the kit view. The staff is
+ * The current exercise (chosen in the library browser) and its drum notation, above the kit view. The staff is
  * engraved once per exercise (VexFlow is loaded on first use); the playhead
  * is moved every animation frame outside React, from the metronome's counts.
  */
@@ -61,6 +63,8 @@ export function NotationStrip({
   coach,
   exercise,
   onSelect,
+  onBrowse,
+  libraryOpen,
   session,
   loops,
   onLoopsChange,
@@ -162,33 +166,32 @@ export function NotationStrip({
   return (
     <section className={`notation ${exercise ? "open" : ""}`} aria-label="Exercise notation">
       <div className="notation-header">
-        <label htmlFor="exercise">Exercise</label>
-        <select
-          id="exercise"
-          value={exercise?.id ?? ""}
+        <span className="notation-label">Exercise</span>
+        <button
+          className={`secondary exercise-button ${libraryOpen ? "selected" : ""}`}
+          aria-expanded={libraryOpen}
           disabled={busy}
-          onChange={(e) => {
-            // Give up focus: Space is the kick key, and it would reopen the list.
-            e.currentTarget.blur();
-            onSelect(e.target.value || null);
-          }}
+          // Keeps focus (unlike most buttons here) so it gets it back when the library closes.
+          // Space can't press it again: the drum keys' default action is cancelled.
+          onClick={onBrowse}
+          title="Browse the grooves and rudiments"
         >
-          <option value="">None: just the metronome</option>
-          <optgroup label="Grooves">
-            {GROOVES.map((ex) => (
-              <option key={ex.id} value={ex.id}>
-                {ex.name}
-              </option>
-            ))}
-          </optgroup>
-          <optgroup label="Rudiments">
-            {RUDIMENTS.map((ex) => (
-              <option key={ex.id} value={ex.id}>
-                {ex.name}
-              </option>
-            ))}
-          </optgroup>
-        </select>
+          {exercise ? exercise.name : "Choose an exercise"}
+          <span className="exercise-button-hint" aria-hidden>
+            {" "}
+            · Browse
+          </span>
+        </button>
+        {exercise && !busy && (
+          <button
+            className="icon-button"
+            aria-label="Hide the exercise: just the metronome"
+            title="Just the metronome"
+            onClick={releasing(() => onSelect(null))}
+          >
+            ×
+          </button>
+        )}
         {exercise && !busy && (
           <>
             <button className="primary play" onClick={releasing(onPlay)}>
@@ -225,7 +228,7 @@ export function NotationStrip({
               ? trainerStatus
             : exercise
               ? `${exercise.description} Suggested ${exercise.tempo.suggested} BPM.`
-              : "Pick a groove or rudiment to see it as drum notation."}
+              : "Choose a groove or rudiment to see it as drum notation, hear it, and play along."}
         </p>
       </div>
       <div className="notation-staff" hidden={!exercise}>

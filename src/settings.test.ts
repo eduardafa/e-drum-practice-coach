@@ -32,6 +32,14 @@ describe("parseSettings", () => {
     });
   });
 
+  it("keeps the tempo of each exercise still in the library, within range", () => {
+    expect(
+      parseSettings({ exerciseTempos: { "rock-8ths": 72, paradiddle: 500, gone: 80, "six-eight": "fast" } }),
+    ).toMatchObject({ exerciseTempos: { "rock-8ths": 72 } });
+    expect(parseSettings({ exerciseTempos: { gone: 80 } }).exerciseTempos).toBeUndefined();
+    expect(parseSettings({ exerciseTempos: [72] }).exerciseTempos).toBeUndefined();
+  });
+
   it("only keeps guideSeen when it's true", () => {
     expect(parseSettings({ guideSeen: "yes" }).guideSeen).toBeUndefined();
   });

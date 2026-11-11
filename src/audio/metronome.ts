@@ -16,11 +16,11 @@ import {
 } from "./schedule";
 import type { TimingGrid } from "../timing/grid";
 import type { TickCommand } from "./tickCommand";
+import { playClick } from "./voices";
 
 const TICK_MS = 25;
 const LOOKAHEAD_SEC = 0.12;
 const START_DELAY_SEC = 0.1;
-const CLICK_DURATION_SEC = 0.03;
 
 export interface BeatListener {
   (step: ScheduledStep & { performanceTime: number }): void;
@@ -57,16 +57,26 @@ export class Metronome {
     return () => this.listeners.delete(listener);
   }
 
+  /**
+   * The page's audio context, created on first use and resumed. Shared with
+   * exercise previews. Must be called from a user gesture the first time
+   * (autoplay policy).
+   */
+  async audioContext(): Promise<AudioContext> {
+    if (!this.ctx) this.ctx = new AudioContext({ latencyHint: "interactive" });
+    await this.ctx.resume();
+    return this.ctx;
+  }
+
   /** Must be called from a user gesture the first time (autoplay policy). */
   async start(): Promise<void> {
     if (this.running) return;
-    if (!this.ctx) this.ctx = new AudioContext({ latencyHint: "interactive" });
-    await this.ctx.resume();
+    const ctx = await this.audioContext();
 
     this.grid.clear();
     this.clock.reset();
     this.cursor = {
-      nextTime: this.ctx.currentTime + START_DELAY_SEC,
+      nextTime: ctx.currentTime + START_DELAY_SEC,
       beatInBar: 0,
       subInBeat: 0,
     };
@@ -110,7 +120,9 @@ export class Metronome {
     for (const step of steps) {
       // A listener may stop the metronome mid-batch (calibration does after its last click).
       if (!this.cursor) break;
-      if (step.beat || this.settings.clickSubdivisions) this.click(ctx, step);
+      if (step.beat || this.settings.clickSubdivisions) {
+        playClick(ctx, ctx.destination, step.time, step.downbeat ? "downbeat" : step.beat ? "beat" : "sub", this.volume);
+      }
       const performanceTime = this.clock.toPerformanceMs(step.time);
       this.grid.add({
         time: performanceTime,
@@ -120,19 +132,5 @@ export class Metronome {
       });
       for (const l of this.listeners) l({ ...step, performanceTime });
     }
-  }
-
-  private click(ctx: AudioContext, step: ScheduledStep): void {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.frequency.value = step.downbeat ? 1600 : step.beat ? 1100 : 800;
-    const peak = this.volume * (step.beat ? 1 : 0.4);
-    // Fast attack and exponential decay give a crisp, clearly placed transient.
-    gain.gain.setValueAtTime(0.0001, step.time);
-    gain.gain.exponentialRampToValueAtTime(Math.max(peak, 0.0002), step.time + 0.001);
-    gain.gain.exponentialRampToValueAtTime(0.0001, step.time + CLICK_DURATION_SEC);
-    osc.connect(gain).connect(ctx.destination);
-    osc.start(step.time);
-    osc.stop(step.time + CLICK_DURATION_SEC + 0.01);
   }
 }

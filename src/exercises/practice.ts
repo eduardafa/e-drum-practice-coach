@@ -1,5 +1,5 @@
 /**
- * Metronome settings that fit an exercise: its suggested tempo, its beats per
+ * Metronome settings that fit an exercise: its tempo, its beats per
  * bar, and a subdivision fine enough to score every note.
  */
 import type { MetronomeSettings, Subdivision } from "../audio/schedule";
@@ -18,10 +18,19 @@ export function subdivisionFor(exercise: Exercise): Subdivision {
   return perBeat % 3 === 0 ? 3 : 4;
 }
 
+/** The tempo an exercise starts at: the drummer's last one for it, or its suggested tempo. */
+export function startingTempo(exercise: Exercise, tempos: Readonly<Record<string, number>>): number {
+  return tempos[exercise.id] ?? exercise.tempo.suggested;
+}
+
 /** Keeps the drummer's own choice of clicking on subdivisions. */
-export function metronomeForExercise(exercise: Exercise, clickSubdivisions: boolean): MetronomeSettings {
+export function metronomeForExercise(
+  exercise: Exercise,
+  clickSubdivisions: boolean,
+  bpm = exercise.tempo.suggested,
+): MetronomeSettings {
   return {
-    bpm: exercise.tempo.suggested,
+    bpm,
     beatsPerBar: exercise.timeSignature.beats,
     subdivision: subdivisionFor(exercise),
     clickSubdivisions,

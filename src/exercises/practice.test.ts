@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { findExercise } from "./library";
-import { metronomeForExercise, subdivisionFor } from "./practice";
+import { metronomeForExercise, startingTempo, subdivisionFor } from "./practice";
 import type { Exercise } from "./types";
 
 function exercise(id: string): Exercise {
@@ -30,5 +30,16 @@ describe("metronomeForExercise", () => {
       clickSubdivisions: true,
     });
     expect(metronomeForExercise(exercise("paradiddle"), false)).toMatchObject({ bpm: 70, beatsPerBar: 4, subdivision: 4 });
+  });
+
+  it("can start at another tempo", () => {
+    expect(metronomeForExercise(exercise("paradiddle"), false, 56)).toMatchObject({ bpm: 56 });
+  });
+});
+
+describe("startingTempo", () => {
+  it("uses the drummer's last tempo for the exercise, else the suggested one", () => {
+    expect(startingTempo(exercise("paradiddle"), { paradiddle: 56, "rock-8ths": 100 })).toBe(56);
+    expect(startingTempo(exercise("paradiddle"), { "rock-8ths": 100 })).toBe(70);
   });
 });
