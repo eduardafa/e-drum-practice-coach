@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_BPM, MIN_BPM, type MetronomeSettings, type ScheduleCursor, stepBpm, takeStepsUntil } from "./schedule";
+import { MAX_BPM, MIN_BPM, type MetronomeSettings, type ScheduleCursor, parseBpm, stepBpm, takeStepsUntil } from "./schedule";
 
 const base: MetronomeSettings = { bpm: 120, beatsPerBar: 4, subdivision: 1, clickSubdivisions: false };
 const cursorAt = (t = 0): ScheduleCursor => ({ nextTime: t, beatInBar: 0, subInBeat: 0 });
@@ -64,5 +64,24 @@ describe("stepBpm", () => {
 
   it("rounds a fractional tempo before stepping", () => {
     expect(stepBpm(60.4, 1)).toBe(61);
+  });
+});
+
+describe("parseBpm", () => {
+  it("reads a typed tempo", () => {
+    expect(parseBpm("120")).toBe(120);
+    expect(parseBpm(" 95 ")).toBe(95);
+    expect(parseBpm("72.6")).toBe(73);
+  });
+
+  it("keeps it within the tempo range", () => {
+    expect(parseBpm("5")).toBe(MIN_BPM);
+    expect(parseBpm("999")).toBe(MAX_BPM);
+  });
+
+  it("rejects text that isn't a tempo", () => {
+    expect(parseBpm("")).toBeNull();
+    expect(parseBpm("  ")).toBeNull();
+    expect(parseBpm("fast")).toBeNull();
   });
 });
