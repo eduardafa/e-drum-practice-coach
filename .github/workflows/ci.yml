@@ -37,6 +37,21 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      # Every action must be pinned to a full commit SHA, with a version comment
+      # that matches it. pinact is downloaded at a fixed version and checked
+      # against its published SHA-256 before it runs.
+      - name: Check actions are pinned
+        env:
+          PINACT_VERSION: 5.0.2
+          PINACT_SHA256: 7f003d8f51e984c2264d2009d430e3e0e87ae404a0e2dc2a9a277b0f731bf5b7
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/pinact.tar.gz" \
+            "https://github.com/suzuki-shunsuke/pinact/releases/download/v${PINACT_VERSION}/pinact_linux_amd64.tar.gz"
+          echo "${PINACT_SHA256}  $RUNNER_TEMP/pinact.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/pinact.tar.gz" -C "$RUNNER_TEMP" pinact
+          "$RUNNER_TEMP/pinact" run --check --verify-comment
+
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
