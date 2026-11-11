@@ -6,17 +6,27 @@ const scoring = { toleranceMs: 12, latencyOffsetMs: -8 };
 
 describe("parseSettings", () => {
   it("keeps valid settings", () => {
-    expect(parseSettings({ metronome, scoring })).toEqual({ metronome, scoring });
+    expect(parseSettings({ metronome, scoring, skillLevel: "advanced" })).toEqual({
+      metronome,
+      scoring,
+      skillLevel: "advanced",
+    });
+  });
+
+  it("drops an unknown skill level", () => {
+    expect(parseSettings({ skillLevel: "expert" }).skillLevel).toBeUndefined();
   });
 
   it("drops out-of-range or malformed sections independently", () => {
     expect(parseSettings({ metronome: { ...metronome, bpm: 999 }, scoring })).toEqual({
       metronome: undefined,
       scoring,
+      skillLevel: undefined,
     });
     expect(parseSettings({ metronome, scoring: { toleranceMs: "12" } })).toEqual({
       metronome,
       scoring: undefined,
+      skillLevel: undefined,
     });
     expect(parseSettings({ metronome: { ...metronome, subdivision: 5 } }).metronome).toBeUndefined();
   });
