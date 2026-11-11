@@ -76,15 +76,16 @@ export class Coach {
   }
 
   /**
-   * Starts a play-along session at the current tempo: a bar of count-in, then
+   * Starts a play-along session at `bpm`: a bar of count-in, then
    * `loops` repetitions. Sets the metronome's beats and subdivision to fit the
    * exercise, and returns the settings used so the UI can show them. Call from
    * a user gesture.
    */
-  async startSession(exercise: Exercise, loops: number): Promise<MetronomeSettings> {
+  async startSession(exercise: Exercise, loops: number, bpm: number): Promise<MetronomeSettings> {
     this.metronome.stop();
     const settings = {
       ...this.metronome.currentSettings,
+      bpm,
       beatsPerBar: exercise.timeSignature.beats,
       subdivision: subdivisionFor(exercise),
     };
