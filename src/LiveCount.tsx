@@ -53,7 +53,8 @@ export function LiveCount({ coach }: { coach: Coach }) {
   const { index, beatsPerBar, subdivision } = useLiveCount(coach);
   const labels = barCounts(beatsPerBar, subdivision);
   return (
-    <ol className="live-count" aria-label="Count">
+    // Long bars (e.g. 7/4 in sixteenths) get smaller cells, so the count stays a few rows tall.
+    <ol className={`live-count ${labels.length > 16 ? "dense" : ""}`} aria-label="Count">
       {labels.map((label, i) => (
         <li
           // oxlint-disable-next-line react/no-array-index-key -- a fixed bar of counts, never reordered
