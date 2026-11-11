@@ -59,6 +59,15 @@ jobs:
       - name: Build
         run: pnpm build
 
+      # The deploy job ships exactly the build that passed the checks.
+      - name: Upload build
+        if: matrix.runner == 'ubuntu-latest'
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7
+
       - name: Runner summary
         if: always()
         run: |
@@ -68,3 +77,96 @@ jobs:
             echo "- Memory: $(free -h | awk '/Mem:/ {print $2}')"
             echo "- Node: $(node --version), pnpm: $(pnpm --version)"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    name: deploy
+    needs: checks
+    # Production on pushes to main; a preview for pull requests from this repo.
+    # Fork PRs never get the Cloudflare secrets, so they are skipped.
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+      || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write # preview URL comment
+    environment:
+      name: ${{ github.event_name == 'push' && 'production' || 'preview' }}
+      url: ${{ steps.deploy.outputs.url }}
+    # Never cancel a production deploy halfway; queue them instead.
+    concurrency:
+      group: deploy-${{ github.event_name == 'push' && 'production' || github.ref }}
+      cancel-in-progress: false
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      # The account ID is not sensitive, so it is an environment variable, not a secret.
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      WRANGLER_SEND_METRICS: "false"
+    steps:
+      - name: Check Cloudflare credentials
+        id: creds
+        run: |
+          if [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is not set, skipping deploy."
+          fi
+
+      - uses: actions/checkout@v7
+        if: steps.creds.outputs.ok
+
+      - uses: pnpm/action-setup@v6
+        if: steps.creds.outputs.ok
+
+      - uses: actions/setup-node@v7
+        if: steps.creds.outputs.ok
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install
+        if: steps.creds.outputs.ok
+        run: pnpm install --frozen-lockfile
+
+      - uses: actions/download-artifact@v8
+        if: steps.creds.outputs.ok
+        with:
+          name: dist
+          path: dist/
+
+      - name: Deploy
+        id: deploy
+        if: steps.creds.outputs.ok
+        env:
+          ALIAS: pr-${{ github.event.pull_request.number }}
+        run: |
+          # Without pipefail, `| tee` would hide a failing wrangler exit code.
+          set -o pipefail
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            pnpm exec wrangler deploy | tee wrangler.log
+          else
+            pnpm exec wrangler versions upload --preview-alias "$ALIAS" | tee wrangler.log
+          fi
+          # Production prints the workers.dev URL; previews print the alias URL.
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            url=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' wrangler.log | head -n1)
+          else
+            url=$(grep -oE "https://${ALIAS}-[a-z0-9.-]+\.workers\.dev" wrangler.log | head -n1)
+          fi
+          if [ -z "$url" ]; then
+            echo "::warning::Deployed, but no workers.dev URL was found in the wrangler output."
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Deployed to $url" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment preview URL
+        if: steps.creds.outputs.ok && github.event_name == 'pull_request' && steps.deploy.outputs.url
+        env:
+          GH_TOKEN: ${{ github.token }}
+          URL: ${{ steps.deploy.outputs.url }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          gh pr comment "${{ github.event.pull_request.number }}" --repo "$GITHUB_REPOSITORY" \
+            --edit-last --create-if-none \
+            --body "Preview: $URL (commit ${SHA:0:7})"
