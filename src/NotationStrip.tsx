@@ -4,16 +4,47 @@ import { ticksPerBeat, type Exercise } from "./exercises/types";
 import type { Coach } from "./live/coach";
 import { xAtTick, type StaffLayout } from "./notation/layout";
 import { playheadTick } from "./notation/playhead";
+import type { NoteResult } from "./playalong/matcher";
+import { SESSION_LOOPS, type SessionPhase } from "./playalong/session";
+import { releasing } from "./releasing";
 
 /** Pick the position one frame ahead, as the live count does: a frame is painted ~16 ms after it's chosen. */
 const PAINT_LOOKAHEAD_MS = 16;
 /** The staff grows to fit the stage width, up to this many times its engraved size. */
 const MAX_SCALE = 1.6;
 
+/** What the strip shows about a running or finished session. */
+export interface SessionView {
+  phase: SessionPhase;
+  /** Loop being played, from 0. */
+  loop: number | null;
+  loops: number;
+  /** Live accuracy in the chosen mode, 0 to 1. */
+  accuracy: number | null;
+}
+
 interface Props {
   coach: Coach;
   exercise: Exercise | null;
   onSelect: (id: string | null) => void;
+  session: SessionView | null;
+  loops: number;
+  onLoopsChange: (loops: number) => void;
+  onPlay: () => void;
+  onStop: () => void;
+}
+
+/** CSS class for a note's latest result on the staff. */
+function markClass(result: NoteResult | undefined): string {
+  if (!result || result.status === "pending") return "mark";
+  return result.status === "missed" ? "mark missed" : `mark ${result.verdict}`;
+}
+
+function sessionStatus(session: SessionView): string {
+  if (session.phase === "countIn") return "Count-in: listen to one bar, then play.";
+  if (session.phase === "done") return "Finished.";
+  const accuracy = session.accuracy === null ? "" : ` · accuracy ${Math.floor(session.accuracy * 100)}%`;
+  return `Loop ${(session.loop ?? 0) + 1} of ${session.loops}${accuracy}`;
 }
 
 type Status = "idle" | "loading" | "ready" | "error";
@@ -23,9 +54,10 @@ type Status = "idle" | "loading" | "ready" | "error";
  * engraved once per exercise (VexFlow is loaded on first use); the playhead
  * is moved every animation frame outside React, from the metronome's counts.
  */
-export function NotationStrip({ coach, exercise, onSelect }: Props) {
+export function NotationStrip({ coach, exercise, onSelect, session, loops, onLoopsChange, onPlay, onStop }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const playheadRef = useRef<HTMLDivElement>(null);
+  const marksRef = useRef<HTMLDivElement>(null);
   const [layout, setLayout] = useState<StaffLayout | null>(null);
   const [status, setStatus] = useState<Status>("idle");
   const scoreStyle = useMemo(() => ({ maxWidth: layout ? layout.width * MAX_SCALE : undefined }), [layout]);
@@ -62,17 +94,35 @@ export function NotationStrip({ coach, exercise, onSelect }: Props) {
   useEffect(() => {
     const playhead = playheadRef.current;
     const host = hostRef.current;
-    if (!layout || !exercise || !playhead || !host) return;
+    const markLayer = marksRef.current;
+    if (!layout || !exercise || !playhead || !host || !markLayer) return;
     const beatTicks = ticksPerBeat(exercise.timeSignature);
+    // One ring per notehead, created once; each frame only changes classes and positions.
+    const marks = layout.marks.map((m) => {
+      const el = document.createElement("div");
+      el.className = "mark";
+      markLayer.append(el);
+      return { ...m, el };
+    });
     let raf = 0;
     let scale = 0;
     const loop = () => {
-      // The staff is scaled by CSS to fit; the playhead follows the same scale.
+      // The staff is scaled by CSS to fit; the playhead and marks follow the same scale.
       const now = host.clientWidth / layout.width;
       if (now !== scale) {
         scale = now;
         playhead.style.top = `${layout.playheadTop * scale}px`;
         playhead.style.height = `${layout.playheadHeight * scale}px`;
+        for (const m of marks) {
+          m.el.style.left = `${m.x * scale}px`;
+          m.el.style.top = `${m.y * scale}px`;
+        }
+      }
+      coach.tickSession(performance.now());
+      const latest = coach.session?.latestResults();
+      for (const m of marks) {
+        const cls = markClass(latest?.get(m.index));
+        if (m.el.className !== cls) m.el.className = cls;
       }
       const { beatsPerBar, subdivision } = coach.metronome.currentSettings;
       const tick = coach.metronome.running
@@ -90,6 +140,7 @@ export function NotationStrip({ coach, exercise, onSelect }: Props) {
     return () => {
       cancelAnimationFrame(raf);
       playhead.hidden = true;
+      markLayer.replaceChildren();
     };
   }, [coach, layout, exercise]);
 
@@ -100,6 +151,7 @@ export function NotationStrip({ coach, exercise, onSelect }: Props) {
         <select
           id="exercise"
           value={exercise?.id ?? ""}
+          disabled={session !== null && session.phase !== "done"}
           onChange={(e) => {
             // Give up focus: Space is the kick key, and it would reopen the list.
             e.currentTarget.blur();
@@ -122,15 +174,44 @@ export function NotationStrip({ coach, exercise, onSelect }: Props) {
             ))}
           </optgroup>
         </select>
+        {exercise && (session === null || session.phase === "done") && (
+          <>
+            <button className="primary play" onClick={releasing(onPlay)}>
+              Play along
+            </button>
+            <select
+              aria-label="Session length"
+              value={loops}
+              onChange={(e) => {
+                e.currentTarget.blur();
+                onLoopsChange(Number(e.target.value));
+              }}
+            >
+              {SESSION_LOOPS.map((n) => (
+                <option key={n} value={n}>
+                  {n} loops
+                </option>
+              ))}
+            </select>
+          </>
+        )}
+        {session && session.phase !== "done" && (
+          <button className="secondary" onClick={releasing(onStop)}>
+            Stop
+          </button>
+        )}
         <p className="notation-description">
-          {exercise
-            ? `${exercise.description} Suggested ${exercise.tempo.suggested} BPM.`
-            : "Pick a groove or rudiment to see it as drum notation."}
+          {session && session.phase !== "done"
+            ? sessionStatus(session)
+            : exercise
+              ? `${exercise.description} Suggested ${exercise.tempo.suggested} BPM.`
+              : "Pick a groove or rudiment to see it as drum notation."}
         </p>
       </div>
       <div className="notation-staff" hidden={!exercise}>
         <div className="notation-score" style={scoreStyle}>
           <div ref={hostRef} />
+          <div ref={marksRef} className="marks" aria-hidden />
           <div ref={playheadRef} className="playhead" hidden />
         </div>
         {status === "loading" && <p className="hint">Loading notation…</p>}

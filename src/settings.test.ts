@@ -24,6 +24,14 @@ describe("parseSettings", () => {
     expect(parseSettings({ exerciseId: 42 }).exerciseId).toBeUndefined();
   });
 
+  it("keeps a known accuracy mode and session length", () => {
+    expect(parseSettings({ accuracyMode: "strict", sessionLoops: 8 })).toMatchObject({ accuracyMode: "strict", sessionLoops: 8 });
+    expect(parseSettings({ accuracyMode: "lenient", sessionLoops: 5 })).toMatchObject({
+      accuracyMode: undefined,
+      sessionLoops: undefined,
+    });
+  });
+
   it("only keeps guideSeen when it's true", () => {
     expect(parseSettings({ guideSeen: "yes" }).guideSeen).toBeUndefined();
   });
