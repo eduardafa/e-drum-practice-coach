@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { GROOVES, RUDIMENTS } from "./exercises/library";
 import { ticksPerBeat, type Exercise } from "./exercises/types";
 import type { Coach } from "./live/coach";
@@ -7,6 +7,8 @@ import { playheadTick } from "./notation/playhead";
 
 /** Pick the position one frame ahead, as the live count does: a frame is painted ~16 ms after it's chosen. */
 const PAINT_LOOKAHEAD_MS = 16;
+/** The staff grows to fit the stage width, up to this many times its engraved size. */
+const MAX_SCALE = 1.6;
 
 interface Props {
   coach: Coach;
@@ -26,6 +28,7 @@ export function NotationStrip({ coach, exercise, onSelect }: Props) {
   const playheadRef = useRef<HTMLDivElement>(null);
   const [layout, setLayout] = useState<StaffLayout | null>(null);
   const [status, setStatus] = useState<Status>("idle");
+  const scoreStyle = useMemo(() => ({ maxWidth: layout ? layout.width * MAX_SCALE : undefined }), [layout]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -58,10 +61,19 @@ export function NotationStrip({ coach, exercise, onSelect }: Props) {
 
   useEffect(() => {
     const playhead = playheadRef.current;
-    if (!layout || !exercise || !playhead) return;
+    const host = hostRef.current;
+    if (!layout || !exercise || !playhead || !host) return;
     const beatTicks = ticksPerBeat(exercise.timeSignature);
     let raf = 0;
+    let scale = 0;
     const loop = () => {
+      // The staff is scaled by CSS to fit; the playhead follows the same scale.
+      const now = host.clientWidth / layout.width;
+      if (now !== scale) {
+        scale = now;
+        playhead.style.top = `${layout.playheadTop * scale}px`;
+        playhead.style.height = `${layout.playheadHeight * scale}px`;
+      }
       const { beatsPerBar, subdivision } = coach.metronome.currentSettings;
       const tick = coach.metronome.running
         ? playheadTick(coach.live.counts, performance.now() + PAINT_LOOKAHEAD_MS, {
@@ -71,7 +83,7 @@ export function NotationStrip({ coach, exercise, onSelect }: Props) {
           })
         : null;
       playhead.hidden = tick === null;
-      if (tick !== null) playhead.style.transform = `translateX(${xAtTick(layout, tick).toFixed(1)}px)`;
+      if (tick !== null) playhead.style.transform = `translateX(${(xAtTick(layout, tick) * scale).toFixed(1)}px)`;
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
@@ -117,7 +129,7 @@ export function NotationStrip({ coach, exercise, onSelect }: Props) {
         </p>
       </div>
       <div className="notation-staff" hidden={!exercise}>
-        <div className="notation-score">
+        <div className="notation-score" style={scoreStyle}>
           <div ref={hostRef} />
           <div ref={playheadRef} className="playhead" hidden />
         </div>

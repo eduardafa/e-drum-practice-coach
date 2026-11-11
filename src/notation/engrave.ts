@@ -171,5 +171,21 @@ export function engraveExercise(exercise: Exercise, host: HTMLDivElement): Staff
   const lengthTicks = exerciseLengthTicks(exercise);
   // The bar line at the end, so the playhead keeps moving through the last beat.
   points.push({ tick: lengthTicks, x: x - 10 });
-  return { width, height: HEIGHT, points: mergePoints(points), lengthTicks };
+  // Scalable: drop the fixed size so CSS can size the staff to fit, keeping its proportions.
+  const svg = host.querySelector("svg");
+  if (svg) {
+    svg.setAttribute("viewBox", `0 0 ${width} ${HEIGHT}`);
+    svg.removeAttribute("width");
+    svg.removeAttribute("height");
+    svg.style.removeProperty("width");
+    svg.style.removeProperty("height");
+  }
+  return {
+    width,
+    height: HEIGHT,
+    points: mergePoints(points),
+    lengthTicks,
+    playheadTop: STAFF_Y - 6,
+    playheadHeight: 92,
+  };
 }

@@ -5,6 +5,8 @@ import { mergePoints, xAtTick, type StaffLayout } from "./layout";
 const layout: StaffLayout = {
   width: 420,
   height: 150,
+  playheadTop: 24,
+  playheadHeight: 92,
   lengthTicks: 192,
   points: [
     { tick: 0, x: 100 },

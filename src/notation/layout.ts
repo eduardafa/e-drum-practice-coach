@@ -10,9 +10,12 @@ export interface StaffPoint {
 }
 
 export interface StaffLayout {
-  /** Engraved width and height in px. */
+  /** Engraved width and height in px, before the staff is scaled to fit the page. */
   width: number;
   height: number;
+  /** The playhead's vertical span in engraved px: from above the cymbals to below the kick. */
+  playheadTop: number;
+  playheadHeight: number;
   /** One point per written note or rest, plus the end of the last bar; sorted by tick. */
   points: StaffPoint[];
   /** The exercise's length in ticks; the playhead wraps here. */

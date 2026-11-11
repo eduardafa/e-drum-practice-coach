@@ -784,13 +784,13 @@ fieldset.group.play {
 }
 
 .notation-staff {
-  overflow-x: auto;
   padding: 0 16px 6px;
 }
 
 .notation-score {
   position: relative;
-  width: max-content;
+  /* As wide as the stage allows, up to MAX_SCALE × the engraved width (set inline). */
+  width: 100%;
   margin: 0 auto;
   /* VexFlow draws in currentColor. */
   color: var(--text);
@@ -798,14 +798,15 @@ fieldset.group.play {
 
 .notation-score svg {
   display: block;
+  width: 100%;
+  height: auto;
 }
 
+/* Top and height follow the staff's scale (set by NotationStrip). */
 .playhead {
   position: absolute;
-  top: 24px;
   left: 0;
   width: 3px;
-  height: 92px;
   margin-left: -1px;
   border-radius: 2px;
   background: var(--accent);
