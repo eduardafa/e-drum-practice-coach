@@ -11,8 +11,11 @@ export interface CalibrationOptions {
   minHits: number;
   /** Tukey fence multiplier: hits beyond Q1/Q3 ∓ k·IQR are dropped. */
   iqrFactor: number;
-  /** Fail when the remaining hits' standard deviation is above this, in ms. */
-  maxSpreadMs: number;
+  /**
+   * The estimate counts as confident when the uncertainty of the median is at
+   * or below this, in ms. Below it, the result is still usable, just less precise.
+   */
+  targetUncertaintyMs: number;
   /** Fail when the estimated offset is larger than this, in ms. */
   maxAbsOffsetMs: number;
 }
@@ -20,7 +23,7 @@ export interface CalibrationOptions {
 export const DEFAULT_CALIBRATION: CalibrationOptions = {
   minHits: 8,
   iqrFactor: 1.5,
-  maxSpreadMs: 15,
+  targetUncertaintyMs: 5,
   maxAbsOffsetMs: 200,
 };
 
@@ -29,17 +32,22 @@ export type CalibrationResult =
       ok: true;
       /** Latency to subtract from every hit, rounded to whole ms. */
       offsetMs: number;
-      /** Standard deviation of the hits that were kept, in ms. */
+      /** Standard deviation of the hits that were kept, in ms: how steady the drummer was. */
       spreadMs: number;
+      /** Standard error of the median, in ms: how precisely the offset is known. */
+      uncertaintyMs: number;
+      /** Whether uncertaintyMs reached the target. */
+      confident: boolean;
       used: number;
       rejected: number;
     }
   | {
       ok: false;
-      reason: "tooFewHits" | "tooSpread" | "outOfRange";
+      reason: "tooFewHits" | "outOfRange";
       /** Present when enough hits were collected to measure it. */
       offsetMs?: number;
       spreadMs?: number;
+      uncertaintyMs?: number;
       used: number;
       rejected: number;
     };
@@ -63,6 +71,15 @@ export function standardDeviation(values: readonly number[]): number {
   const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
   const sq = values.reduce((sum, v) => sum + (v - mean) ** 2, 0);
   return Math.sqrt(sq / (values.length - 1));
+}
+
+/**
+ * Standard error of the median for roughly normal data: about 1.2533 · SD / √n.
+ * It shrinks as hits accumulate, so a less steady drummer reaches the same
+ * precision by playing longer. Infinite with no hits.
+ */
+export function medianStandardError(spread: number, count: number): number {
+  return count > 0 ? (1.2533 * spread) / Math.sqrt(count) : Number.POSITIVE_INFINITY;
 }
 
 /** Splits values into those inside the Tukey fences and those outside. */
@@ -96,11 +113,10 @@ export function computeCalibration(
 
   const offsetMs = Math.round(median(kept));
   const spreadMs = standardDeviation(kept);
-  if (spreadMs > options.maxSpreadMs) {
-    return { ok: false, reason: "tooSpread", offsetMs, spreadMs, ...counts };
-  }
+  const uncertaintyMs = medianStandardError(spreadMs, kept.length);
   if (Math.abs(offsetMs) > options.maxAbsOffsetMs) {
-    return { ok: false, reason: "outOfRange", offsetMs, spreadMs, ...counts };
+    return { ok: false, reason: "outOfRange", offsetMs, spreadMs, uncertaintyMs, ...counts };
   }
-  return { ok: true, offsetMs, spreadMs, ...counts };
+  const confident = uncertaintyMs <= options.targetUncertaintyMs;
+  return { ok: true, offsetMs, spreadMs, uncertaintyMs, confident, ...counts };
 }

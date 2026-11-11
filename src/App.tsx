@@ -3,6 +3,7 @@ import { isSubdivision, MAX_BPM, MIN_BPM, type MetronomeSettings } from "./audio
 import { CalibrationPanel } from "./CalibrationPanel";
 import { Coach, DEFAULT_METRONOME } from "./live/coach";
 import type { MidiStatus } from "./midi/connection";
+import { DEFAULT_SKILL_LEVEL, isSkillLevel, SKILL_LEVELS, SKILL_PROFILES, type SkillLevel } from "./profiles";
 import { formatDelta, KitRenderer } from "./render/kitRenderer";
 import { DEFAULT_SCORING, type ScoringOptions } from "./timing/grid";
 import { loadSettings, saveSettings } from "./settings";
@@ -74,6 +75,7 @@ export default function App() {
   const [running, setRunning] = useState(false);
   const [volume, setVolume] = useState(coach.metronome.volume);
   const [calibrating, setCalibrating] = useState(false);
+  const [skillLevel, setSkillLevel] = useState<SkillLevel>(saved.skillLevel ?? DEFAULT_SKILL_LEVEL);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -88,8 +90,8 @@ export default function App() {
   useEffect(() => {
     coach.metronome.setSettings(metronome);
     coach.scoring = scoring;
-    saveSettings({ metronome, scoring });
-  }, [metronome, scoring]);
+    saveSettings({ metronome, scoring, skillLevel });
+  }, [metronome, scoring, skillLevel]);
 
   useEffect(() => {
     coach.metronome.volume = volume;
@@ -126,7 +128,7 @@ export default function App() {
   const startCalibration = async () => {
     setRunning(false);
     setCalibrating(true);
-    await coach.startCalibration();
+    await coach.startCalibration(skillLevel);
   };
 
   const endCalibration = (offsetMs: number | null) => {
@@ -151,6 +153,7 @@ export default function App() {
         {calibrating && (
           <CalibrationPanel
             coach={coach}
+            level={skillLevel}
             currentOffsetMs={scoring.latencyOffsetMs}
             onRetry={() => void startCalibration()}
             onClose={endCalibration}
@@ -238,6 +241,21 @@ export default function App() {
         <fieldset className="group" disabled={calibrating}>
           <h2>Scoring</h2>
           <label className="field">
+            <span>Skill level</span>
+            <select
+              value={skillLevel}
+              onChange={(e) => {
+                if (isSkillLevel(e.target.value)) setSkillLevel(e.target.value);
+              }}
+            >
+              {SKILL_LEVELS.map((level) => (
+                <option key={level} value={level}>
+                  {SKILL_PROFILES[level].label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
             <span>On-time window</span>
             <input
               type="range"
@@ -263,8 +281,8 @@ export default function App() {
             Calibrate latency
           </button>
           <p className="hint">
-            Calibrate to measure your setup's delay automatically, then fine-tune the offset by hand if
-            needed.
+            Calibrate to measure your setup's delay. The skill level sets the calibration tempo and how long
+            it may listen; steadier playing finishes sooner. Fine-tune the offset by hand if needed.
           </p>
         </fieldset>
 

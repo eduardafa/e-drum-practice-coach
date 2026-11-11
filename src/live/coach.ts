@@ -7,7 +7,8 @@ import type { MetronomeSettings } from "../audio/schedule";
 import { lookupNote } from "../kit/nitroMax";
 import { MidiConnection, type TimedMidiEvent } from "../midi/connection";
 import { DEFAULT_SCORING, scoreHit, TimingGrid, type ScoringOptions } from "../timing/grid";
-import { CALIBRATION_METRONOME, CalibrationSession, type CalibrationProgress } from "./calibration";
+import type { SkillLevel } from "../profiles";
+import { calibrationSetup, CalibrationSession, type CalibrationProgress } from "./calibration";
 import { LiveState } from "./liveState";
 
 export const DEFAULT_METRONOME: MetronomeSettings = {
@@ -35,11 +36,8 @@ export class Coach {
       this.metronome.onStep((step) => {
         if (!step.beat) return;
         this.live.addBeat({ time: step.performanceTime, downbeat: step.downbeat });
-        if (this.calibration?.addClick(step.performanceTime, step.intervalSec * 1000)) {
-          // Last click is already scheduled; stop scheduling more.
-          this.metronome.stop();
-          this.restoreSettings();
-        }
+        // No more clicks needed: the target was reached or the limit is scheduled.
+        if (this.calibration?.addClick(step.performanceTime, step.intervalSec * 1000)) this.stopCalibrationClicks();
       }),
     );
   }
@@ -58,13 +56,14 @@ export class Coach {
     this.metronome.stop();
   }
 
-  /** Starts a calibration run with fixed metronome settings. Call from a user gesture. */
-  async startCalibration(): Promise<void> {
+  /** Starts a calibration run for a skill level. Call from a user gesture. */
+  async startCalibration(level: SkillLevel): Promise<void> {
     this.metronome.stop();
     this.restoreSettings();
+    const setup = calibrationSetup(level);
     this.settingsBeforeCalibration = this.metronome.currentSettings;
-    this.metronome.setSettings(CALIBRATION_METRONOME);
-    this.calibration = new CalibrationSession();
+    this.metronome.setSettings(setup.metronome);
+    this.calibration = new CalibrationSession(setup.plan, setup.options);
     this.live.resetSession();
     await this.metronome.start();
   }
@@ -94,6 +93,12 @@ export class Coach {
     this.metronome.dispose();
   }
 
+  /** Stops the clicks once the run needs no more, and restores the drummer's settings. */
+  private stopCalibrationClicks(): void {
+    if (this.metronome.running) this.metronome.stop();
+    this.restoreSettings();
+  }
+
   private restoreSettings(): void {
     if (!this.settingsBeforeCalibration) return;
     this.metronome.setSettings(this.settingsBeforeCalibration);
@@ -103,7 +108,10 @@ export class Coach {
   private handleMidi({ event, time }: TimedMidiEvent): void {
     if (event.kind !== "noteOn") return;
     const mapping = lookupNote(event.note);
-    this.calibration?.addHit(time);
+    if (this.calibration) {
+      this.calibration.addHit(time);
+      if (this.calibration.finished) this.stopCalibrationClicks();
+    }
     // While calibrating, show raw timing: the offset being measured isn't applied.
     const scoring = this.calibration ? { ...this.scoring, latencyOffsetMs: 0 } : this.scoring;
     this.live.addHit({
