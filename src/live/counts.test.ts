@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { barCounts, CountTracker, currentCount, type Count } from "./counts";
+import { barCounts, countAt, currentCount, type Count } from "./counts";
 
 describe("barCounts", () => {
   it("counts quarter notes as beat numbers", () => {
@@ -19,25 +19,19 @@ describe("barCounts", () => {
   });
 });
 
-describe("CountTracker", () => {
-  it("labels steps through the bar and restarts on the downbeat", () => {
-    const tracker = new CountTracker();
-    const steps = [true, false, false, false, false, false, false, false, true, false];
-    const labels = steps.map((downbeat, i) => tracker.next({ downbeat, time: i * 250 }, 4, 2).label);
-    expect(labels).toEqual(["1", "&", "2", "&", "3", "&", "4", "&", "1", "&"]);
+describe("countAt", () => {
+  it("labels positions in a bar of eighths", () => {
+    expect(countAt({ beatInBar: 0, subInBeat: 0 }, 4, 2)).toEqual({ index: 0, label: "1" });
+    expect(countAt({ beatInBar: 1, subInBeat: 1 }, 4, 2)).toEqual({ index: 3, label: "&" });
+    expect(countAt({ beatInBar: 3, subInBeat: 1 }, 4, 2)).toEqual({ index: 7, label: "&" });
   });
 
-  it("keeps the step's time and position", () => {
-    const tracker = new CountTracker();
-    tracker.next({ downbeat: true, time: 1000 }, 4, 2);
-    expect(tracker.next({ downbeat: false, time: 1250 }, 4, 2)).toEqual({ time: 1250, index: 1, label: "&" });
+  it("labels sixteenths", () => {
+    expect(countAt({ beatInBar: 2, subInBeat: 3 }, 4, 4)).toEqual({ index: 11, label: "a" });
   });
 
-  it("wraps around if a downbeat is missed", () => {
-    const tracker = new CountTracker();
-    tracker.next({ downbeat: true, time: 0 }, 2, 1);
-    tracker.next({ downbeat: false, time: 1 }, 2, 1);
-    expect(tracker.next({ downbeat: false, time: 2 }, 2, 1)).toMatchObject({ index: 0, label: "1" });
+  it("clamps a position left over from a settings change", () => {
+    expect(countAt({ beatInBar: 5, subInBeat: 0 }, 4, 1)).toEqual({ index: 3, label: "4" });
   });
 });
 

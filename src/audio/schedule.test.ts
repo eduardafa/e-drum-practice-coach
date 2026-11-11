@@ -40,3 +40,11 @@ describe("takeStepsUntil", () => {
     expect(step.downbeat).toBe(false);
   });
 });
+
+describe("step positions", () => {
+  it("report the beat and subdivision of every step", () => {
+    const cursor = { nextTime: 0, beatInBar: 0, subInBeat: 0 };
+    const steps = takeStepsUntil(cursor, { bpm: 120, beatsPerBar: 4, subdivision: 2, clickSubdivisions: false }, 2.0);
+    expect(steps.map((s) => `${s.beatInBar}.${s.subInBeat}`)).toEqual(["0.0", "0.1", "1.0", "1.1", "2.0", "2.1", "3.0", "3.1"]);
+  });
+});

@@ -1,8 +1,9 @@
 /**
  * Labels every metronome step with how a drummer counts it: "1 & 2 &" for
- * eighths, "1 e & a" for sixteenths, "1 trip let" for triplets. The labels
- * carry the step's scheduled time, so a live count display can light up the
- * right syllable exactly when the click is heard.
+ * eighths, "1 e & a" for sixteenths, "1 trip let" for triplets. Counts carry
+ * the step's scheduled time, so a live count display can light up the right
+ * syllable exactly when the click is heard. The label comes from the step's
+ * position in the bar, so it stays right even if settings change mid-bar.
  */
 import type { Subdivision } from "../audio/schedule";
 
@@ -31,22 +32,15 @@ export interface Count {
   label: string;
 }
 
-/**
- * Turns the metronome's step stream into counts. A downbeat restarts the bar;
- * every other step moves one position along it.
- */
-export class CountTracker {
-  private index = -1;
-
-  next(step: { downbeat: boolean; time: number }, beatsPerBar: number, subdivision: Subdivision): Count {
-    const labels = barCounts(beatsPerBar, subdivision);
-    this.index = step.downbeat ? 0 : (this.index + 1) % labels.length;
-    return { time: step.time, index: this.index, label: labels[this.index] };
-  }
-
-  reset(): void {
-    this.index = -1;
-  }
+/** The count for a step at this position in the bar. */
+export function countAt(
+  position: { beatInBar: number; subInBeat: number },
+  beatsPerBar: number,
+  subdivision: Subdivision,
+): { index: number; label: string } {
+  const labels = barCounts(beatsPerBar, subdivision);
+  const index = Math.min(position.beatInBar * subdivision + position.subInBeat, labels.length - 1);
+  return { index, label: labels[index] };
 }
 
 /** The count being heard at `now`: the latest one at or before it, or null. */
