@@ -15,6 +15,7 @@ import {
   takeStepsUntil,
 } from "./schedule";
 import type { TimingGrid } from "../timing/grid";
+import type { TickCommand } from "./tickCommand";
 
 const TICK_MS = 25;
 const LOOKAHEAD_SEC = 0.12;
@@ -74,13 +75,13 @@ export class Metronome {
       this.worker = new Worker(new URL("./tick.worker.ts", import.meta.url), { type: "module" });
       this.worker.addEventListener("message", () => this.schedule());
     }
-    this.worker.postMessage({ cmd: "start", intervalMs: TICK_MS });
+    this.worker.postMessage({ cmd: "start", intervalMs: TICK_MS } satisfies TickCommand);
     this.schedule();
   }
 
   stop(): void {
     this.cursor = null;
-    this.worker?.postMessage({ cmd: "stop" });
+    this.worker?.postMessage({ cmd: "stop" } satisfies TickCommand);
     this.grid.clear();
   }
 
