@@ -4,6 +4,9 @@ import { CalibrationPanel } from "./CalibrationPanel";
 import { KeyboardHint } from "./KeyboardHint";
 import { LiveCount } from "./LiveCount";
 import { MetronomeGuide } from "./MetronomeGuide";
+import { NotationStrip } from "./NotationStrip";
+import { findExercise } from "./exercises/library";
+import { metronomeForExercise } from "./exercises/practice";
 import { Coach, DEFAULT_METRONOME } from "./live/coach";
 import type { MidiStatus } from "./midi/connection";
 import {
@@ -88,6 +91,8 @@ export default function App() {
   const [calibrating, setCalibrating] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [exerciseId, setExerciseId] = useState<string | null>(saved.exerciseId ?? null);
+  const exercise = exerciseId === null ? null : (findExercise(exerciseId) ?? null);
   /** What's typed in the tempo box while it has focus; null shows the current tempo. */
   const [tempoDraft, setTempoDraft] = useState<string | null>(null);
   /** Set by Escape so the blur that follows throws the draft away instead of applying it. */
@@ -114,8 +119,8 @@ export default function App() {
   useEffect(() => {
     coach.metronome.setSettings(metronome);
     coach.scoring = scoring;
-    saveSettings({ metronome, scoring, skillLevel, guideSeen: guideSeen || undefined });
-  }, [metronome, scoring, skillLevel, guideSeen]);
+    saveSettings({ metronome, scoring, skillLevel, guideSeen: guideSeen || undefined, exerciseId: exerciseId ?? undefined });
+  }, [metronome, scoring, skillLevel, guideSeen, exerciseId]);
 
   useEffect(() => {
     coach.metronome.volume = volume;
@@ -198,6 +203,13 @@ export default function App() {
     if (offsetMs !== null) setScoring((s) => ({ ...s, latencyOffsetMs: offsetMs }));
   };
 
+  /** Picking an exercise sets the metronome to fit it: suggested tempo, its beats, fine enough to score every note. */
+  const selectExercise = (id: string | null) => {
+    setExerciseId(id);
+    const picked = id === null ? undefined : findExercise(id);
+    if (picked) setMetronome((m) => metronomeForExercise(picked, m.clickSubdivisions));
+  };
+
   const updateMetronome = (patch: Partial<MetronomeSettings>) =>
     setMetronome((m) => ({ ...m, ...patch }));
   const updateScoring = (patch: Partial<ScoringOptions>) => setScoring((s) => ({ ...s, ...patch }));
@@ -210,6 +222,7 @@ export default function App() {
       </header>
 
       <main className="stage">
+        <NotationStrip coach={coach} exercise={exercise} onSelect={selectExercise} />
         <canvas ref={canvasRef} className="kit-canvas" aria-label="Live view of the drum kit" />
         {guideOpen && !calibrating && (
           <MetronomeGuide
