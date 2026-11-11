@@ -90,6 +90,16 @@ The `CodeQL` workflow analyses the TypeScript code and the workflow files themse
 `security-extended` queries, on every pull request, on pushes to `main` and weekly. A pull request can't merge
 if it adds a high or critical CodeQL security alert.
 
+## Supply chain
+
+- pnpm doesn't install a package version until it has been public for 3 days (`minimumReleaseAge` in
+  `pnpm-workspace.yaml`), and dependency build scripts are blocked unless explicitly allowed.
+- Dependabot opens weekly update PRs for npm packages and GitHub Actions, and security-fix PRs when a
+  vulnerability is disclosed.
+- Secret scanning with push protection blocks commits that contain credentials.
+
+To report a vulnerability, see [SECURITY.md](SECURITY.md).
+
 ## How timing works
 
 MIDI timestamps and the audio clock are separate clocks. Clicks are scheduled ahead of time on the audio
