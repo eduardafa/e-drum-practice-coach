@@ -7,6 +7,7 @@ const layout: StaffLayout = {
   height: 150,
   playheadTop: 24,
   playheadHeight: 92,
+  marks: [],
   lengthTicks: 192,
   points: [
     { tick: 0, x: 100 },

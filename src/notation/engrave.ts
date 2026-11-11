@@ -34,7 +34,7 @@ import {
 } from "vexflow/core";
 import { exerciseLengthTicks, type Exercise } from "../exercises/types";
 import type { PadId } from "../kit/nitroMax";
-import { mergePoints, type StaffLayout, type StaffPoint } from "./layout";
+import { mergePoints, type NoteMark, type StaffLayout, type StaffPoint } from "./layout";
 import { isCompound, spellBar, type SpelledEvent, type StaffVoice } from "./spelling";
 
 /**
@@ -118,6 +118,7 @@ export function engraveExercise(exercise: Exercise, host: HTMLDivElement): Staff
   ctx.setStrokeStyle("currentColor");
   const beamGroups = [isCompound(ts) || ts.unit === 8 ? new Fraction(3, 8) : new Fraction(1, 4)];
   const points: StaffPoint[] = [];
+  const marks: NoteMark[] = [];
 
   let x = 0;
   for (let bar = 0; bar < exercise.bars; bar++) {
@@ -162,7 +163,12 @@ export function engraveExercise(exercise: Exercise, host: HTMLDivElement): Staff
       b.beams.forEach((beam) => beam.setContext(ctx).draw());
       b.tuplets.forEach((t) => t.setContext(ctx).draw());
       b.events.forEach((e, i) => {
-        if (e.ticks > 0) points.push({ tick: e.tick, x: b.notes[i].getAbsoluteX() });
+        const note = b.notes[i];
+        if (e.ticks > 0) points.push({ tick: e.tick, x: note.getAbsoluteX() });
+        // Keys were built in the order of e.notes, so getYs() lines up with them.
+        const ys = note.getYs();
+        const headX = (note.getNoteHeadBeginX() + note.getNoteHeadEndX()) / 2;
+        e.notes.forEach((n, k) => marks.push({ index: exercise.notes.indexOf(n), x: headX, y: ys[k] }));
       });
     }
     x += barWidth;
@@ -185,6 +191,7 @@ export function engraveExercise(exercise: Exercise, host: HTMLDivElement): Staff
     height: HEIGHT,
     points: mergePoints(points),
     lengthTicks,
+    marks,
     playheadTop: STAFF_Y - 6,
     playheadHeight: 92,
   };

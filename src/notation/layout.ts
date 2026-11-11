@@ -3,6 +3,13 @@
  * mapping from time to position can be tested without a browser.
  */
 
+/** Where one note of the exercise is drawn: its index in exercise.notes and its notehead's centre. */
+export interface NoteMark {
+  index: number;
+  x: number;
+  y: number;
+}
+
 /** A point on the staff: a tick position and its x coordinate in px. */
 export interface StaffPoint {
   tick: number;
@@ -20,6 +27,8 @@ export interface StaffLayout {
   points: StaffPoint[];
   /** The exercise's length in ticks; the playhead wraps here. */
   lengthTicks: number;
+  /** Every note's notehead, for marking hit results on the staff. */
+  marks: NoteMark[];
 }
 
 /**
