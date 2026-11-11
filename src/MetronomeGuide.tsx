@@ -1,8 +1,9 @@
-import { useState, type MouseEvent } from "react";
+import { useState } from "react";
 import type { MetronomeSettings } from "./audio/schedule";
 import { GUIDE_COUNTS, GUIDE_START_BPM, METRONOME_GUIDE, type GuideStep } from "./guide/metronomeGuide";
 import type { Coach } from "./live/coach";
 import { LiveCount, useLiveCount } from "./LiveCount";
+import { releasing } from "./releasing";
 
 interface Props {
   coach: Coach;
@@ -12,17 +13,6 @@ interface Props {
   onApply: (settings: MetronomeSettings) => void;
   onToggleMetronome: () => void;
   onClose: () => void;
-}
-
-/**
- * Buttons give up focus after a click: Space is the kick key, and a focused
- * button would otherwise be pressed again by every kick.
- */
-function releasing(action: () => void) {
-  return (e: MouseEvent<HTMLButtonElement>) => {
-    e.currentTarget.blur();
-    action();
-  };
 }
 
 export function MetronomeGuide({ coach, running, basicsOpen, onApply, onToggleMetronome, onClose }: Props) {
