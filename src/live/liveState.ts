@@ -38,6 +38,14 @@ export class LiveState {
   onTimeHits = 0;
   sumDeltaMs = 0;
   sumAbsDeltaMs = 0;
+  /** Running mean and sum of squared deviations (Welford's algorithm) for the spread. */
+  private deltaMean = 0;
+  private deltaM2 = 0;
+
+  /** Standard deviation of this session's scored deltas: how steady the drummer is. */
+  get spreadMs(): number | null {
+    return this.scoredHits >= 2 ? Math.sqrt(this.deltaM2 / (this.scoredHits - 1)) : null;
+  }
 
   addHit(hit: LiveHit): void {
     this.lastHit = hit;
@@ -49,6 +57,10 @@ export class LiveState {
       if (hit.score.verdict === "onTime") this.onTimeHits += 1;
       this.sumDeltaMs += hit.score.deltaMs;
       this.sumAbsDeltaMs += Math.abs(hit.score.deltaMs);
+      // Welford's update: numerically stable, and needs no list of past hits.
+      const before = hit.score.deltaMs - this.deltaMean;
+      this.deltaMean += before / this.scoredHits;
+      this.deltaM2 += before * (hit.score.deltaMs - this.deltaMean);
     }
   }
 
@@ -62,6 +74,8 @@ export class LiveState {
     this.onTimeHits = 0;
     this.sumDeltaMs = 0;
     this.sumAbsDeltaMs = 0;
+    this.deltaMean = 0;
+    this.deltaM2 = 0;
     this.beats.length = 0;
   }
 }

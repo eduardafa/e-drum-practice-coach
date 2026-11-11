@@ -356,3 +356,17 @@ button:focus-visible {
 .calibration-progress .meter::-moz-meter-bar {
   background: var(--accent);
 }
+
+.suggestion {
+  display: block;
+  margin: 12px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.suggestion p {
+  margin: 0 0 8px;
+}

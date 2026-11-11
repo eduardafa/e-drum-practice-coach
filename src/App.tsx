@@ -3,7 +3,16 @@ import { isSubdivision, MAX_BPM, MIN_BPM, type MetronomeSettings } from "./audio
 import { CalibrationPanel } from "./CalibrationPanel";
 import { Coach, DEFAULT_METRONOME } from "./live/coach";
 import type { MidiStatus } from "./midi/connection";
-import { DEFAULT_SKILL_LEVEL, isSkillLevel, SKILL_LEVELS, SKILL_PROFILES, type SkillLevel } from "./profiles";
+import {
+  DEFAULT_SKILL_LEVEL,
+  isSkillLevel,
+  levelForTolerance,
+  MIN_HITS_FOR_SUGGESTION,
+  SKILL_LEVELS,
+  SKILL_PROFILES,
+  suggestLevel,
+  type SkillLevel,
+} from "./profiles";
 import { formatDelta, KitRenderer } from "./render/kitRenderer";
 import { DEFAULT_SCORING, type ScoringOptions } from "./timing/grid";
 import { loadSettings, saveSettings } from "./settings";
@@ -23,7 +32,11 @@ const KEY_TO_NOTE: Record<string, number> = {
 
 const saved = loadSettings();
 const coach = new Coach(saved.metronome ?? DEFAULT_METRONOME);
-coach.scoring = saved.scoring ?? { ...DEFAULT_SCORING };
+// A first-time drummer gets the on-time window of their (default) skill level.
+coach.scoring = saved.scoring ?? {
+  ...DEFAULT_SCORING,
+  toleranceMs: SKILL_PROFILES[saved.skillLevel ?? DEFAULT_SKILL_LEVEL].toleranceMs,
+};
 
 function useMidiStatus(): MidiStatus {
   return useSyncExternalStore(
@@ -37,6 +50,7 @@ interface Stats {
   onTimePct: number | null;
   meanMs: number | null;
   meanAbsMs: number | null;
+  spreadMs: number | null;
   lastNote: string;
 }
 
@@ -48,6 +62,7 @@ function readStats(): Stats {
     onTimePct: l.scoredHits ? (100 * l.onTimeHits) / l.scoredHits : null,
     meanMs: l.scoredHits ? l.sumDeltaMs / l.scoredHits : null,
     meanAbsMs: l.scoredHits ? l.sumAbsDeltaMs / l.scoredHits : null,
+    spreadMs: l.spreadMs,
     lastNote: last
       ? `note ${last.note} · ${last.pad ? `${last.pad} ${last.zone}` : "unmapped"} · vel ${last.velocity}`
       : "—",
@@ -76,6 +91,10 @@ export default function App() {
   const [volume, setVolume] = useState(coach.metronome.volume);
   const [calibrating, setCalibrating] = useState(false);
   const [skillLevel, setSkillLevel] = useState<SkillLevel>(saved.skillLevel ?? DEFAULT_SKILL_LEVEL);
+  /** The level a calibration run started with, so its panel describes that run. */
+  const [calibrationLevel, setCalibrationLevel] = useState<SkillLevel>(skillLevel);
+  /** A suggested level the drummer said "not now" to; not suggested again this page session. */
+  const [dismissedSuggestion, setDismissedSuggestion] = useState<SkillLevel | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -128,8 +147,21 @@ export default function App() {
   const startCalibration = async () => {
     setRunning(false);
     setCalibrating(true);
+    setCalibrationLevel(skillLevel);
     await coach.startCalibration(skillLevel);
   };
+
+  /** Switching level also applies its on-time window; the slider stays for fine-tuning. */
+  const applySkillLevel = (level: SkillLevel) => {
+    setSkillLevel(level);
+    setScoring((s) => ({ ...s, toleranceMs: SKILL_PROFILES[level].toleranceMs }));
+  };
+
+  const suggestion =
+    stats.scored >= MIN_HITS_FOR_SUGGESTION && stats.spreadMs !== null
+      ? suggestLevel(skillLevel, stats.spreadMs)
+      : null;
+  const windowLevel = levelForTolerance(scoring.toleranceMs);
 
   const endCalibration = (offsetMs: number | null) => {
     coach.endCalibration();
@@ -153,7 +185,9 @@ export default function App() {
         {calibrating && (
           <CalibrationPanel
             coach={coach}
-            level={skillLevel}
+            level={calibrationLevel}
+            currentLevel={skillLevel}
+            onSwitchLevel={applySkillLevel}
             currentOffsetMs={scoring.latencyOffsetMs}
             onRetry={() => void startCalibration()}
             onClose={endCalibration}
@@ -245,7 +279,7 @@ export default function App() {
             <select
               value={skillLevel}
               onChange={(e) => {
-                if (isSkillLevel(e.target.value)) setSkillLevel(e.target.value);
+                if (isSkillLevel(e.target.value)) applySkillLevel(e.target.value);
               }}
             >
               {SKILL_LEVELS.map((level) => (
@@ -255,6 +289,22 @@ export default function App() {
               ))}
             </select>
           </label>
+          {suggestion !== null && suggestion !== dismissedSuggestion && stats.spreadMs !== null && (
+            <output className="suggestion">
+              <p>
+                Your hits vary by ±{stats.spreadMs.toFixed(0)} ms. The {SKILL_PROFILES[suggestion].label} window (±
+                {SKILL_PROFILES[suggestion].toleranceMs} ms) fits you best right now.
+              </p>
+              <div className="calibration-actions">
+                <button className="primary" onClick={() => applySkillLevel(suggestion)}>
+                  Switch to {SKILL_PROFILES[suggestion].label}
+                </button>
+                <button className="secondary" onClick={() => setDismissedSuggestion(suggestion)}>
+                  Not now
+                </button>
+              </div>
+            </output>
+          )}
           <label className="field">
             <span>On-time window</span>
             <input
@@ -266,6 +316,11 @@ export default function App() {
             />
             <span className="unit">±{scoring.toleranceMs} ms</span>
           </label>
+          <p className="hint">
+            {windowLevel === null
+              ? `Custom window. ${SKILL_PROFILES[skillLevel].label} uses ±${SKILL_PROFILES[skillLevel].toleranceMs} ms.`
+              : `${SKILL_PROFILES[windowLevel].label} window.`}
+          </p>
           <label className="field">
             <span>Latency offset</span>
             <input
@@ -297,6 +352,8 @@ export default function App() {
             <dd>{stats.meanMs === null ? "—" : formatDelta(stats.meanMs)}</dd>
             <dt>Average |error|</dt>
             <dd>{stats.meanAbsMs === null ? "—" : `${stats.meanAbsMs.toFixed(1)} ms`}</dd>
+            <dt>Consistency</dt>
+            <dd>{stats.spreadMs === null ? "—" : `±${stats.spreadMs.toFixed(0)} ms`}</dd>
           </dl>
           <p className="last-note">Last hit: {stats.lastNote}</p>
         </section>
