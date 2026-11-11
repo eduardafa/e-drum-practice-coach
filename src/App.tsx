@@ -1,21 +1,22 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { isSubdivision, MAX_BPM, MIN_BPM, type MetronomeSettings } from "./audio/schedule";
+import { MAX_BPM, MIN_BPM, parseBpm, stepBpm, type MetronomeSettings } from "./audio/schedule";
 import { CalibrationPanel } from "./CalibrationPanel";
+import { KeyboardHint } from "./KeyboardHint";
 import { LiveCount } from "./LiveCount";
 import { MetronomeGuide } from "./MetronomeGuide";
 import { Coach, DEFAULT_METRONOME } from "./live/coach";
 import type { MidiStatus } from "./midi/connection";
 import {
   DEFAULT_SKILL_LEVEL,
-  isSkillLevel,
   levelForTolerance,
   MIN_HITS_FOR_SUGGESTION,
-  SKILL_LEVELS,
   SKILL_PROFILES,
   suggestLevel,
   type SkillLevel,
 } from "./profiles";
+import { releasing } from "./releasing";
 import { formatDelta, KitRenderer } from "./render/kitRenderer";
+import { SettingsPanel } from "./SettingsPanel";
 import { DEFAULT_SCORING, type ScoringOptions } from "./timing/grid";
 import { loadSettings, saveSettings } from "./settings";
 
@@ -51,23 +52,16 @@ interface Stats {
   scored: number;
   onTimePct: number | null;
   meanMs: number | null;
-  meanAbsMs: number | null;
   spreadMs: number | null;
-  lastNote: string;
 }
 
 function readStats(): Stats {
   const l = coach.live;
-  const last = l.lastHit;
   return {
     scored: l.scoredHits,
     onTimePct: l.scoredHits ? (100 * l.onTimeHits) / l.scoredHits : null,
     meanMs: l.scoredHits ? l.sumDeltaMs / l.scoredHits : null,
-    meanAbsMs: l.scoredHits ? l.sumAbsDeltaMs / l.scoredHits : null,
     spreadMs: l.spreadMs,
-    lastNote: last
-      ? `note ${last.note} · ${last.pad ? `${last.pad} ${last.zone}` : "unmapped"} · vel ${last.velocity}`
-      : "—",
   };
 }
 
@@ -93,6 +87,11 @@ export default function App() {
   const [volume, setVolume] = useState(coach.metronome.volume);
   const [calibrating, setCalibrating] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  /** What's typed in the tempo box while it has focus; null shows the current tempo. */
+  const [tempoDraft, setTempoDraft] = useState<string | null>(null);
+  /** Set by Escape so the blur that follows throws the draft away instead of applying it. */
+  const discardTempoDraft = useRef(false);
   const [guideSeen, setGuideSeen] = useState(saved.guideSeen === true);
   /** Whether this opening of the guide is the drummer's first. */
   const [guideFirstOpen, setGuideFirstOpen] = useState(false);
@@ -135,6 +134,11 @@ export default function App() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.code === "Escape" && (settingsOpen || guideOpen)) {
+        setSettingsOpen(false);
+        setGuideOpen(false);
+        return;
+      }
       if (e.repeat || e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
       if (e.code === "KeyM") {
         void toggleMetronome();
@@ -150,14 +154,22 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   });
 
+  // Only one panel is open over the kit view at a time.
   const openGuide = () => {
+    setSettingsOpen(false);
     setGuideFirstOpen(!guideSeen);
     setGuideOpen(true);
     setGuideSeen(true);
   };
 
+  const toggleSettings = () => {
+    setGuideOpen(false);
+    setSettingsOpen((open) => !open);
+  };
+
   const startCalibration = async () => {
     setGuideOpen(false);
+    setSettingsOpen(false);
     setRunning(false);
     setCalibrating(true);
     setCalibrationLevel(skillLevel);
@@ -175,6 +187,10 @@ export default function App() {
       ? suggestLevel(skillLevel, stats.spreadMs)
       : null;
   const windowLevel = levelForTolerance(scoring.toleranceMs);
+  const levelSummary =
+    windowLevel === skillLevel
+      ? `${SKILL_PROFILES[skillLevel].label} · ±${scoring.toleranceMs} ms window`
+      : `${SKILL_PROFILES[skillLevel].label} · custom ±${scoring.toleranceMs} ms window`;
 
   const endCalibration = (offsetMs: number | null) => {
     coach.endCalibration();
@@ -205,6 +221,20 @@ export default function App() {
             onClose={() => setGuideOpen(false)}
           />
         )}
+        {settingsOpen && !calibrating && (
+          <SettingsPanel
+            metronome={metronome}
+            onMetronomeChange={updateMetronome}
+            volume={volume}
+            onVolumeChange={setVolume}
+            scoring={scoring}
+            onScoringChange={updateScoring}
+            skillLevel={skillLevel}
+            onSkillLevelChange={applySkillLevel}
+            onCalibrate={() => void startCalibration()}
+            onClose={() => setSettingsOpen(false)}
+          />
+        )}
         {calibrating && (
           <CalibrationPanel
             coach={coach}
@@ -219,111 +249,116 @@ export default function App() {
       </main>
 
       <aside className="controls">
-        <fieldset className="group" disabled={calibrating}>
-          <h2>Metronome</h2>
+        <fieldset className="group play" disabled={calibrating}>
           {!guideSeen && (
-            <output className="suggestion">
-              <p>New to playing with a metronome? The guide shows how to count and play the money beat along with it.</p>
-              <button className="primary" onClick={openGuide}>
+            <output className="suggestion first-visit">
+              <p>New to playing with a metronome? Learn to count and play along.</p>
+              <button className="primary" onClick={releasing(openGuide)}>
                 Open the guide
               </button>
             </output>
           )}
-          <button className={`primary ${running ? "active" : ""}`} onClick={() => void toggleMetronome()}>
-            {running ? "Stop" : "Start"} <kbd>M</kbd>
-          </button>
-          {running && <LiveCount coach={coach} />}
-          <button className="link-button" onClick={openGuide}>
-            How to play with the metronome
-          </button>
-          <label className="field">
-            <span>Tempo</span>
+          <div className="play-row">
+            <button
+              className={`primary start ${running ? "active" : ""}`}
+              onClick={releasing(() => void toggleMetronome())}
+            >
+              {running ? "Stop" : "Start"} <kbd>M</kbd>
+            </button>
+            <button
+              className={`secondary ${settingsOpen ? "selected" : ""}`}
+              aria-expanded={settingsOpen}
+              onClick={releasing(toggleSettings)}
+            >
+              <span className="icon" aria-hidden>
+                ⚙
+              </span>
+              Settings
+            </button>
+          </div>
+          <LiveCount coach={coach} />
+          <div className="tempo">
+            <label htmlFor="tempo">Tempo</label>
+            <button
+              className="secondary step"
+              aria-label="Slower"
+              title="1 BPM slower (Shift: 5)"
+              onClick={(e) => {
+                const delta = e.shiftKey ? -5 : -1;
+                releasing(() => updateMetronome({ bpm: stepBpm(metronome.bpm, delta) }))(e);
+              }}
+            >
+              −
+            </button>
             <input
-              type="range"
-              min={MIN_BPM}
-              max={MAX_BPM}
-              value={metronome.bpm}
-              onChange={(e) => updateMetronome({ bpm: Number(e.target.value) })}
-            />
-            <input
+              id="tempo"
               type="number"
               className="num"
               min={MIN_BPM}
               max={MAX_BPM}
-              value={metronome.bpm}
+              value={tempoDraft ?? metronome.bpm}
+              onFocus={(e) => {
+                setTempoDraft(String(metronome.bpm));
+                e.currentTarget.select();
+              }}
+              // Typing "120" passes through "1" and "12": apply only values in range while typing,
+              // and settle the rest (clamped, or back to the tempo if not a number) on Enter or blur.
               onChange={(e) => {
+                setTempoDraft(e.target.value);
                 const bpm = Number(e.target.value);
-                if (bpm >= MIN_BPM && bpm <= MAX_BPM) updateMetronome({ bpm });
+                if (e.target.value !== "" && bpm >= MIN_BPM && bpm <= MAX_BPM) updateMetronome({ bpm: Math.round(bpm) });
+              }}
+              onBlur={() => {
+                const bpm = tempoDraft === null || discardTempoDraft.current ? null : parseBpm(tempoDraft);
+                if (bpm !== null) updateMetronome({ bpm });
+                discardTempoDraft.current = false;
+                setTempoDraft(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") e.currentTarget.blur();
+                if (e.key === "Escape") {
+                  discardTempoDraft.current = true;
+                  e.currentTarget.blur();
+                }
               }}
             />
+            <button
+              className="secondary step"
+              aria-label="Faster"
+              title="1 BPM faster (Shift: 5)"
+              onClick={(e) => {
+                const delta = e.shiftKey ? 5 : 1;
+                releasing(() => updateMetronome({ bpm: stepBpm(metronome.bpm, delta) }))(e);
+              }}
+            >
+              +
+            </button>
             <span className="unit">BPM</span>
-          </label>
-          <label className="field">
-            <span>Beats per bar</span>
-            <select
-              value={metronome.beatsPerBar}
-              onChange={(e) => updateMetronome({ beatsPerBar: Number(e.target.value) })}
-            >
-              {[2, 3, 4, 5, 6, 7].map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="field">
-            <span>Score against</span>
-            <select
-              value={metronome.subdivision}
-              onChange={(e) => {
-                const subdivision = Number(e.target.value);
-                if (isSubdivision(subdivision)) updateMetronome({ subdivision });
-              }}
-            >
-              <option value={1}>Quarter notes</option>
-              <option value={2}>Eighth notes</option>
-              <option value={3}>Triplets</option>
-              <option value={4}>Sixteenth notes</option>
-            </select>
-          </label>
-          <label className="field checkbox">
-            <input
-              type="checkbox"
-              checked={metronome.clickSubdivisions}
-              onChange={(e) => updateMetronome({ clickSubdivisions: e.target.checked })}
-            />
-            <span>Click on subdivisions</span>
-          </label>
-          <label className="field">
-            <span>Volume</span>
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.05}
-              value={volume}
-              onChange={(e) => setVolume(Number(e.target.value))}
-            />
-          </label>
-        </fieldset>
+          </div>
 
-        <fieldset className="group" disabled={calibrating}>
-          <h2>Scoring</h2>
-          <label className="field">
-            <span>Skill level</span>
-            <select
-              value={skillLevel}
-              onChange={(e) => {
-                if (isSkillLevel(e.target.value)) applySkillLevel(e.target.value);
-              }}
-            >
-              {SKILL_LEVELS.map((level) => (
-                <option key={level} value={level}>
-                  {SKILL_PROFILES[level].label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <h2>This session</h2>
+          <dl className="tiles">
+            <div>
+              <dt>On time</dt>
+              <dd>{stats.onTimePct === null ? "—" : `${stats.onTimePct.toFixed(0)}%`}</dd>
+              <dd className="tile-note">
+                {stats.scored === 0 ? "no hits yet" : stats.scored === 1 ? "of 1 hit" : `of ${stats.scored} hits`}
+              </dd>
+            </div>
+            <div>
+              <dt>Average</dt>
+              <dd>{stats.meanMs === null ? "—" : formatDelta(stats.meanMs)}</dd>
+              <dd className="tile-note">
+                {stats.meanMs === null || Math.round(stats.meanMs) === 0 ? "\u00a0" : stats.meanMs < 0 ? "early" : "late"}
+              </dd>
+            </div>
+            <div>
+              <dt>Consistency</dt>
+              <dd>{stats.spreadMs === null ? "—" : `±${stats.spreadMs.toFixed(0)} ms`}</dd>
+              <dd className="tile-note">spread</dd>
+            </div>
+          </dl>
+          <p className="level-summary">{levelSummary}</p>
           {suggestion !== null && suggestion !== dismissedSuggestion && stats.spreadMs !== null && (
             <output className="suggestion">
               <p>
@@ -331,72 +366,25 @@ export default function App() {
                 {SKILL_PROFILES[suggestion].toleranceMs} ms) fits you best right now.
               </p>
               <div className="calibration-actions">
-                <button className="primary" onClick={() => applySkillLevel(suggestion)}>
+                <button className="primary" onClick={releasing(() => applySkillLevel(suggestion))}>
                   Switch to {SKILL_PROFILES[suggestion].label}
                 </button>
-                <button className="secondary" onClick={() => setDismissedSuggestion(suggestion)}>
+                <button className="secondary" onClick={releasing(() => setDismissedSuggestion(suggestion))}>
                   Not now
                 </button>
               </div>
             </output>
           )}
-          <label className="field">
-            <span>On-time window</span>
-            <input
-              type="range"
-              min={5}
-              max={80}
-              value={scoring.toleranceMs}
-              onChange={(e) => updateScoring({ toleranceMs: Number(e.target.value) })}
-            />
-            <span className="unit">±{scoring.toleranceMs} ms</span>
-          </label>
-          <p className="hint">
-            {windowLevel === null
-              ? `Custom window. ${SKILL_PROFILES[skillLevel].label} uses ±${SKILL_PROFILES[skillLevel].toleranceMs} ms.`
-              : `${SKILL_PROFILES[windowLevel].label} window.`}
-          </p>
-          <label className="field">
-            <span>Latency offset</span>
-            <input
-              type="range"
-              min={-200}
-              max={200}
-              value={scoring.latencyOffsetMs}
-              onChange={(e) => updateScoring({ latencyOffsetMs: Number(e.target.value) })}
-            />
-            <span className="unit">{formatDelta(scoring.latencyOffsetMs)}</span>
-          </label>
-          <button className="secondary" onClick={() => void startCalibration()}>
-            Calibrate latency
-          </button>
-          <p className="hint">
-            Calibrate to measure your setup's delay. The skill level sets the calibration tempo and how long
-            it may listen; steadier playing finishes sooner. Fine-tune the offset by hand if needed.
-          </p>
+          {/* Until the guide is opened, the first-visit prompt above stands in for this link. */}
+          {guideSeen && (
+            <button className="link-button" onClick={releasing(openGuide)}>
+              How to play with the metronome
+            </button>
+          )}
         </fieldset>
 
-        <section>
-          <h2>This session</h2>
-          <dl className="stats">
-            <dt>Scored hits</dt>
-            <dd>{stats.scored}</dd>
-            <dt>On time</dt>
-            <dd>{stats.onTimePct === null ? "—" : `${stats.onTimePct.toFixed(0)}%`}</dd>
-            <dt>Average</dt>
-            <dd>{stats.meanMs === null ? "—" : formatDelta(stats.meanMs)}</dd>
-            <dt>Average |error|</dt>
-            <dd>{stats.meanAbsMs === null ? "—" : `${stats.meanAbsMs.toFixed(1)} ms`}</dd>
-            <dt>Consistency</dt>
-            <dd>{stats.spreadMs === null ? "—" : `±${stats.spreadMs.toFixed(0)} ms`}</dd>
-          </dl>
-          <p className="last-note">Last hit: {stats.lastNote}</p>
-        </section>
-
-        <p className="hint">
-          No kit? Use the keyboard: <kbd>Space</kbd> kick, <kbd>S</kbd> snare, <kbd>A</kbd> hi-hat,{" "}
-          <kbd>Q</kbd> crash, <kbd>W</kbd>/<kbd>E</kbd>/<kbd>D</kbd> toms, <kbd>R</kbd> ride.
-        </p>
+        {/* Settings always lists the keys; here only while no kit is playing. */}
+        {!(midi.state === "ready" && midi.selectedId) && <KeyboardHint />}
       </aside>
     </div>
   );

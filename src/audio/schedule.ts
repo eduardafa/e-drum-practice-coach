@@ -21,6 +21,17 @@ export interface MetronomeSettings {
 export const MIN_BPM = 30;
 export const MAX_BPM = 300;
 
+/** The tempo one step of the − / + buttons away, kept within MIN_BPM..MAX_BPM. */
+export function stepBpm(bpm: number, delta: number): number {
+  return Math.min(MAX_BPM, Math.max(MIN_BPM, Math.round(bpm) + delta));
+}
+
+/** A typed tempo, rounded and kept within MIN_BPM..MAX_BPM; null if it isn't a number. */
+export function parseBpm(text: string): number | null {
+  const value = Number(text.trim());
+  return text.trim() === "" || !Number.isFinite(value) ? null : stepBpm(value, 0);
+}
+
 export interface ScheduleCursor {
   nextTime: number;
   beatInBar: number;
