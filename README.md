@@ -14,6 +14,8 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
 - Lookahead metronome on Web Audio, with tempo, beats per bar, subdivisions and an accented downbeat.
 - Per-hit timing in ms, a per-pad timing strip over the last 5 s, and session stats.
 - Adjustable on-time window and latency offset.
+- Latency calibration: play along to 16 clicks and the app measures your setup's delay and sets the
+  offset.
 - Keyboard fallback for trying the app without a kit.
 
 ## Running it
@@ -30,7 +32,8 @@ pnpm build         # type-check + production build
 ```
 
 Plug the kit in over USB, click **Connect kit**, allow MIDI access, then press **M** to start the
-metronome.
+metronome. Before your first session, click **Calibrate latency** and hit any pad on each click, so
+the scores account for your setup's delay.
 
 Without a kit: <kbd>Space</kbd> kick, <kbd>S</kbd> snare, <kbd>A</kbd> hi-hat, <kbd>Z</kbd> hi-hat pedal,
 <kbd>Q</kbd> crash, <kbd>W</kbd>/<kbd>E</kbd>/<kbd>D</kbd> toms, <kbd>R</kbd> ride.
