@@ -1,4 +1,6 @@
 import { findExercise } from "./exercises/library";
+import { isAccuracyMode, type AccuracyMode } from "./playalong/results";
+import { SESSION_LOOPS } from "./playalong/session";
 import { isSubdivision, MAX_BPM, MIN_BPM, type MetronomeSettings } from "./audio/schedule";
 import { isSkillLevel, type SkillLevel } from "./profiles";
 import type { ScoringOptions } from "./timing/grid";
@@ -13,6 +15,10 @@ export interface SavedSettings {
   guideSeen?: boolean;
   /** The exercise shown as notation, if any. */
   exerciseId?: string;
+  /** Which accuracy the play-along results lead with. */
+  accuracyMode?: AccuracyMode;
+  /** How many loops a play-along session lasts. */
+  sessionLoops?: number;
 }
 
 type UnknownRecord = Record<string, unknown>;
@@ -61,6 +67,8 @@ export function parseSettings(raw: unknown): SavedSettings {
     guideSeen: raw.guideSeen === true ? true : undefined,
     // Only ids still in the library: an exercise removed in an update is simply forgotten.
     exerciseId: typeof raw.exerciseId === "string" && findExercise(raw.exerciseId) ? raw.exerciseId : undefined,
+    accuracyMode: isAccuracyMode(raw.accuracyMode) ? raw.accuracyMode : undefined,
+    sessionLoops: SESSION_LOOPS.find((n) => n === raw.sessionLoops),
   };
 }
 
