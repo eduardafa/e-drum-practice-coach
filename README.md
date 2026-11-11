@@ -114,6 +114,7 @@ src/
   audio/    metronome scheduler, worker timer, audio-to-performance clock mapping
   timing/   timing grid and hit scoring
   kit/      Nitro Max note map and pad layout
+  exercises/ exercise format (48 ticks per quarter), drum-tab builder, validator, starter library
   live/     Coach (wiring) and LiveState (shared per-hit state)
   render/   Canvas 2D kit renderer
 ```
