@@ -526,3 +526,8 @@ button:focus-visible {
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* Space between the guide's buttons and the explanation under them. */
+.guide .calibration-actions {
+  margin-bottom: 12px;
+}
