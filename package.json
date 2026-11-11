@@ -14,8 +14,11 @@
     "deploy": "wrangler deploy"
   },
   "dependencies": {
+    "@vexflow-fonts/academico": "1.0.1",
+    "@vexflow-fonts/bravura": "1.0.2",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "vexflow": "5.0.0"
   },
   "devDependencies": {
     "@types/react": "^19.3.0",

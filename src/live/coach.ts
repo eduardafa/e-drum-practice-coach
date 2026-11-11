@@ -29,6 +29,8 @@ export class Coach {
   /** The drummer's metronome settings, restored when calibration ends. */
   private settingsBeforeCalibration: MetronomeSettings | null = null;
   private unsubscribers: Array<() => void> = [];
+  /** Bars started since the metronome started; -1 before the first downbeat. */
+  private bar = -1;
 
   constructor(settings: MetronomeSettings = DEFAULT_METRONOME) {
     this.metronome = new Metronome(settings, this.grid);
@@ -36,7 +38,9 @@ export class Coach {
       this.midi.onEvent((e) => this.handleMidi(e)),
       this.metronome.onStep((step) => {
         const { beatsPerBar, subdivision } = this.metronome.currentSettings;
-        this.live.addCount({ time: step.performanceTime, ...countAt(step, beatsPerBar, subdivision) });
+        if (step.beatInBar === 0 && step.subInBeat === 0) this.bar += 1;
+        const count = countAt(step, beatsPerBar, subdivision);
+        this.live.addCount({ time: step.performanceTime, ...count, bar: Math.max(0, this.bar) });
         if (!step.beat) return;
         this.live.addBeat({ time: step.performanceTime, downbeat: step.downbeat });
         // No more clicks needed: the target was reached or the limit is scheduled.
@@ -52,6 +56,7 @@ export class Coach {
   async startMetronome(): Promise<void> {
     if (this.calibrating) return;
     this.live.resetSession();
+    this.bar = -1;
     await this.metronome.start();
   }
 

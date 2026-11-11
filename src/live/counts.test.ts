@@ -37,9 +37,9 @@ describe("countAt", () => {
 
 describe("currentCount", () => {
   const counts: Count[] = [
-    { time: 1000, index: 0, label: "1" },
-    { time: 1250, index: 1, label: "&" },
-    { time: 1500, index: 2, label: "2" },
+    { time: 1000, index: 0, label: "1", bar: 0 },
+    { time: 1250, index: 1, label: "&", bar: 0 },
+    { time: 1500, index: 2, label: "2", bar: 0 },
   ];
 
   it("is null before the first count", () => {

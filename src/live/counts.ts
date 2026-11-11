@@ -30,6 +30,8 @@ export interface Count {
   /** Position within the bar, from 0. */
   index: number;
   label: string;
+  /** Bars since the metronome started, from 0, so multi-bar exercises know which bar is playing. */
+  bar: number;
 }
 
 /** The count for a step at this position in the bar. */

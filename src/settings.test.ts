@@ -18,6 +18,12 @@ describe("parseSettings", () => {
     expect(parseSettings({ skillLevel: "firstSteps" }).skillLevel).toBe("firstSteps");
   });
 
+  it("keeps an exercise that's in the library, and drops one that isn't", () => {
+    expect(parseSettings({ exerciseId: "paradiddle" }).exerciseId).toBe("paradiddle");
+    expect(parseSettings({ exerciseId: "removed-groove" }).exerciseId).toBeUndefined();
+    expect(parseSettings({ exerciseId: 42 }).exerciseId).toBeUndefined();
+  });
+
   it("only keeps guideSeen when it's true", () => {
     expect(parseSettings({ guideSeen: "yes" }).guideSeen).toBeUndefined();
   });
