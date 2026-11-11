@@ -1,0 +1,6 @@
+# Dependency build scripts are blocked unless listed here. esbuild and workerd come with
+# wrangler; their scripts are only needed for local `wrangler dev` and bundling Worker code,
+# not for deploying static assets, so they stay off.
+allowBuilds:
+  esbuild: false
+  workerd: false
