@@ -1,0 +1,11 @@
+# CodeQL configuration, shared by every language in .github/workflows/codeql.yml.
+name: CodeQL config
+# The default suite plus extra security queries with a slightly higher
+# false-positive rate. Findings are triaged, not ignored.
+queries:
+  - uses: security-extended
+# Build output and dependencies aren't our code. (They aren't checked out in CI
+# either; this keeps local runs consistent.)
+paths-ignore:
+  - dist
+  - node_modules
