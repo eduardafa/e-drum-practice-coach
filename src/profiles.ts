@@ -5,14 +5,14 @@
  * long it may keep listening.
  */
 
-export type SkillLevel = "beginner" | "intermediate" | "advanced";
+export type SkillLevel = "firstSteps" | "beginner" | "intermediate" | "advanced";
 
-export const SKILL_LEVELS: readonly SkillLevel[] = ["beginner", "intermediate", "advanced"];
+export const SKILL_LEVELS: readonly SkillLevel[] = ["firstSteps", "beginner", "intermediate", "advanced"];
 
 export const DEFAULT_SKILL_LEVEL: SkillLevel = "beginner";
 
 export function isSkillLevel(value: unknown): value is SkillLevel {
-  return value === "beginner" || value === "intermediate" || value === "advanced";
+  return value === "firstSteps" || value === "beginner" || value === "intermediate" || value === "advanced";
 }
 
 export interface SkillProfile {
@@ -36,6 +36,14 @@ export interface SkillProfile {
 }
 
 export const SKILL_PROFILES: Readonly<Record<SkillLevel, SkillProfile>> = {
+  firstSteps: {
+    label: "First steps",
+    toleranceMs: 70,
+    typicalSpreadMs: 60,
+    // ±12 ms is a sixth of the ±70 ms window (Beginner's ratio too), and keeps a
+    // ±69 ms player's run near a minute; ±10 would take about 80 s (simulated).
+    calibration: { bpm: 60, maxClicks: 96, targetUncertaintyMs: 12 },
+  },
   beginner: {
     label: "Beginner",
     toleranceMs: 35,
