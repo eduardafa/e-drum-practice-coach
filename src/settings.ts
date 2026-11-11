@@ -1,3 +1,4 @@
+import { findExercise } from "./exercises/library";
 import { isSubdivision, MAX_BPM, MIN_BPM, type MetronomeSettings } from "./audio/schedule";
 import { isSkillLevel, type SkillLevel } from "./profiles";
 import type { ScoringOptions } from "./timing/grid";
@@ -10,6 +11,8 @@ export interface SavedSettings {
   skillLevel?: SkillLevel;
   /** The drummer has opened the metronome guide at least once. */
   guideSeen?: boolean;
+  /** The exercise shown as notation, if any. */
+  exerciseId?: string;
 }
 
 type UnknownRecord = Record<string, unknown>;
@@ -56,6 +59,8 @@ export function parseSettings(raw: unknown): SavedSettings {
     scoring: parseScoring(raw.scoring),
     skillLevel: isSkillLevel(raw.skillLevel) ? raw.skillLevel : undefined,
     guideSeen: raw.guideSeen === true ? true : undefined,
+    // Only ids still in the library: an exercise removed in an update is simply forgotten.
+    exerciseId: typeof raw.exerciseId === "string" && findExercise(raw.exerciseId) ? raw.exerciseId : undefined,
   };
 }
 
