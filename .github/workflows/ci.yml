@@ -35,7 +35,10 @@ jobs:
     continue-on-error: ${{ matrix.runner != 'ubuntu-latest' }}
     timeout-minutes: 10
     steps:
+      # Nothing in this workflow pushes, so the token isn't kept in .git/config.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       # Every action must be pinned to a full commit SHA, with a version comment
       # that matches it. pinact is downloaded at a fixed version and checked
@@ -145,6 +148,8 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: steps.creds.outputs.ok
+        with:
+          persist-credentials: false
 
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         if: steps.creds.outputs.ok
