@@ -1,13 +1,17 @@
 import { useEffect, useState } from "react";
 import type { CalibrationProgress } from "./live/calibration";
 import type { Coach } from "./live/coach";
-import { SKILL_PROFILES, type SkillLevel } from "./profiles";
+import { SKILL_PROFILES, suggestLevel, type SkillLevel } from "./profiles";
 import { formatDelta } from "./render/kitRenderer";
 import type { CalibrationResult } from "./timing/calibration";
 
 interface Props {
   coach: Coach;
+  /** The level this run was started with. */
   level: SkillLevel;
+  /** The level selected now (it can change from the result screen). */
+  currentLevel: SkillLevel;
+  onSwitchLevel: (level: SkillLevel) => void;
   currentOffsetMs: number;
   onRetry: () => void;
   /** Called with the offset to apply, or null to keep the current one. */
@@ -24,7 +28,15 @@ function useProgress(coach: Coach): CalibrationProgress | null {
   return progress;
 }
 
-export function CalibrationPanel({ coach, level, currentOffsetMs, onRetry, onClose }: Props) {
+export function CalibrationPanel({
+  coach,
+  level,
+  currentLevel,
+  onSwitchLevel,
+  currentOffsetMs,
+  onRetry,
+  onClose,
+}: Props) {
   const progress = useProgress(coach);
   const profile = SKILL_PROFILES[level];
 
@@ -46,6 +58,8 @@ export function CalibrationPanel({ coach, level, currentOffsetMs, onRetry, onClo
         <Result
           result={progress.result}
           level={level}
+          currentLevel={currentLevel}
+          onSwitchLevel={onSwitchLevel}
           currentOffsetMs={currentOffsetMs}
           onRetry={onRetry}
           onClose={onClose}
@@ -104,6 +118,8 @@ function Listening({ progress }: { progress: Extract<CalibrationProgress, { phas
 function Result({
   result,
   level,
+  currentLevel,
+  onSwitchLevel,
   currentOffsetMs,
   onRetry,
   onClose,
@@ -143,6 +159,7 @@ function Result({
           starting point. Calibrate again as your playing gets steadier.
         </p>
       )}
+      <LevelSuggestion spreadMs={spreadMs} currentLevel={currentLevel} onSwitchLevel={onSwitchLevel} />
       <dl className="stats">
         <dt>Your consistency</dt>
         <dd>±{spreadMs.toFixed(0)} ms</dd>
@@ -165,6 +182,31 @@ function Result({
         </button>
       </div>
     </>
+  );
+}
+
+/** Suggests the level that fits the spread measured during calibration, if it differs. */
+function LevelSuggestion({
+  spreadMs,
+  currentLevel,
+  onSwitchLevel,
+}: {
+  spreadMs: number;
+  currentLevel: SkillLevel;
+  onSwitchLevel: (level: SkillLevel) => void;
+}) {
+  const suggested = suggestLevel(currentLevel, spreadMs);
+  if (suggested === null) return null;
+  const { label, toleranceMs } = SKILL_PROFILES[suggested];
+  return (
+    <div className="suggestion">
+      <p>
+        Based on how you played (±{spreadMs.toFixed(0)} ms), {label} fits you best: its on-time window is ±{toleranceMs} ms.
+      </p>
+      <button className="secondary" onClick={() => onSwitchLevel(suggested)}>
+        Switch to {label}
+      </button>
+    </div>
   );
 }
 
