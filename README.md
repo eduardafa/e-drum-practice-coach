@@ -23,6 +23,10 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
 - Latency calibration: play along to the click and the app measures your setup's delay and sets the
   offset. It adapts to your skill level (Beginner, Intermediate, Advanced) and keeps listening until the
   measurement is precise, so steadier playing finishes sooner.
+- Drum notation: pick a groove or rudiment from the starter library and it appears as standard drum notation
+  above the kit view, with a playhead that follows the metronome. Picking one also sets the metronome to fit
+  it. The notation is engraved with [VexFlow](https://www.vexflow.com/), loaded only when an exercise is
+  picked.
 - Keyboard fallback for trying the app without a kit.
 
 ## Running it
@@ -125,6 +129,7 @@ src/
   playalong/ expected-note timeline and hit matching for play-along scoring
   live/     Coach (wiring) and LiveState (shared per-hit state)
   guide/    the metronome guide's steps, as data
+  notation/ rhythm spelling, VexFlow engraving (loaded on demand) and the playhead mapping
   render/   Canvas 2D kit renderer
 ```
 
