@@ -1,10 +1,13 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { MAX_BPM, MIN_BPM, parseBpm, stepBpm, type MetronomeSettings } from "./audio/schedule";
 import { CalibrationPanel } from "./CalibrationPanel";
 import { KeyboardHint } from "./KeyboardHint";
 import { LiveCount } from "./LiveCount";
 import { MetronomeGuide } from "./MetronomeGuide";
-import { NotationStrip } from "./NotationStrip";
+import { NotationStrip, type SessionView } from "./NotationStrip";
+import type { AccuracyMode } from "./playalong/results";
+import { DEFAULT_SESSION_LOOPS } from "./playalong/session";
+import { ResultsPanel } from "./ResultsPanel";
 import { findExercise } from "./exercises/library";
 import { metronomeForExercise } from "./exercises/practice";
 import { Coach, DEFAULT_METRONOME } from "./live/coach";
@@ -56,15 +59,31 @@ interface Stats {
   onTimePct: number | null;
   meanMs: number | null;
   spreadMs: number | null;
+  /** The metronome stops by itself when a play-along session ends. */
+  running: boolean;
+  session: (Omit<SessionView, "accuracy"> & { accuracy: Record<AccuracyMode, number | null> }) | null;
 }
 
 function readStats(): Stats {
   const l = coach.live;
+  const now = performance.now();
+  // Also resolves missed notes when no exercise is drawn to do it every frame.
+  coach.tickSession(now);
+  const session = coach.session;
   return {
     scored: l.scoredHits,
     onTimePct: l.scoredHits ? (100 * l.onTimeHits) / l.scoredHits : null,
     meanMs: l.scoredHits ? l.sumDeltaMs / l.scoredHits : null,
     spreadMs: l.spreadMs,
+    running: coach.metronome.running,
+    session: session
+      ? {
+          phase: session.phase,
+          loop: session.currentLoop(now),
+          loops: session.loops,
+          accuracy: session.results().accuracy,
+        }
+      : null,
   };
 }
 
@@ -93,6 +112,8 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [exerciseId, setExerciseId] = useState<string | null>(saved.exerciseId ?? null);
   const exercise = exerciseId === null ? null : (findExercise(exerciseId) ?? null);
+  const [sessionLoops, setSessionLoops] = useState(saved.sessionLoops ?? DEFAULT_SESSION_LOOPS);
+  const [accuracyMode, setAccuracyMode] = useState<AccuracyMode>(saved.accuracyMode ?? "partial");
   /** What's typed in the tempo box while it has focus; null shows the current tempo. */
   const [tempoDraft, setTempoDraft] = useState<string | null>(null);
   /** Set by Escape so the blur that follows throws the draft away instead of applying it. */
@@ -119,8 +140,24 @@ export default function App() {
   useEffect(() => {
     coach.metronome.setSettings(metronome);
     coach.scoring = scoring;
-    saveSettings({ metronome, scoring, skillLevel, guideSeen: guideSeen || undefined, exerciseId: exerciseId ?? undefined });
-  }, [metronome, scoring, skillLevel, guideSeen, exerciseId]);
+    saveSettings({
+      metronome,
+      scoring,
+      skillLevel,
+      guideSeen: guideSeen || undefined,
+      exerciseId: exerciseId ?? undefined,
+      accuracyMode,
+      sessionLoops,
+    });
+  }, [metronome, scoring, skillLevel, guideSeen, exerciseId, accuracyMode, sessionLoops]);
+
+  const sessionView = useMemo<SessionView | null>(
+    () => stats.session && { ...stats.session, accuracy: stats.session.accuracy[accuracyMode] },
+    [stats.session, accuracyMode],
+  );
+
+  // A finished session stops the clicks by itself; keep the Start button in step.
+  if (running && !stats.running && stats.session?.phase === "done") setRunning(false);
 
   useEffect(() => {
     coach.metronome.volume = volume;
@@ -128,6 +165,8 @@ export default function App() {
 
   const toggleMetronome = async () => {
     if (coach.calibrating) return;
+    // Stopping during a session abandons it; starting plain clicks clears a finished one.
+    coach.endSession();
     if (coach.metronome.running) {
       coach.stopMetronome();
       setRunning(false);
@@ -172,7 +211,23 @@ export default function App() {
     setSettingsOpen((open) => !open);
   };
 
+  /** Starts a play-along session at `bpm` (the current tempo, or a retry's new tempo). */
+  const startSession = async (bpm: number) => {
+    if (!exercise || coach.calibrating) return;
+    setGuideOpen(false);
+    setSettingsOpen(false);
+    const settings = await coach.startSession(exercise, sessionLoops, bpm);
+    setMetronome(settings);
+    setRunning(true);
+  };
+
+  const stopSession = () => {
+    coach.endSession();
+    setRunning(false);
+  };
+
   const startCalibration = async () => {
+    coach.endSession();
     setGuideOpen(false);
     setSettingsOpen(false);
     setRunning(false);
@@ -205,6 +260,7 @@ export default function App() {
 
   /** Picking an exercise sets the metronome to fit it: suggested tempo, its beats, fine enough to score every note. */
   const selectExercise = (id: string | null) => {
+    coach.endSession();
     setExerciseId(id);
     const picked = id === null ? undefined : findExercise(id);
     if (picked) setMetronome((m) => metronomeForExercise(picked, m.clickSubdivisions));
@@ -222,7 +278,16 @@ export default function App() {
       </header>
 
       <main className="stage">
-        <NotationStrip coach={coach} exercise={exercise} onSelect={selectExercise} />
+        <NotationStrip
+          coach={coach}
+          exercise={exercise}
+          onSelect={selectExercise}
+          session={sessionView}
+          loops={sessionLoops}
+          onLoopsChange={setSessionLoops}
+          onPlay={() => void startSession(metronome.bpm)}
+          onStop={stopSession}
+        />
         <canvas ref={canvasRef} className="kit-canvas" aria-label="Live view of the drum kit" />
         {guideOpen && !calibrating && (
           <MetronomeGuide
@@ -244,8 +309,21 @@ export default function App() {
             onScoringChange={updateScoring}
             skillLevel={skillLevel}
             onSkillLevelChange={applySkillLevel}
+            accuracyMode={accuracyMode}
+            onAccuracyModeChange={setAccuracyMode}
             onCalibrate={() => void startCalibration()}
             onClose={() => setSettingsOpen(false)}
+          />
+        )}
+        {exercise && stats.session?.phase === "done" && coach.session && !calibrating && (
+          <ResultsPanel
+            exercise={exercise}
+            results={coach.session.results()}
+            mode={accuracyMode}
+            bpm={coach.session.bpm}
+            loops={coach.session.loops}
+            onRetry={(change) => void startSession(stepBpm(coach.session?.bpm ?? metronome.bpm, change))}
+            onClose={() => coach.endSession()}
           />
         )}
         {calibrating && (

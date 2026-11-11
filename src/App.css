@@ -820,3 +820,93 @@ fieldset.group.play {
     display: none;
   }
 }
+
+/* Play-along controls in the notation header. */
+.notation-header button.primary.play {
+  padding: 5px 12px;
+  font-size: 13px;
+}
+
+.notation-header button.secondary {
+  padding: 4px 12px;
+  font-size: 13px;
+}
+
+/* Result rings on the noteheads: the latest result of each note. */
+.marks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.mark {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border-radius: 50%;
+  border: 2.5px solid transparent;
+}
+
+.mark.onTime {
+  border-color: #3ddc84;
+}
+
+.mark.early {
+  border-color: #4ea8ff;
+}
+
+.mark.late {
+  border-color: #ff9f43;
+}
+
+.mark.missed {
+  border: 2px dashed #ff6b6b;
+}
+
+/* End-of-session results, in the calibration panel's place. */
+.calibration.results {
+  max-height: calc(100% - 32px);
+  overflow-y: auto;
+}
+
+.results .results-score {
+  font-size: 44px;
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  margin: 4px 0 0;
+}
+
+.results .calibration-meta {
+  text-align: center;
+}
+
+.pad-results {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 14px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pad-results th,
+.pad-results td {
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border);
+  text-align: right;
+}
+
+.pad-results th[scope="row"],
+.pad-results thead th:first-child {
+  text-align: left;
+}
+
+.pad-results thead th {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.results .hint {
+  margin-top: 10px;
+}

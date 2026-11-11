@@ -1,5 +1,6 @@
 import { isSubdivision, type MetronomeSettings } from "./audio/schedule";
 import { KeyboardHint } from "./KeyboardHint";
+import { isAccuracyMode, type AccuracyMode } from "./playalong/results";
 import { isSkillLevel, levelForTolerance, SKILL_LEVELS, SKILL_PROFILES, type SkillLevel } from "./profiles";
 import { releasing } from "./releasing";
 import { formatDelta } from "./render/kitRenderer";
@@ -14,6 +15,8 @@ interface Props {
   onScoringChange: (patch: Partial<ScoringOptions>) => void;
   skillLevel: SkillLevel;
   onSkillLevelChange: (level: SkillLevel) => void;
+  accuracyMode: AccuracyMode;
+  onAccuracyModeChange: (mode: AccuracyMode) => void;
   onCalibrate: () => void;
   onClose: () => void;
 }
@@ -31,6 +34,8 @@ export function SettingsPanel({
   onScoringChange,
   skillLevel,
   onSkillLevelChange,
+  accuracyMode,
+  onAccuracyModeChange,
   onCalibrate,
   onClose,
 }: Props) {
@@ -143,6 +148,26 @@ export function SettingsPanel({
       <p className="hint">
         Calibrate to measure your setup's delay. The skill level sets the calibration tempo and how long it may
         listen; steadier playing finishes sooner. Fine-tune the offset by hand if needed.
+      </p>
+
+      <h3>Play along</h3>
+      <label className="field">
+        <span>Accuracy</span>
+        <select
+          value={accuracyMode}
+          onChange={(e) => {
+            if (isAccuracyMode(e.target.value)) onAccuracyModeChange(e.target.value);
+          }}
+        >
+          <option value="partial">Partial credit</option>
+          <option value="strict">Strict</option>
+        </select>
+      </label>
+      <p className="hint">
+        {accuracyMode === "partial"
+          ? "A hit inside your on-time window counts fully; a bit outside still counts for part, less the further off it is. Gentler while you're learning."
+          : "Only hits inside your on-time window count. Clear and demanding."}{" "}
+        Both are shown at the end of a session.
       </p>
 
       <h3>Keyboard</h3>
