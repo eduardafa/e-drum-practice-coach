@@ -11,7 +11,9 @@ import { ResultsPanel } from "./ResultsPanel";
 import { nextRound, type RoundRecord, type TrainerConfig } from "./playalong/trainer";
 import { TrainerPanel, type TrainerStage } from "./TrainerPanel";
 import { findExercise } from "./exercises/library";
-import { metronomeForExercise } from "./exercises/practice";
+import { metronomeForExercise, startingTempo } from "./exercises/practice";
+import type { Exercise } from "./exercises/types";
+import { LibraryPanel } from "./LibraryPanel";
 import { Coach, DEFAULT_METRONOME } from "./live/coach";
 import type { MidiStatus } from "./midi/connection";
 import {
@@ -118,6 +120,11 @@ export default function App() {
   const exercise = exerciseId === null ? null : (findExercise(exerciseId) ?? null);
   const [sessionLoops, setSessionLoops] = useState(saved.sessionLoops ?? DEFAULT_SESSION_LOOPS);
   const [accuracyMode, setAccuracyMode] = useState<AccuracyMode>(saved.accuracyMode ?? "partial");
+  /** The last tempo used for each exercise, so choosing one again picks up where the drummer left off. */
+  const [exerciseTempos, setExerciseTempos] = useState<Record<string, number>>(saved.exerciseTempos ?? {});
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  /** The exercise whose preview is playing in the library, or null. */
+  const [previewingId, setPreviewingId] = useState<string | null>(null);
   /** The tempo trainer: null when off; "round" while a round is being played (no panel then). */
   const [trainer, setTrainer] = useState<TrainerStage | { kind: "round" } | null>(null);
   const [trainerConfig, setTrainerConfig] = useState<TrainerConfig | null>(null);
@@ -158,8 +165,14 @@ export default function App() {
       exerciseId: exerciseId ?? undefined,
       accuracyMode,
       sessionLoops,
+      exerciseTempos,
     });
-  }, [metronome, scoring, skillLevel, guideSeen, exerciseId, accuracyMode, sessionLoops]);
+  }, [metronome, scoring, skillLevel, guideSeen, exerciseId, accuracyMode, sessionLoops, exerciseTempos]);
+
+  // Remember the tempo of the exercise on the staff, however it changed (− / +, typed, a retry, the trainer).
+  if (exerciseId !== null && exerciseTempos[exerciseId] !== metronome.bpm) {
+    setExerciseTempos({ ...exerciseTempos, [exerciseId]: metronome.bpm });
+  }
 
   const sessionView = useMemo<SessionView | null>(
     () => stats.session && { ...stats.session, accuracy: stats.session.accuracy[accuracyMode] },
@@ -173,6 +186,33 @@ export default function App() {
     coach.metronome.volume = volume;
   }, [volume]);
 
+  const stopPreview = () => {
+    coach.preview.stop();
+    setPreviewingId(null);
+  };
+
+  const closeLibrary = () => {
+    stopPreview();
+    setLibraryOpen(false);
+  };
+
+  const toggleLibrary = () => {
+    if (libraryOpen) {
+      closeLibrary();
+      return;
+    }
+    setSettingsOpen(false);
+    setGuideOpen(false);
+    setLibraryOpen(true);
+  };
+
+  /** Plays one loop; the metronome stops so the two don't clash. */
+  const previewExercise = (picked: Exercise, bpm: number) => {
+    setPreviewingId(picked.id);
+    setRunning(false);
+    void coach.startPreview(picked, bpm, () => setPreviewingId((id) => (id === picked.id ? null : id)));
+  };
+
   const stopTrainer = () => {
     coach.endSession();
     setRunning(false);
@@ -181,6 +221,7 @@ export default function App() {
 
   const toggleMetronome = async () => {
     if (coach.calibrating) return;
+    stopPreview();
     if (trainer?.kind === "round" || trainer?.kind === "between") {
       stopTrainer();
       return;
@@ -198,11 +239,14 @@ export default function App() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.code === "Escape" && (settingsOpen || guideOpen)) {
+      if (e.code === "Escape" && (settingsOpen || guideOpen || libraryOpen)) {
         setSettingsOpen(false);
         setGuideOpen(false);
+        closeLibrary();
         return;
       }
+      // While browsing, keys move around the library: Space and Enter press its buttons, not the drums.
+      if (libraryOpen) return;
       if (e.repeat || e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
       if (e.code === "KeyM") {
         void toggleMetronome();
@@ -220,6 +264,7 @@ export default function App() {
 
   // Only one panel is open over the kit view at a time.
   const openGuide = () => {
+    closeLibrary();
     setSettingsOpen(false);
     setGuideFirstOpen(!guideSeen);
     setGuideOpen(true);
@@ -227,6 +272,7 @@ export default function App() {
   };
 
   const toggleSettings = () => {
+    closeLibrary();
     setGuideOpen(false);
     setSettingsOpen((open) => !open);
   };
@@ -234,6 +280,7 @@ export default function App() {
   /** Starts a play-along session at `bpm` (the current tempo, or a retry's new tempo). */
   const startSession = async (bpm: number) => {
     if (!exercise || coach.calibrating) return;
+    closeLibrary();
     setGuideOpen(false);
     setSettingsOpen(false);
     const settings = await coach.startSession(exercise, sessionLoops, bpm);
@@ -285,6 +332,7 @@ export default function App() {
   }, [trainer]);
 
   const startCalibration = async () => {
+    closeLibrary();
     coach.endSession();
     setGuideOpen(false);
     setSettingsOpen(false);
@@ -316,12 +364,19 @@ export default function App() {
     if (offsetMs !== null) setScoring((s) => ({ ...s, latencyOffsetMs: offsetMs }));
   };
 
-  /** Picking an exercise sets the metronome to fit it: suggested tempo, its beats, fine enough to score every note. */
+  /**
+   * Choosing an exercise sets the metronome to fit it: the drummer's last tempo for it (or its
+   * suggested tempo), its beats, and fine enough to score every note.
+   */
   const selectExercise = (id: string | null) => {
+    closeLibrary();
     coach.endSession();
+    setTrainer(null);
     setExerciseId(id);
     const picked = id === null ? undefined : findExercise(id);
-    if (picked) setMetronome((m) => metronomeForExercise(picked, m.clickSubdivisions));
+    if (picked) {
+      setMetronome((m) => metronomeForExercise(picked, m.clickSubdivisions, startingTempo(picked, exerciseTempos)));
+    }
   };
 
   const updateMetronome = (patch: Partial<MetronomeSettings>) =>
@@ -340,6 +395,8 @@ export default function App() {
           coach={coach}
           exercise={exercise}
           onSelect={selectExercise}
+          onBrowse={toggleLibrary}
+          libraryOpen={libraryOpen}
           session={sessionView}
           loops={sessionLoops}
           onLoopsChange={setSessionLoops}
@@ -382,7 +439,19 @@ export default function App() {
             onClose={() => setSettingsOpen(false)}
           />
         )}
-        {exercise && trainer && trainer.kind !== "round" && !calibrating && (
+        {libraryOpen && !calibrating && (
+          <LibraryPanel
+            selectedId={exerciseId}
+            tempos={exerciseTempos}
+            player={coach.preview}
+            previewingId={previewingId}
+            onPreview={previewExercise}
+            onStopPreview={stopPreview}
+            onSelect={selectExercise}
+            onClose={closeLibrary}
+          />
+        )}
+        {exercise && trainer && trainer.kind !== "round" && !libraryOpen && !calibrating && (
           <TrainerPanel
             exercise={exercise}
             stage={trainer}
@@ -396,7 +465,7 @@ export default function App() {
             }}
           />
         )}
-        {exercise && !trainer && stats.session?.phase === "done" && coach.session && !calibrating && (
+        {exercise && !trainer && stats.session?.phase === "done" && coach.session && !libraryOpen && !calibrating && (
           <ResultsPanel
             exercise={exercise}
             results={coach.session.results()}
