@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { MAX_BPM, MIN_BPM, stepBpm, type MetronomeSettings } from "./audio/schedule";
+import { MAX_BPM, MIN_BPM, parseBpm, stepBpm, type MetronomeSettings } from "./audio/schedule";
 import { CalibrationPanel } from "./CalibrationPanel";
 import { KeyboardHint } from "./KeyboardHint";
 import { LiveCount } from "./LiveCount";
@@ -88,6 +88,10 @@ export default function App() {
   const [calibrating, setCalibrating] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  /** What's typed in the tempo box while it has focus; null shows the current tempo. */
+  const [tempoDraft, setTempoDraft] = useState<string | null>(null);
+  /** Set by Escape so the blur that follows throws the draft away instead of applying it. */
+  const discardTempoDraft = useRef(false);
   const [guideSeen, setGuideSeen] = useState(saved.guideSeen === true);
   /** Whether this opening of the guide is the drummer's first. */
   const [guideFirstOpen, setGuideFirstOpen] = useState(false);
@@ -292,13 +296,30 @@ export default function App() {
               className="num"
               min={MIN_BPM}
               max={MAX_BPM}
-              value={metronome.bpm}
+              value={tempoDraft ?? metronome.bpm}
+              onFocus={(e) => {
+                setTempoDraft(String(metronome.bpm));
+                e.currentTarget.select();
+              }}
+              // Typing "120" passes through "1" and "12": apply only values in range while typing,
+              // and settle the rest (clamped, or back to the tempo if not a number) on Enter or blur.
               onChange={(e) => {
+                setTempoDraft(e.target.value);
                 const bpm = Number(e.target.value);
-                if (bpm >= MIN_BPM && bpm <= MAX_BPM) updateMetronome({ bpm });
+                if (e.target.value !== "" && bpm >= MIN_BPM && bpm <= MAX_BPM) updateMetronome({ bpm: Math.round(bpm) });
+              }}
+              onBlur={() => {
+                const bpm = tempoDraft === null || discardTempoDraft.current ? null : parseBpm(tempoDraft);
+                if (bpm !== null) updateMetronome({ bpm });
+                discardTempoDraft.current = false;
+                setTempoDraft(null);
               }}
               onKeyDown={(e) => {
                 if (e.key === "Enter") e.currentTarget.blur();
+                if (e.key === "Escape") {
+                  discardTempoDraft.current = true;
+                  e.currentTarget.blur();
+                }
               }}
             />
             <button
