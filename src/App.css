@@ -596,6 +596,14 @@ fieldset.group.play {
 
 .play-row button.secondary {
   margin-top: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.play-row .icon {
+  font-size: 19px;
+  line-height: 1;
 }
 
 .secondary.selected {

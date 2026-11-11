@@ -266,7 +266,10 @@ export default function App() {
               aria-expanded={settingsOpen}
               onClick={releasing(toggleSettings)}
             >
-              <span aria-hidden>⚙</span> Settings
+              <span className="icon" aria-hidden>
+                ⚙
+              </span>
+              Settings
             </button>
           </div>
           <LiveCount coach={coach} />
