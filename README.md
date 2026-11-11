@@ -71,6 +71,13 @@ locally:
 actionlint          # checks .github/workflows
 ```
 
+[zizmor](https://github.com/zizmorcore/zizmor) audits the workflows for security problems, such as leaked
+credentials, script injection, or a pinned SHA that only exists in a fork:
+
+```sh
+GH_TOKEN=$(gh auth token) zizmor .github/
+```
+
 ## Security scanning
 
 The `Security` workflow runs [Trivy](https://github.com/aquasecurity/trivy) on every pull request, on pushes to
