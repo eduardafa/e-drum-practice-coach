@@ -601,8 +601,9 @@ fieldset.group.play {
   gap: 6px;
 }
 
+/* The gear glyph is drawn at 0.75 of its font size: 12 px makes it 9 px, the cap height of "Settings". */
 .play-row .icon {
-  font-size: 19px;
+  font-size: 12px;
   line-height: 1;
 }
 
