@@ -28,7 +28,8 @@ export interface SkillProfile {
 }
 
 export const SKILL_PROFILES: Readonly<Record<SkillLevel, SkillProfile>> = {
-  beginner: { label: "Beginner", calibration: { bpm: 70, maxClicks: 80, targetUncertaintyMs: 5 } },
+  // ±7 ms is ample next to a beginner's on-time window, and halves the run for a ±29 ms player.
+  beginner: { label: "Beginner", calibration: { bpm: 70, maxClicks: 80, targetUncertaintyMs: 7 } },
   intermediate: { label: "Intermediate", calibration: { bpm: 80, maxClicks: 48, targetUncertaintyMs: 4 } },
   advanced: { label: "Advanced", calibration: { bpm: 90, maxClicks: 32, targetUncertaintyMs: 3 } },
 };

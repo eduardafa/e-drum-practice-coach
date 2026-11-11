@@ -50,7 +50,7 @@ describe("calibrationSetup", () => {
     const beginner = calibrationSetup("beginner");
     expect(beginner.metronome.bpm).toBe(SKILL_PROFILES.beginner.calibration.bpm);
     expect(beginner.plan.maxClicks).toBe(80);
-    expect(beginner.options.targetUncertaintyMs).toBe(5);
+    expect(beginner.options.targetUncertaintyMs).toBe(7);
     expect(calibrationSetup("advanced").options.targetUncertaintyMs).toBe(3);
   });
 });
@@ -114,6 +114,19 @@ describe("CalibrationSession: adaptive length", () => {
     // and nearly all within 10 ms.
     expect(within(5)).toBeGreaterThanOrEqual(0.6);
     expect(within(10)).toBeGreaterThanOrEqual(0.93);
+  });
+
+  it("with the real Beginner profile, a ±29 ms drummer finishes in about 30 clicks", () => {
+    const { plan, options } = calibrationSetup("beginner");
+    const runs = Array.from({ length: 100 }, (_, seed) => {
+      const { result, clicksAfterCountIn } = simulate(new CalibrationSession(plan, options), 25, 29, seed + 500);
+      if (!result.ok) throw new Error(`seed ${seed}: ${result.reason}`);
+      return { error: Math.abs(result.offsetMs - 25), clicks: clicksAfterCountIn, confident: result.confident };
+    });
+    const mean = runs.reduce((sum, r) => sum + r.clicks, 0) / runs.length;
+    expect(mean).toBeLessThan(40);
+    expect(runs.every((r) => r.confident)).toBe(true);
+    expect(runs.filter((r) => r.error <= 14).length / runs.length).toBeGreaterThanOrEqual(0.93);
   });
 
   it("still gives a usable result when the limit comes first", () => {
