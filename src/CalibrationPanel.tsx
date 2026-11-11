@@ -3,7 +3,7 @@ import type { CalibrationProgress } from "./live/calibration";
 import type { Coach } from "./live/coach";
 import { SKILL_PROFILES, suggestLevel, type SkillLevel } from "./profiles";
 import { formatDelta } from "./render/kitRenderer";
-import type { CalibrationResult } from "./timing/calibration";
+import { isClearlyNegative, type CalibrationResult } from "./timing/calibration";
 
 interface Props {
   coach: Coach;
@@ -141,6 +141,7 @@ function Result({
   }
 
   const { offsetMs, spreadMs, uncertaintyMs, confident, used, rejected } = result;
+  const negative = isClearlyNegative(result);
   const amount =
     offsetMs === 0
       ? "no measurable delay"
@@ -159,6 +160,12 @@ function Result({
           starting point. Calibrate again as your playing gets steadier.
         </p>
       )}
+      {negative && (
+        <p className="calibration-note warn-note">
+          A negative result usually means playing ahead of the click, not a delay in your setup. Using it would count
+          your early hits as on time. Keeping the offset at 0 ms keeps them visible, so you can practise them away.
+        </p>
+      )}
       <LevelSuggestion spreadMs={spreadMs} currentLevel={currentLevel} onSwitchLevel={onSwitchLevel} />
       <dl className="stats">
         <dt>Your consistency</dt>
@@ -171,9 +178,20 @@ function Result({
         <dd>{formatDelta(currentOffsetMs)}</dd>
       </dl>
       <div className="calibration-actions">
-        <button className="primary" onClick={() => onClose(offsetMs)}>
-          {confident ? "Use" : "Use anyway:"} {formatDelta(offsetMs)}
-        </button>
+        {negative ? (
+          <>
+            <button className="primary" onClick={() => onClose(0)}>
+              Keep 0 ms
+            </button>
+            <button className="secondary" onClick={() => onClose(offsetMs)}>
+              Use anyway: {formatDelta(offsetMs)}
+            </button>
+          </>
+        ) : (
+          <button className="primary" onClick={() => onClose(offsetMs)}>
+            {confident ? "Use" : "Use anyway:"} {formatDelta(offsetMs)}
+          </button>
+        )}
         <button className="secondary" onClick={onRetry}>
           Try again
         </button>

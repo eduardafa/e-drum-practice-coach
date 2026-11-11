@@ -120,3 +120,14 @@ export function computeCalibration(
   const confident = uncertaintyMs <= options.targetUncertaintyMs;
   return { ok: true, offsetMs, spreadMs, uncertaintyMs, confident, ...counts };
 }
+
+/**
+ * Whether a result is clearly negative: below zero by more than its own
+ * uncertainty. System latency (USB, the drum module) can only make hits
+ * register late, and audio output latency is already compensated, so a
+ * clearly negative offset usually means the drummer plays ahead of the click.
+ * Applying it would count those early hits as on time.
+ */
+export function isClearlyNegative(result: Pick<Extract<CalibrationResult, { ok: true }>, "offsetMs" | "uncertaintyMs">): boolean {
+  return result.offsetMs < -result.uncertaintyMs;
+}

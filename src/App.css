@@ -370,3 +370,7 @@ button:focus-visible {
 .suggestion p {
   margin: 0 0 8px;
 }
+
+.calibration-note.warn-note {
+  color: var(--warn);
+}
