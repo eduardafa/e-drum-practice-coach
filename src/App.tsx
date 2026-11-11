@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { isSubdivision, MAX_BPM, MIN_BPM, type MetronomeSettings } from "./audio/schedule";
+import { CalibrationPanel } from "./CalibrationPanel";
 import { Coach, DEFAULT_METRONOME } from "./live/coach";
 import type { MidiStatus } from "./midi/connection";
 import { formatDelta, KitRenderer } from "./render/kitRenderer";
@@ -72,6 +73,7 @@ export default function App() {
   const [scoring, setScoring] = useState<ScoringOptions>(coach.scoring);
   const [running, setRunning] = useState(false);
   const [volume, setVolume] = useState(coach.metronome.volume);
+  const [calibrating, setCalibrating] = useState(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -94,6 +96,7 @@ export default function App() {
   }, [volume]);
 
   const toggleMetronome = async () => {
+    if (coach.calibrating) return;
     if (coach.metronome.running) {
       coach.stopMetronome();
       setRunning(false);
@@ -120,6 +123,18 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   });
 
+  const startCalibration = async () => {
+    setRunning(false);
+    setCalibrating(true);
+    await coach.startCalibration();
+  };
+
+  const endCalibration = (offsetMs: number | null) => {
+    coach.endCalibration();
+    setCalibrating(false);
+    if (offsetMs !== null) setScoring((s) => ({ ...s, latencyOffsetMs: offsetMs }));
+  };
+
   const updateMetronome = (patch: Partial<MetronomeSettings>) =>
     setMetronome((m) => ({ ...m, ...patch }));
   const updateScoring = (patch: Partial<ScoringOptions>) => setScoring((s) => ({ ...s, ...patch }));
@@ -133,10 +148,18 @@ export default function App() {
 
       <main className="stage">
         <canvas ref={canvasRef} className="kit-canvas" aria-label="Live view of the drum kit" />
+        {calibrating && (
+          <CalibrationPanel
+            coach={coach}
+            currentOffsetMs={scoring.latencyOffsetMs}
+            onRetry={() => void startCalibration()}
+            onClose={endCalibration}
+          />
+        )}
       </main>
 
       <aside className="controls">
-        <section>
+        <fieldset className="group" disabled={calibrating}>
           <h2>Metronome</h2>
           <button className={`primary ${running ? "active" : ""}`} onClick={() => void toggleMetronome()}>
             {running ? "Stop" : "Start"} <kbd>M</kbd>
@@ -210,9 +233,9 @@ export default function App() {
               onChange={(e) => setVolume(Number(e.target.value))}
             />
           </label>
-        </section>
+        </fieldset>
 
-        <section>
+        <fieldset className="group" disabled={calibrating}>
           <h2>Scoring</h2>
           <label className="field">
             <span>On-time window</span>
@@ -229,17 +252,21 @@ export default function App() {
             <span>Latency offset</span>
             <input
               type="range"
-              min={-100}
-              max={100}
+              min={-200}
+              max={200}
               value={scoring.latencyOffsetMs}
               onChange={(e) => updateScoring({ latencyOffsetMs: Number(e.target.value) })}
             />
             <span className="unit">{formatDelta(scoring.latencyOffsetMs)}</span>
           </label>
+          <button className="secondary" onClick={() => void startCalibration()}>
+            Calibrate latency
+          </button>
           <p className="hint">
-            If your hits feel on time but always score late, raise the offset by about your average.
+            Calibrate to measure your setup's delay automatically, then fine-tune the offset by hand if
+            needed.
           </p>
-        </section>
+        </fieldset>
 
         <section>
           <h2>This session</h2>
