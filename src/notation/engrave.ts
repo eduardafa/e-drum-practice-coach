@@ -113,6 +113,9 @@ export function engraveExercise(exercise: Exercise, host: HTMLDivElement): Staff
   const renderer = new Renderer(host, Renderer.Backends.SVG);
   renderer.resize(width, HEIGHT);
   const ctx = renderer.getContext();
+  // Draw in the surrounding text colour, so the page's CSS themes the notation.
+  ctx.setFillStyle("currentColor");
+  ctx.setStrokeStyle("currentColor");
   const beamGroups = [isCompound(ts) || ts.unit === 8 ? new Fraction(3, 8) : new Fraction(1, 4)];
   const points: StaffPoint[] = [];
 
