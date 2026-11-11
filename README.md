@@ -38,6 +38,18 @@ the scores account for your setup's delay.
 Without a kit: <kbd>Space</kbd> kick, <kbd>S</kbd> snare, <kbd>A</kbd> hi-hat, <kbd>Z</kbd> hi-hat pedal,
 <kbd>Q</kbd> crash, <kbd>W</kbd>/<kbd>E</kbd>/<kbd>D</kbd> toms, <kbd>R</kbd> ride.
 
+## Deployment
+
+The app is static and runs on Cloudflare Workers (static assets only, no server code). CI deploys it:
+
+- **Merge to `main`**: deploys to production, after lint, type-check, tests and build pass.
+- **Pull request**: uploads a preview version and comments its URL on the PR.
+
+The deploy uses the exact build the checks produced. Config lives in `wrangler.jsonc`, and response headers
+(Content Security Policy, a Permissions-Policy that allows MIDI only for this site, caching) live in
+`public/_headers`. The deploy job needs the `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` repository
+secrets, and it is skipped while they aren't set.
+
 ## How timing works
 
 MIDI timestamps and the audio clock are separate clocks. Clicks are scheduled ahead of time on the audio
