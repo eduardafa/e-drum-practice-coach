@@ -3,6 +3,7 @@
  * together. One instance lives for the lifetime of the page.
  */
 import { Metronome } from "../audio/metronome";
+import { PreviewPlayer } from "../audio/previewPlayer";
 import { subdivisionFor } from "../exercises/practice";
 import type { Exercise } from "../exercises/types";
 import { PlayAlongSession } from "../playalong/session";
@@ -27,6 +28,8 @@ export class Coach {
   readonly grid = new TimingGrid();
   readonly live = new LiveState();
   readonly metronome: Metronome;
+  /** Plays exercises in the library browser; stopped whenever the metronome starts. */
+  readonly preview = new PreviewPlayer();
   scoring: ScoringOptions = { ...DEFAULT_SCORING };
   private calibration: CalibrationSession | null = null;
   /** The drummer's metronome settings, restored when calibration ends. */
@@ -61,6 +64,7 @@ export class Coach {
 
   async startMetronome(): Promise<void> {
     if (this.calibrating) return;
+    this.preview.stop();
     this.live.resetSession();
     this.bar = -1;
     await this.metronome.start();
@@ -82,6 +86,7 @@ export class Coach {
    * a user gesture.
    */
   async startSession(exercise: Exercise, loops: number, bpm: number): Promise<MetronomeSettings> {
+    this.preview.stop();
     this.metronome.stop();
     const settings = {
       ...this.metronome.currentSettings,
@@ -112,8 +117,21 @@ export class Coach {
     this.playAlong = null;
   }
 
+  /**
+   * Plays one loop of an exercise at `bpm`, stopping the metronome and any
+   * session first so the two don't play over each other. Call from a user gesture.
+   */
+  async startPreview(exercise: Exercise, bpm: number, onEnd: () => void): Promise<void> {
+    if (this.calibrating) return;
+    this.endSession();
+    this.metronome.stop();
+    const ctx = await this.metronome.audioContext();
+    this.preview.play(ctx, exercise, bpm, this.metronome.volume, onEnd);
+  }
+
   /** Starts a calibration run for a skill level. Call from a user gesture. */
   async startCalibration(level: SkillLevel): Promise<void> {
+    this.preview.stop();
     this.metronome.stop();
     this.restoreSettings();
     const setup = calibrationSetup(level);
@@ -146,6 +164,7 @@ export class Coach {
   dispose(): void {
     for (const u of this.unsubscribers) u();
     this.midi.dispose();
+    this.preview.stop();
     this.metronome.dispose();
   }
 
