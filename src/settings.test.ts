@@ -13,6 +13,10 @@ describe("parseSettings", () => {
     });
   });
 
+  it("keeps the First steps level", () => {
+    expect(parseSettings({ skillLevel: "firstSteps" }).skillLevel).toBe("firstSteps");
+  });
+
   it("drops an unknown skill level", () => {
     expect(parseSettings({ skillLevel: "expert" }).skillLevel).toBeUndefined();
   });

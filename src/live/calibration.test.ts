@@ -52,6 +52,10 @@ describe("calibrationSetup", () => {
     expect(beginner.plan.maxClicks).toBe(80);
     expect(beginner.options.targetUncertaintyMs).toBe(7);
     expect(calibrationSetup("advanced").options.targetUncertaintyMs).toBe(3);
+    const firstSteps = calibrationSetup("firstSteps");
+    expect(firstSteps.metronome.bpm).toBe(60);
+    expect(firstSteps.options.targetUncertaintyMs).toBe(12);
+    expect(firstSteps.plan.maxClicks).toBe(96);
   });
 });
 
@@ -127,6 +131,27 @@ describe("CalibrationSession: adaptive length", () => {
     expect(mean).toBeLessThan(40);
     expect(runs.every((r) => r.confident)).toBe(true);
     expect(runs.filter((r) => r.error <= 14).length / runs.length).toBeGreaterThanOrEqual(0.93);
+  });
+
+  it("with the First steps profile, a ±69 ms drummer gets a confident, usable result", () => {
+    const { plan, options } = calibrationSetup("firstSteps");
+    const interval = 1000; // 60 BPM
+    const runs = Array.from({ length: 100 }, (_, seed) => {
+      const session = new CalibrationSession(plan, options);
+      const random = rng(seed + 900);
+      let clicks = 0;
+      for (let i = 0; ; i++) {
+        clicks = i + 1;
+        const last = session.addClick(1000 + i * interval, interval);
+        session.addHit(1000 + i * interval + 25 + gaussian(random, 69));
+        if (last || session.finished) break;
+      }
+      const done = session.progress(1000 + (clicks + 1) * interval);
+      if (done.phase !== "done" || !done.result.ok) throw new Error(`seed ${seed} didn't finish`);
+      return { error: Math.abs(done.result.offsetMs - 25), confident: done.result.confident };
+    });
+    expect(runs.filter((r) => r.confident).length).toBeGreaterThanOrEqual(95);
+    expect(runs.filter((r) => r.error <= 24).length).toBeGreaterThanOrEqual(90);
   });
 
   it("still gives a usable result when the limit comes first", () => {

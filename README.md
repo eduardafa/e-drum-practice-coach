@@ -13,8 +13,8 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
   timing: early is blue, on time is green, late is orange.
 - Lookahead metronome on Web Audio, with tempo, beats per bar, subdivisions and an accented downbeat.
 - Per-hit timing in ms, a per-pad timing strip over the last 5 s, and session stats.
-- Skill levels (Beginner, Intermediate, Advanced) with on-time windows of ±35, ±20 and ±10 ms, and a suggestion
-  when your playing fits another level better. The window and latency offset stay adjustable.
+- Skill levels (First steps, Beginner, Intermediate, Advanced) with on-time windows of ±70, ±35, ±20 and ±10 ms,
+  and a suggestion when your playing fits another level better. The window and latency offset stay adjustable.
 - Latency calibration: play along to the click and the app measures your setup's delay and sets the
   offset. It adapts to your skill level (Beginner, Intermediate, Advanced) and keeps listening until the
   measurement is precise, so steadier playing finishes sooner.
