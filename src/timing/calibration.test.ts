@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   computeCalibration,
+  isClearlyNegative,
   median,
   medianStandardError,
   quantile,
@@ -107,5 +108,24 @@ describe("computeCalibration", () => {
       reason: "outOfRange",
       offsetMs: 323,
     });
+  });
+});
+
+describe("isClearlyNegative", () => {
+  it("flags an offset below zero by more than its uncertainty", () => {
+    expect(isClearlyNegative({ offsetMs: -25, uncertaintyMs: 10 })).toBe(true);
+  });
+
+  it("doesn't flag a small negative offset within its uncertainty", () => {
+    expect(isClearlyNegative({ offsetMs: -3, uncertaintyMs: 5 })).toBe(false);
+  });
+
+  it("doesn't flag at exactly minus the uncertainty", () => {
+    expect(isClearlyNegative({ offsetMs: -5, uncertaintyMs: 5 })).toBe(false);
+  });
+
+  it("never flags zero or positive offsets", () => {
+    expect(isClearlyNegative({ offsetMs: 0, uncertaintyMs: 0 })).toBe(false);
+    expect(isClearlyNegative({ offsetMs: 25, uncertaintyMs: 3 })).toBe(false);
   });
 });
