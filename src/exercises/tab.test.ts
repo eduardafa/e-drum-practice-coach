@@ -39,6 +39,11 @@ describe("tabOf", () => {
     }
   });
 
+  it("gives the sticking of rudiments, and none for grooves", () => {
+    expect(tab("paradiddle").sticking?.join("")).toBe("RLRRLRLLRLRRLRLL");
+    expect(tab("rock-8ths").sticking).toBeNull();
+  });
+
   it("writes time signatures as on the page", () => {
     expect(formatTimeSignature(findExercise("six-eight")!)).toBe("6/8");
   });

@@ -4,7 +4,7 @@
  * exercise would be heavy and hard to read at that size.
  */
 import { NITRO_MAX_PADS, type PadId } from "../kit/nitroMax";
-import { exerciseLengthTicks, ticksPerBeat, type Exercise, type ExerciseNote } from "./types";
+import { exerciseLengthTicks, ticksPerBeat, type Exercise, type ExerciseNote, type Hand } from "./types";
 
 export type TabCell = Pick<ExerciseNote, "dynamic" | "open" | "flam"> | null;
 
@@ -20,6 +20,8 @@ export interface Tab {
   stepsPerBeat: number;
   /** Cymbals at the top, feet at the bottom, as on a drum staff. */
   rows: TabRow[];
+  /** The hand for each step, for rudiments; null when the exercise gives no sticking. */
+  sticking: (Hand | null)[] | null;
 }
 
 const ROW_ORDER: readonly PadId[] = ["crash", "ride", "hihat", "tom1", "snare", "tom2", "tom3", "kick", "hihatPedal"];
@@ -39,7 +41,9 @@ export function tabOf(exercise: Exercise): Tab {
     }
     return { pad, label: NITRO_MAX_PADS.find((p) => p.id === pad)?.label ?? pad, cells };
   });
-  return { steps, stepsPerBeat: beat / stepTicks, rows };
+  const sticking = exercise.notes.some((n) => n.hand) ? Array.from({ length: steps }, (): Hand | null => null) : null;
+  if (sticking) for (const n of exercise.notes) if (n.hand) sticking[n.tick / stepTicks] = n.hand;
+  return { steps, stepsPerBeat: beat / stepTicks, rows, sticking };
 }
 
 /** A time signature as written, e.g. "4/4" or "6/8". */
