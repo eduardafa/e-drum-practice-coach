@@ -6,8 +6,10 @@ import { LiveCount } from "./LiveCount";
 import { MetronomeGuide } from "./MetronomeGuide";
 import { NotationStrip, type SessionView } from "./NotationStrip";
 import type { AccuracyMode } from "./playalong/results";
-import { DEFAULT_SESSION_LOOPS } from "./playalong/session";
+import { DEFAULT_SESSION_LOOPS, type PlayAlongSession } from "./playalong/session";
 import { ResultsPanel } from "./ResultsPanel";
+import { nextRound, type RoundRecord, type TrainerConfig } from "./playalong/trainer";
+import { TrainerPanel, type TrainerStage } from "./TrainerPanel";
 import { findExercise } from "./exercises/library";
 import { metronomeForExercise } from "./exercises/practice";
 import { Coach, DEFAULT_METRONOME } from "./live/coach";
@@ -40,6 +42,8 @@ const KEY_TO_NOTE: Record<string, number> = {
 };
 
 const saved = loadSettings();
+/** The pause between tempo-trainer rounds, to read the score before the next count-in. */
+const BETWEEN_ROUNDS_MS = 3000;
 const coach = new Coach(saved.metronome ?? DEFAULT_METRONOME);
 // A first-time drummer gets the on-time window of their (default) skill level.
 coach.scoring = saved.scoring ?? {
@@ -114,6 +118,12 @@ export default function App() {
   const exercise = exerciseId === null ? null : (findExercise(exerciseId) ?? null);
   const [sessionLoops, setSessionLoops] = useState(saved.sessionLoops ?? DEFAULT_SESSION_LOOPS);
   const [accuracyMode, setAccuracyMode] = useState<AccuracyMode>(saved.accuracyMode ?? "partial");
+  /** The tempo trainer: null when off; "round" while a round is being played (no panel then). */
+  const [trainer, setTrainer] = useState<TrainerStage | { kind: "round" } | null>(null);
+  const [trainerConfig, setTrainerConfig] = useState<TrainerConfig | null>(null);
+  const [trainerRounds, setTrainerRounds] = useState<RoundRecord[]>([]);
+  /** The last trainer round already scored, so a finished session is counted once. */
+  const [scoredSession, setScoredSession] = useState<PlayAlongSession | null>(null);
   /** What's typed in the tempo box while it has focus; null shows the current tempo. */
   const [tempoDraft, setTempoDraft] = useState<string | null>(null);
   /** Set by Escape so the blur that follows throws the draft away instead of applying it. */
@@ -163,8 +173,18 @@ export default function App() {
     coach.metronome.volume = volume;
   }, [volume]);
 
+  const stopTrainer = () => {
+    coach.endSession();
+    setRunning(false);
+    setTrainer({ kind: "finished", reason: "stopped" });
+  };
+
   const toggleMetronome = async () => {
     if (coach.calibrating) return;
+    if (trainer?.kind === "round" || trainer?.kind === "between") {
+      stopTrainer();
+      return;
+    }
     // Stopping during a session abandons it; starting plain clicks clears a finished one.
     coach.endSession();
     if (coach.metronome.running) {
@@ -221,10 +241,48 @@ export default function App() {
     setRunning(true);
   };
 
+  // The latest startSession, for the between-rounds timer (which mustn't restart on every render).
+  const startSessionRef = useRef(startSession);
+  useEffect(() => {
+    startSessionRef.current = startSession;
+  });
+
   const stopSession = () => {
     coach.endSession();
     setRunning(false);
   };
+
+  const startTrainer = (config: TrainerConfig) => {
+    setTrainerConfig(config);
+    setTrainerRounds([]);
+    setTrainer({ kind: "round" });
+    void startSession(config.startBpm);
+  };
+
+  // A trainer round has finished: score it, then pick the next tempo or finish. Done while
+  // rendering (guarded so each session counts once); the next round's session replaces this one.
+  const finished = coach.session;
+  // Read the phase from the coach's session itself: the polled stats can still describe the
+  // previous round for up to 150 ms after the next one has started.
+  if (trainer?.kind === "round" && finished?.phase === "done" && finished !== scoredSession && trainerConfig) {
+    const accuracy = finished.results().accuracy[accuracyMode] ?? 0;
+    const next = nextRound(trainerConfig, finished.bpm, accuracy);
+    setScoredSession(finished);
+    setTrainerRounds((rounds) => [...rounds, { bpm: finished.bpm, accuracy, outcome: next.outcome }]);
+    setTrainer(next.outcome === "done" ? { kind: "finished", reason: "target" } : { kind: "between", nextBpm: next.bpm });
+  }
+
+  // Between rounds: a short pause to read the score, then the next round starts with a count-in.
+  useEffect(() => {
+    if (trainer?.kind !== "between") return;
+    const { nextBpm } = trainer;
+    const id = setTimeout(() => {
+      setTrainer({ kind: "round" });
+      void startSessionRef.current(nextBpm);
+    }, BETWEEN_ROUNDS_MS);
+    return () => clearTimeout(id);
+    // Only when the stage changes: the app re-renders every 150 ms, which must not restart the pause.
+  }, [trainer]);
 
   const startCalibration = async () => {
     coach.endSession();
@@ -286,7 +344,16 @@ export default function App() {
           loops={sessionLoops}
           onLoopsChange={setSessionLoops}
           onPlay={() => void startSession(metronome.bpm)}
-          onStop={stopSession}
+          onStop={trainer ? stopTrainer : stopSession}
+          onTrain={() => {
+            coach.endSession();
+            setTrainer({ kind: "setup" });
+          }}
+          trainerStatus={
+            trainer?.kind === "round" || trainer?.kind === "between"
+              ? `Tempo trainer, round ${trainerRounds.length + 1}${trainerConfig ? ` (target ${trainerConfig.targetBpm} BPM)` : ""} · `
+              : null
+          }
         />
         <canvas ref={canvasRef} className="kit-canvas" aria-label="Live view of the drum kit" />
         {guideOpen && !calibrating && (
@@ -315,7 +382,21 @@ export default function App() {
             onClose={() => setSettingsOpen(false)}
           />
         )}
-        {exercise && stats.session?.phase === "done" && coach.session && !calibrating && (
+        {exercise && trainer && trainer.kind !== "round" && !calibrating && (
+          <TrainerPanel
+            exercise={exercise}
+            stage={trainer}
+            config={trainerConfig}
+            rounds={trainerRounds}
+            onStart={startTrainer}
+            onStop={stopTrainer}
+            onClose={() => {
+              coach.endSession();
+              setTrainer(null);
+            }}
+          />
+        )}
+        {exercise && !trainer && stats.session?.phase === "done" && coach.session && !calibrating && (
           <ResultsPanel
             exercise={exercise}
             results={coach.session.results()}
