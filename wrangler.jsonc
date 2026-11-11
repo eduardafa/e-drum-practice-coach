@@ -1,0 +1,15 @@
+// Cloudflare Workers config. The app is static, so this is an assets-only
+// Worker: no script, Cloudflare serves the files in dist/ directly.
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "e-drum-practice-coach",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./dist",
+    // Unknown paths get index.html, so client-side routes added later work on reload.
+    "not_found_handling": "single-page-application"
+  },
+  // Production lives on workers.dev; pull requests get aliased version URLs there too.
+  "workers_dev": true,
+  "preview_urls": true
+}
