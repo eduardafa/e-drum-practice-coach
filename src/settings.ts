@@ -8,6 +8,8 @@ export interface SavedSettings {
   metronome?: MetronomeSettings;
   scoring?: ScoringOptions;
   skillLevel?: SkillLevel;
+  /** The drummer has opened the metronome guide at least once. */
+  guideSeen?: boolean;
 }
 
 type UnknownRecord = Record<string, unknown>;
@@ -53,6 +55,7 @@ export function parseSettings(raw: unknown): SavedSettings {
     metronome: parseMetronome(raw.metronome),
     scoring: parseScoring(raw.scoring),
     skillLevel: isSkillLevel(raw.skillLevel) ? raw.skillLevel : undefined,
+    guideSeen: raw.guideSeen === true ? true : undefined,
   };
 }
 
