@@ -63,6 +63,14 @@ pinact run          # pins every action in .github/workflows
 
 Dependabot opens a weekly PR that updates the pins.
 
+Workflow files are linted with [actionlint](https://github.com/rhysd/actionlint), which runs
+[shellcheck](https://github.com/koalaman/shellcheck) on every `run:` script when it is installed. To run it
+locally:
+
+```sh
+actionlint          # checks .github/workflows
+```
+
 ## How timing works
 
 MIDI timestamps and the audio clock are separate clocks. Clicks are scheduled ahead of time on the audio
