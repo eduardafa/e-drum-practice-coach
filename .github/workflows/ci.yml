@@ -35,7 +35,10 @@ jobs:
     continue-on-error: ${{ matrix.runner != 'ubuntu-latest' }}
     timeout-minutes: 10
     steps:
+      # Nothing in this workflow pushes, so the token isn't kept in .git/config.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       # Every action must be pinned to a full commit SHA, with a version comment
       # that matches it. pinact is downloaded at a fixed version and checked
@@ -66,6 +69,21 @@ jobs:
           tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP" actionlint
           shellcheck --version | head -n 2
           "$RUNNER_TEMP/actionlint" -color
+
+      # Audits workflow security: credential persistence, template injection,
+      # excessive permissions, dangerous triggers, and impostor commits (a pinned
+      # SHA that only exists in a fork). The token enables those online checks.
+      - name: Audit workflow security
+        env:
+          ZIZMOR_VERSION: 1.32.0
+          ZIZMOR_SHA256: bb110cc765eca9cd7efb2e284a956be5974c60027b0970f16397d86208a9957b
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/zizmor.tar.gz" \
+            "https://github.com/zizmorcore/zizmor/releases/download/v${ZIZMOR_VERSION}/zizmor-x86_64-unknown-linux-gnu.tar.gz"
+          echo "${ZIZMOR_SHA256}  $RUNNER_TEMP/zizmor.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/zizmor.tar.gz" -C "$RUNNER_TEMP" zizmor
+          "$RUNNER_TEMP/zizmor" --no-progress .github/
 
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
 
@@ -100,9 +118,11 @@ jobs:
 
       - name: Runner summary
         if: always()
+        env:
+          RUNNER_LABEL: ${{ matrix.runner }}
         run: |
           {
-            echo "### ${{ matrix.runner }}"
+            echo "### $RUNNER_LABEL"
             echo "- CPUs: $(nproc)"
             echo "- Memory: $(free -h | awk '/Mem:/ {print $2}')"
             echo "- Node: $(node --version), pnpm: $(pnpm --version)"
@@ -145,6 +165,8 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: steps.creds.outputs.ok
+        with:
+          persist-credentials: false
 
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         if: steps.creds.outputs.ok
@@ -196,7 +218,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           URL: ${{ steps.deploy.outputs.url }}
           SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          gh pr comment "${{ github.event.pull_request.number }}" --repo "$GITHUB_REPOSITORY" \
+          gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" \
             --edit-last --create-if-none \
             --body "Preview: $URL (commit ${SHA:0:7})"
