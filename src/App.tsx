@@ -310,7 +310,7 @@ export default function App() {
             <input
               type="range"
               min={5}
-              max={40}
+              max={80}
               value={scoring.toleranceMs}
               onChange={(e) => updateScoring({ toleranceMs: Number(e.target.value) })}
             />
