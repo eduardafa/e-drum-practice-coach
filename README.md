@@ -27,6 +27,11 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
   above the kit view, with a playhead that follows the metronome. Picking one also sets the metronome to fit
   it. The notation is engraved with [VexFlow](https://www.vexflow.com/), loaded only when an exercise is
   picked.
+- Play along: start a session from the notation strip (2 to 16 loops, after a one-bar count-in). Each note is
+  ringed with its result as you play, and a results screen shows your accuracy, notes on time, early, late and
+  missed, extra hits, timing, consistency and a per-pad breakdown, with retry and 5 BPM slower/faster.
+  Accuracy is partial credit by default (full credit inside the on-time window, less the further off a hit is)
+  or strict (only on-time notes count), chosen in Settings; extra hits count against both.
 - Keyboard fallback for trying the app without a kit.
 
 ## Running it
@@ -126,7 +131,7 @@ src/
   timing/   timing grid and hit scoring
   kit/      Nitro Max note map and pad layout
   exercises/ exercise format (48 ticks per quarter), drum-tab builder, validator, starter library
-  playalong/ expected-note timeline and hit matching for play-along scoring
+  playalong/ expected-note timeline, hit matching, sessions and accuracy scoring
   live/     Coach (wiring) and LiveState (shared per-hit state)
   guide/    the metronome guide's steps, as data
   notation/ rhythm spelling, VexFlow engraving (loaded on demand) and the playhead mapping
