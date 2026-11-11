@@ -52,6 +52,17 @@ variable from the `production` and `preview` GitHub environments, so the checks 
 token. Only `main` can
 deploy to `production`. The job is skipped while the secrets aren't set.
 
+## CI security
+
+GitHub Actions are pinned to full commit SHAs, with the version as a comment (`@<sha> # v7.0.1`), and CI fails
+if one isn't. To pin a new action, run [pinact](https://github.com/suzuki-shunsuke/pinact):
+
+```sh
+pinact run          # pins every action in .github/workflows
+```
+
+Dependabot opens a weekly PR that updates the pins.
+
 ## How timing works
 
 MIDI timestamps and the audio clock are separate clocks. Clicks are scheduled ahead of time on the audio
