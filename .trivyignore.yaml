@@ -1,0 +1,15 @@
+# Findings Trivy should ignore. Policy:
+# - Every entry needs a `statement` saying why it's safe to ignore (not used,
+#   not reachable, no fix and mitigated elsewhere, false positive).
+# - Every entry needs an `expired_at` review date, at most 90 days out. After it,
+#   the finding comes back and has to be re-assessed.
+#
+# Example:
+# vulnerabilities:
+#   - id: CVE-2026-12345
+#     paths: ["pnpm-lock.yaml"]
+#     statement: Only affects the CLI, which we don't call. Revisit when vite 9 ships.
+#     expired_at: 2027-02-01
+vulnerabilities: []
+secrets: []
+misconfigurations: []

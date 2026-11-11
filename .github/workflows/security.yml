@@ -1,0 +1,82 @@
+name: Security
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  # Weekly scan of main, to catch vulnerabilities disclosed after code was merged.
+  schedule:
+    - cron: "17 6 * * 1" # Mondays 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  trivy:
+    name: trivy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: write # upload results to code scanning
+    env:
+      # Trivy releases are immutable and sigstore-signed. This checksum was taken
+      # from a release whose signature was verified with cosign (see ADR 0011).
+      TRIVY_VERSION: 0.76.1
+      TRIVY_SHA256: c7cbe3137fb8a48a17574bede3dd6beb16742d1e9772929940fc90082c39d9c0
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Trivy
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/trivy.tar.gz" \
+            "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          echo "${TRIVY_SHA256}  $RUNNER_TEMP/trivy.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/trivy.tar.gz" -C "$RUNNER_TEMP" trivy
+          "$RUNNER_TEMP/trivy" --version
+
+      # Full report, every severity, for the Security tab. Never fails the job.
+      # Dev dependencies are included: they don't ship to users, but they run in CI.
+      - name: Scan (report)
+        run: |
+          "$RUNNER_TEMP/trivy" fs . \
+            --scanners vuln,secret,misconfig \
+            --include-dev-deps \
+            --ignorefile .trivyignore.yaml \
+            --format sarif --output trivy.sarif \
+            --exit-code 0
+
+      # Fork PRs get a read-only token, so they can't upload; the gate below still runs.
+      - name: Upload to code scanning
+        if: >-
+          always()
+          && hashFiles('trivy.sarif') != ''
+          && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          sarif_file: trivy.sarif
+          category: trivy
+
+      # The gate: fail on HIGH or CRITICAL vulnerabilities that have a fix, and on
+      # any secret. Reuses the database downloaded by the report scan.
+      - name: Gate on vulnerabilities and secrets
+        run: |
+          "$RUNNER_TEMP/trivy" fs . \
+            --scanners vuln \
+            --include-dev-deps \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --ignorefile .trivyignore.yaml \
+            --skip-db-update \
+            --exit-code 1
+          "$RUNNER_TEMP/trivy" fs . \
+            --scanners secret \
+            --ignorefile .trivyignore.yaml \
+            --exit-code 1

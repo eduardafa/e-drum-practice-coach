@@ -71,6 +71,14 @@ locally:
 actionlint          # checks .github/workflows
 ```
 
+## Security scanning
+
+The `Security` workflow runs [Trivy](https://github.com/aquasecurity/trivy) on every pull request, on pushes to
+`main` and weekly. It fails on HIGH or CRITICAL vulnerabilities that have a fix, and on any committed secret.
+The full report, including lower severities and config checks, goes to the repository's Security tab.
+
+To ignore a finding, add it to `.trivyignore.yaml` with a reason and an expiry date (at most 90 days).
+
 ## How timing works
 
 MIDI timestamps and the audio clock are separate clocks. Clicks are scheduled ahead of time on the audio
