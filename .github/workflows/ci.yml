@@ -141,6 +141,8 @@ jobs:
         env:
           ALIAS: pr-${{ github.event.pull_request.number }}
         run: |
+          # Without pipefail, `| tee` would hide a failing wrangler exit code.
+          set -o pipefail
           if [ "$GITHUB_EVENT_NAME" = "push" ]; then
             pnpm exec wrangler deploy | tee wrangler.log
           else
@@ -151,6 +153,9 @@ jobs:
             url=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' wrangler.log | head -n1)
           else
             url=$(grep -oE "https://${ALIAS}-[a-z0-9.-]+\.workers\.dev" wrangler.log | head -n1)
+          fi
+          if [ -z "$url" ]; then
+            echo "::warning::Deployed, but no workers.dev URL was found in the wrangler output."
           fi
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "Deployed to $url" >> "$GITHUB_STEP_SUMMARY"
