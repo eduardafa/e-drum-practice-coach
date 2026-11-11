@@ -15,6 +15,9 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
 - A "How to play with the metronome" guide for new drummers: counting "1 & 2 &", and four steps to the money
   beat, each with a one-tap metronome setup and a live count that lights up in time with the clicks.
 - Per-hit timing in ms, a per-pad timing strip over the last 5 s, and session stats.
+- A side panel with only what you need while playing, so it fits without scrolling: Start/Stop (<kbd>M</kbd>),
+  the live count, tempo − / + buttons (hold Shift for 5 BPM steps), and on-time %, average and consistency.
+  Set-once metronome and scoring settings open in a Settings panel over the kit view; <kbd>Esc</kbd> closes it.
 - Skill levels (First steps, Beginner, Intermediate, Advanced) with on-time windows of ±70, ±35, ±20 and ±10 ms,
   and a suggestion when your playing fits another level better. The window and latency offset stay adjustable.
 - Latency calibration: play along to the click and the app measures your setup's delay and sets the
