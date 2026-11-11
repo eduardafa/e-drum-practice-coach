@@ -1,4 +1,5 @@
 import { isSubdivision, MAX_BPM, MIN_BPM, type MetronomeSettings } from "./audio/schedule";
+import { isSkillLevel, type SkillLevel } from "./profiles";
 import type { ScoringOptions } from "./timing/grid";
 
 const KEY = "edrum-coach:settings:v1";
@@ -6,6 +7,7 @@ const KEY = "edrum-coach:settings:v1";
 export interface SavedSettings {
   metronome?: MetronomeSettings;
   scoring?: ScoringOptions;
+  skillLevel?: SkillLevel;
 }
 
 type UnknownRecord = Record<string, unknown>;
@@ -47,7 +49,11 @@ function parseScoring(value: unknown): ScoringOptions | undefined {
  */
 export function parseSettings(raw: unknown): SavedSettings {
   if (!isRecord(raw)) return {};
-  return { metronome: parseMetronome(raw.metronome), scoring: parseScoring(raw.scoring) };
+  return {
+    metronome: parseMetronome(raw.metronome),
+    scoring: parseScoring(raw.scoring),
+    skillLevel: isSkillLevel(raw.skillLevel) ? raw.skillLevel : undefined,
+  };
 }
 
 /** Per-browser convenience only; the app works fine when storage is unavailable. */

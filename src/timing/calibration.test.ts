@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   computeCalibration,
-  DEFAULT_CALIBRATION,
   median,
+  medianStandardError,
   quantile,
   rejectOutliers,
   standardDeviation,
@@ -30,6 +30,21 @@ describe("standardDeviation", () => {
 
   it("is zero for a single value", () => {
     expect(standardDeviation([5])).toBe(0);
+  });
+});
+
+describe("medianStandardError", () => {
+  it("is about 1.25 × SD / √n", () => {
+    expect(medianStandardError(29, 53)).toBeCloseTo(4.99, 2);
+    expect(medianStandardError(10, 12)).toBeCloseTo(3.62, 2);
+  });
+
+  it("shrinks as hits accumulate", () => {
+    expect(medianStandardError(29, 12)).toBeGreaterThan(medianStandardError(29, 48));
+  });
+
+  it("is infinite with no hits", () => {
+    expect(medianStandardError(10, 0)).toBe(Number.POSITIVE_INFINITY);
   });
 });
 
@@ -67,11 +82,23 @@ describe("computeCalibration", () => {
     expect(computeCalibration([20, 21, 22])).toMatchObject({ ok: false, reason: "tooFewHits", used: 3 });
   });
 
-  it("fails when the playing is too uneven to measure", () => {
+  it("is confident about steady hits", () => {
+    const result = computeCalibration(steady);
+    expect(result).toMatchObject({ ok: true, confident: true });
+    expect(result.uncertaintyMs).toBeLessThan(1);
+  });
+
+  it("still returns a usable result for uneven playing, flagged as not confident", () => {
     const uneven = [0, 40, 10, 50, -10, 30, 60, 5, 45, 20, -5, 35];
     const result = computeCalibration(uneven);
-    expect(result).toMatchObject({ ok: false, reason: "tooSpread" });
-    expect(result.spreadMs).toBeGreaterThan(DEFAULT_CALIBRATION.maxSpreadMs);
+    expect(result).toMatchObject({ ok: true, confident: false, offsetMs: 25 });
+    expect(result.uncertaintyMs).toBeGreaterThan(5);
+  });
+
+  it("uses the target from the options", () => {
+    const uneven = [0, 40, 10, 50, -10, 30, 60, 5, 45, 20, -5, 35];
+    const loose = { minHits: 8, iqrFactor: 1.5, targetUncertaintyMs: 10, maxAbsOffsetMs: 200 };
+    expect(computeCalibration(uneven, loose)).toMatchObject({ ok: true, confident: true });
   });
 
   it("fails when the offset is implausibly large", () => {
