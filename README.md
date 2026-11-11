@@ -32,6 +32,10 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
   missed, extra hits, timing, consistency and a per-pad breakdown, with retry and 5 BPM slower/faster.
   Accuracy is partial credit by default (full credit inside the on-time window, less the further off a hit is)
   or strict (only on-time notes count), chosen in Settings; extra hits count against both.
+- Tempo trainer: practise an exercise in rounds that speed up as you play cleanly. After each round the tempo
+  goes up a step (default 4 BPM) at 90% or more, down a step below 70%, and otherwise stays, until you pass a
+  round at your target tempo. A short pause and a count-in at the new tempo separate the rounds, and a chart
+  shows each round's tempo and accuracy.
 - Keyboard fallback for trying the app without a kit.
 
 ## Running it

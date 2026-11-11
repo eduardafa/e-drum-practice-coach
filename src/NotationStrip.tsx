@@ -32,6 +32,9 @@ interface Props {
   onLoopsChange: (loops: number) => void;
   onPlay: () => void;
   onStop: () => void;
+  onTrain: () => void;
+  /** Set while the tempo trainer runs: shown before the session status, and locks the controls. */
+  trainerStatus: string | null;
 }
 
 /** CSS class for a note's latest result on the staff. */
@@ -54,7 +57,19 @@ type Status = "idle" | "loading" | "ready" | "error";
  * engraved once per exercise (VexFlow is loaded on first use); the playhead
  * is moved every animation frame outside React, from the metronome's counts.
  */
-export function NotationStrip({ coach, exercise, onSelect, session, loops, onLoopsChange, onPlay, onStop }: Props) {
+export function NotationStrip({
+  coach,
+  exercise,
+  onSelect,
+  session,
+  loops,
+  onLoopsChange,
+  onPlay,
+  onStop,
+  onTrain,
+  trainerStatus,
+}: Props) {
+  const busy = trainerStatus !== null || (session !== null && session.phase !== "done");
   const hostRef = useRef<HTMLDivElement>(null);
   const playheadRef = useRef<HTMLDivElement>(null);
   const marksRef = useRef<HTMLDivElement>(null);
@@ -151,7 +166,7 @@ export function NotationStrip({ coach, exercise, onSelect, session, loops, onLoo
         <select
           id="exercise"
           value={exercise?.id ?? ""}
-          disabled={session !== null && session.phase !== "done"}
+          disabled={busy}
           onChange={(e) => {
             // Give up focus: Space is the kick key, and it would reopen the list.
             e.currentTarget.blur();
@@ -174,10 +189,13 @@ export function NotationStrip({ coach, exercise, onSelect, session, loops, onLoo
             ))}
           </optgroup>
         </select>
-        {exercise && (session === null || session.phase === "done") && (
+        {exercise && !busy && (
           <>
             <button className="primary play" onClick={releasing(onPlay)}>
               Play along
+            </button>
+            <button className="secondary" onClick={releasing(onTrain)}>
+              Tempo trainer
             </button>
             <select
               aria-label="Session length"
@@ -195,14 +213,16 @@ export function NotationStrip({ coach, exercise, onSelect, session, loops, onLoo
             </select>
           </>
         )}
-        {session && session.phase !== "done" && (
+        {busy && (
           <button className="secondary" onClick={releasing(onStop)}>
             Stop
           </button>
         )}
         <p className="notation-description">
           {session && session.phase !== "done"
-            ? sessionStatus(session)
+            ? `${trainerStatus ?? ""}${sessionStatus(session)}`
+            : trainerStatus !== null
+              ? trainerStatus
             : exercise
               ? `${exercise.description} Suggested ${exercise.tempo.suggested} BPM.`
               : "Pick a groove or rudiment to see it as drum notation."}
