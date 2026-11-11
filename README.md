@@ -23,10 +23,13 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
 - Latency calibration: play along to the click and the app measures your setup's delay and sets the
   offset. It adapts to your skill level (Beginner, Intermediate, Advanced) and keeps listening until the
   measurement is precise, so steadier playing finishes sooner.
-- Drum notation: pick a groove or rudiment from the starter library and it appears as standard drum notation
-  above the kit view, with a playhead that follows the metronome. Picking one also sets the metronome to fit
-  it. The notation is engraved with [VexFlow](https://www.vexflow.com/), loaded only when an exercise is
-  picked.
+- Exercise library: browse the grooves and rudiments, each with its time signature, tempo range and a drum-tab
+  preview (with the sticking for rudiments). Listen plays one loop with synthesised drum sounds and a click on
+  every beat. Choosing an exercise sets the metronome to fit it, at your last tempo for that exercise or its
+  suggested tempo. It works with the keyboard: <kbd>Tab</kbd> and <kbd>Enter</kbd>, <kbd>Esc</kbd> to close.
+- Drum notation: the chosen exercise appears as standard drum notation above the kit view, with a playhead
+  that follows the metronome. The notation is engraved with [VexFlow](https://www.vexflow.com/), loaded only
+  when an exercise is chosen.
 - Play along: start a session from the notation strip (2 to 16 loops, after a one-bar count-in). Each note is
   ringed with its result as you play, and a results screen shows your accuracy, notes on time, early, late and
   missed, extra hits, timing, consistency and a per-pad breakdown, with retry and 5 BPM slower/faster.
@@ -131,10 +134,10 @@ stored as a timing grid. Each MIDI hit is then compared with the nearest grid po
 ```
 src/
   midi/     Web MIDI connection and MIDI byte parsing
-  audio/    metronome scheduler, worker timer, audio-to-performance clock mapping
+  audio/    metronome scheduler, worker timer, clock mapping, synthesised click and drum voices, previews
   timing/   timing grid and hit scoring
   kit/      Nitro Max note map and pad layout
-  exercises/ exercise format (48 ticks per quarter), drum-tab builder, validator, starter library
+  exercises/ exercise format (48 ticks per quarter), drum-tab builder, validator, starter library, preview timing
   playalong/ expected-note timeline, hit matching, sessions and accuracy scoring
   live/     Coach (wiring) and LiveState (shared per-hit state)
   guide/    the metronome guide's steps, as data
