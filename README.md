@@ -14,8 +14,9 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
 - Lookahead metronome on Web Audio, with tempo, beats per bar, subdivisions and an accented downbeat.
 - Per-hit timing in ms, a per-pad timing strip over the last 5 s, and session stats.
 - Adjustable on-time window and latency offset.
-- Latency calibration: play along to 16 clicks and the app measures your setup's delay and sets the
-  offset.
+- Latency calibration: play along to the click and the app measures your setup's delay and sets the
+  offset. It adapts to your skill level (Beginner, Intermediate, Advanced) and keeps listening until the
+  measurement is precise, so steadier playing finishes sooner.
 - Keyboard fallback for trying the app without a kit.
 
 ## Running it
