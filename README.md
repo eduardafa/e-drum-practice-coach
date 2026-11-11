@@ -12,6 +12,8 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
 - Live kit view on Canvas 2D at 60fps. Pads flash by how hard they were hit and are coloured by
   timing: early is blue, on time is green, late is orange.
 - Lookahead metronome on Web Audio, with tempo, beats per bar, subdivisions and an accented downbeat.
+- A "How to play with the metronome" guide for new drummers: counting "1 & 2 &", and four steps to the money
+  beat, each with a one-tap metronome setup and a live count that lights up in time with the clicks.
 - Per-hit timing in ms, a per-pad timing strip over the last 5 s, and session stats.
 - Skill levels (First steps, Beginner, Intermediate, Advanced) with on-time windows of ±70, ±35, ±20 and ±10 ms,
   and a suggestion when your playing fits another level better. The window and latency offset stay adjustable.
@@ -119,6 +121,7 @@ src/
   exercises/ exercise format (48 ticks per quarter), drum-tab builder, validator, starter library
   playalong/ expected-note timeline and hit matching for play-along scoring
   live/     Coach (wiring) and LiveState (shared per-hit state)
+  guide/    the metronome guide's steps, as data
   render/   Canvas 2D kit renderer
 ```
 
