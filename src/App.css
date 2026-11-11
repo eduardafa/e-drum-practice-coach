@@ -142,7 +142,18 @@ button.primary.active {
 
 button.primary kbd {
   opacity: 0.6;
-  margin-left: 6px;
+}
+
+/* Centre a key hint (Start M, Close Esc) on the button's text instead of its baseline. */
+button:has(> kbd) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+button:has(> kbd) kbd {
+  line-height: 1.4;
 }
 
 kbd {
@@ -722,7 +733,6 @@ fieldset.group.play {
 }
 
 .overlay button.secondary kbd {
-  margin-left: 6px;
   opacity: 0.7;
 }
 
