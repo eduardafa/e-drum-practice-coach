@@ -5,6 +5,7 @@
  */
 import type { PadId } from "../kit/nitroMax";
 import type { HitScore } from "../timing/grid";
+import type { Count } from "./counts";
 
 export interface LiveHit {
   pad: PadId | null;
@@ -23,6 +24,7 @@ export interface Beat {
 
 const MAX_RECENT_HITS = 64;
 const MAX_BEATS = 16;
+const MAX_COUNTS = 64;
 
 export class LiveState {
   /** Most recent hit per pad, for the flash animation. */
@@ -31,6 +33,8 @@ export class LiveState {
   readonly recentHits: LiveHit[] = [];
   /** Upcoming and recent beats, for the beat pulse. */
   readonly beats: Beat[] = [];
+  /** Upcoming and recent counts ("1", "&", ...), for the live count. */
+  readonly counts: Count[] = [];
   lastHit: LiveHit | null = null;
 
   /** Running totals of the current metronome session. */
@@ -64,6 +68,11 @@ export class LiveState {
     }
   }
 
+  addCount(count: Count): void {
+    this.counts.push(count);
+    if (this.counts.length > MAX_COUNTS) this.counts.shift();
+  }
+
   addBeat(beat: Beat): void {
     this.beats.push(beat);
     if (this.beats.length > MAX_BEATS) this.beats.shift();
@@ -77,5 +86,6 @@ export class LiveState {
     this.deltaMean = 0;
     this.deltaM2 = 0;
     this.beats.length = 0;
+    this.counts.length = 0;
   }
 }

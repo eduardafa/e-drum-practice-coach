@@ -32,6 +32,10 @@ export interface ScheduledStep {
   intervalSec: number;
   beat: boolean;
   downbeat: boolean;
+  /** Beat within the bar, from 0. */
+  beatInBar: number;
+  /** Subdivision within the beat, from 0 (0 is the beat itself). */
+  subInBeat: number;
 }
 
 export function stepInterval(settings: MetronomeSettings): number {
@@ -64,6 +68,8 @@ export function takeStepsUntil(
       intervalSec,
       beat,
       downbeat: beat && cursor.beatInBar === 0,
+      beatInBar: cursor.beatInBar,
+      subInBeat: cursor.subInBeat,
     });
 
     cursor.nextTime += intervalSec;

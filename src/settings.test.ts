@@ -6,15 +6,20 @@ const scoring = { toleranceMs: 12, latencyOffsetMs: -8 };
 
 describe("parseSettings", () => {
   it("keeps valid settings", () => {
-    expect(parseSettings({ metronome, scoring, skillLevel: "advanced" })).toEqual({
+    expect(parseSettings({ metronome, scoring, skillLevel: "advanced", guideSeen: true })).toEqual({
       metronome,
       scoring,
       skillLevel: "advanced",
+      guideSeen: true,
     });
   });
 
   it("keeps the First steps level", () => {
     expect(parseSettings({ skillLevel: "firstSteps" }).skillLevel).toBe("firstSteps");
+  });
+
+  it("only keeps guideSeen when it's true", () => {
+    expect(parseSettings({ guideSeen: "yes" }).guideSeen).toBeUndefined();
   });
 
   it("drops an unknown skill level", () => {
@@ -26,11 +31,13 @@ describe("parseSettings", () => {
       metronome: undefined,
       scoring,
       skillLevel: undefined,
+      guideSeen: undefined,
     });
     expect(parseSettings({ metronome, scoring: { toleranceMs: "12" } })).toEqual({
       metronome,
       scoring: undefined,
       skillLevel: undefined,
+      guideSeen: undefined,
     });
     expect(parseSettings({ metronome: { ...metronome, subdivision: 5 } }).metronome).toBeUndefined();
   });

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { isSubdivision, MAX_BPM, MIN_BPM, type MetronomeSettings } from "./audio/schedule";
 import { CalibrationPanel } from "./CalibrationPanel";
+import { LiveCount } from "./LiveCount";
+import { MetronomeGuide } from "./MetronomeGuide";
 import { Coach, DEFAULT_METRONOME } from "./live/coach";
 import type { MidiStatus } from "./midi/connection";
 import {
@@ -90,6 +92,10 @@ export default function App() {
   const [running, setRunning] = useState(false);
   const [volume, setVolume] = useState(coach.metronome.volume);
   const [calibrating, setCalibrating] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [guideSeen, setGuideSeen] = useState(saved.guideSeen === true);
+  /** Whether this opening of the guide is the drummer's first. */
+  const [guideFirstOpen, setGuideFirstOpen] = useState(false);
   const [skillLevel, setSkillLevel] = useState<SkillLevel>(saved.skillLevel ?? DEFAULT_SKILL_LEVEL);
   /** The level a calibration run started with, so its panel describes that run. */
   const [calibrationLevel, setCalibrationLevel] = useState<SkillLevel>(skillLevel);
@@ -109,8 +115,8 @@ export default function App() {
   useEffect(() => {
     coach.metronome.setSettings(metronome);
     coach.scoring = scoring;
-    saveSettings({ metronome, scoring, skillLevel });
-  }, [metronome, scoring, skillLevel]);
+    saveSettings({ metronome, scoring, skillLevel, guideSeen: guideSeen || undefined });
+  }, [metronome, scoring, skillLevel, guideSeen]);
 
   useEffect(() => {
     coach.metronome.volume = volume;
@@ -144,7 +150,14 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   });
 
+  const openGuide = () => {
+    setGuideFirstOpen(!guideSeen);
+    setGuideOpen(true);
+    setGuideSeen(true);
+  };
+
   const startCalibration = async () => {
+    setGuideOpen(false);
     setRunning(false);
     setCalibrating(true);
     setCalibrationLevel(skillLevel);
@@ -182,6 +195,16 @@ export default function App() {
 
       <main className="stage">
         <canvas ref={canvasRef} className="kit-canvas" aria-label="Live view of the drum kit" />
+        {guideOpen && !calibrating && (
+          <MetronomeGuide
+            coach={coach}
+            running={running}
+            basicsOpen={guideFirstOpen}
+            onApply={(settings) => setMetronome(settings)}
+            onToggleMetronome={() => void toggleMetronome()}
+            onClose={() => setGuideOpen(false)}
+          />
+        )}
         {calibrating && (
           <CalibrationPanel
             coach={coach}
@@ -198,8 +221,20 @@ export default function App() {
       <aside className="controls">
         <fieldset className="group" disabled={calibrating}>
           <h2>Metronome</h2>
+          {!guideSeen && (
+            <output className="suggestion">
+              <p>New to playing with a metronome? The guide shows how to count and play the money beat along with it.</p>
+              <button className="primary" onClick={openGuide}>
+                Open the guide
+              </button>
+            </output>
+          )}
           <button className={`primary ${running ? "active" : ""}`} onClick={() => void toggleMetronome()}>
             {running ? "Stop" : "Start"} <kbd>M</kbd>
+          </button>
+          {running && <LiveCount coach={coach} />}
+          <button className="link-button" onClick={openGuide}>
+            How to play with the metronome
           </button>
           <label className="field">
             <span>Tempo</span>

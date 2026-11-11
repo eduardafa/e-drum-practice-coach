@@ -9,6 +9,7 @@ import { MidiConnection, type TimedMidiEvent } from "../midi/connection";
 import { DEFAULT_SCORING, scoreHit, TimingGrid, type ScoringOptions } from "../timing/grid";
 import type { SkillLevel } from "../profiles";
 import { calibrationSetup, CalibrationSession, type CalibrationProgress } from "./calibration";
+import { countAt } from "./counts";
 import { LiveState } from "./liveState";
 
 export const DEFAULT_METRONOME: MetronomeSettings = {
@@ -34,6 +35,8 @@ export class Coach {
     this.unsubscribers.push(
       this.midi.onEvent((e) => this.handleMidi(e)),
       this.metronome.onStep((step) => {
+        const { beatsPerBar, subdivision } = this.metronome.currentSettings;
+        this.live.addCount({ time: step.performanceTime, ...countAt(step, beatsPerBar, subdivision) });
         if (!step.beat) return;
         this.live.addBeat({ time: step.performanceTime, downbeat: step.downbeat });
         // No more clicks needed: the target was reached or the limit is scheduled.
