@@ -1,5 +1,5 @@
-# Keeps the SHA-pinned GitHub Actions current. Dependabot updates the SHA and
-# its "# vX.Y.Z" comment together. npm updates are tracked separately.
+# Keeps dependencies current: the SHA-pinned GitHub Actions (Dependabot updates
+# the SHA and its "# vX.Y.Z" comment together) and the npm packages.
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -15,3 +15,22 @@ updates:
         patterns: ["*"]
     commit-message:
       prefix: ci
+
+  # npm packages (pnpm lockfile). Minor and patch updates come as one weekly PR;
+  # major updates get their own PR each, since they can break things. Security
+  # fixes bypass the cooldown (they're Dependabot security updates, enabled in
+  # the repository settings).
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    # Longer than pnpm's 3-day minimumReleaseAge, so a proposed version always installs.
+    cooldown:
+      default-days: 7
+    groups:
+      npm-minor-and-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+    commit-message:
+      prefix: deps
+      prefix-development: deps-dev
