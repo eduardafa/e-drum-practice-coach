@@ -117,6 +117,7 @@ src/
   timing/   timing grid and hit scoring
   kit/      Nitro Max note map and pad layout
   exercises/ exercise format (48 ticks per quarter), drum-tab builder, validator, starter library
+  playalong/ expected-note timeline and hit matching for play-along scoring
   live/     Coach (wiring) and LiveState (shared per-hit state)
   render/   Canvas 2D kit renderer
 ```
