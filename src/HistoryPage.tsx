@@ -204,8 +204,8 @@ export function HistoryPage({ records, status, accuracyMode, selectedExerciseId,
                     </div>
                   </>
                 ) : (
-                  <button className="secondary danger" onClick={releasing(() => setConfirming(true))}>
-                    Clear history…
+                  <button className="primary danger" onClick={releasing(() => setConfirming(true))}>
+                    Clear history
                   </button>
                 )}
               </div>

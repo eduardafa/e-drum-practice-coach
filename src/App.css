@@ -2129,16 +2129,6 @@ button.primary.danger {
   max-width: 520px;
 }
 
-button.secondary.danger {
-  color: var(--danger);
-  border-color: var(--danger);
-}
-
-button.secondary.danger:hover:not(:disabled) {
-  background: var(--tint);
-  border-color: var(--danger);
-}
-
 @media (max-width: 900px) {
   .history-columns {
     grid-template-columns: 1fr;
