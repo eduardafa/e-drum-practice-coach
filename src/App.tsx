@@ -321,13 +321,32 @@ export default function App() {
     }
   };
 
+  const panelOpen = settingsOpen || guideOpen || libraryOpen || historyOpen;
+  const closePanels = () => {
+    setSettingsOpen(false);
+    setGuideOpen(false);
+    setHistoryOpen(false);
+    closeLibrary();
+  };
+
+  // Pressing outside an open panel closes it, like Esc. Presses inside a
+  // panel are its own, and the buttons that open a panel (they carry
+  // aria-expanded) toggle it themselves. Calibration, the trainer and
+  // results aren't closed this way: a stray click mustn't end a run.
+  useEffect(() => {
+    if (!panelOpen) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (e.target instanceof Element && e.target.closest(".overlay, .guide, [aria-expanded]")) return;
+      closePanels();
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  });
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.code === "Escape" && (settingsOpen || guideOpen || libraryOpen || historyOpen)) {
-        setSettingsOpen(false);
-        setGuideOpen(false);
-        setHistoryOpen(false);
-        closeLibrary();
+      if (e.code === "Escape" && panelOpen) {
+        closePanels();
         return;
       }
       // While browsing, keys move around the library: Space and Enter press its buttons, not the drums.
