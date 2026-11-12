@@ -55,7 +55,7 @@ const readColors = (): Colors =>
 const FLASH_MS = 260;
 const LABEL_MS = 900;
 const STRIP_HISTORY_MS = 5000;
-const BEAT_PULSE_MS = 140;
+const BEAT_PULSE_MS = 180;
 /** The strip shows ±this many ms around the grid point. */
 const STRIP_RANGE_MS = 60;
 
@@ -132,7 +132,6 @@ export class KitRenderer {
     for (const pad of NITRO_MAX_PADS) {
       this.drawPad(pad, boxX + pad.x * boxW, boxY + pad.y * boxH, pad.r * boxH, now);
     }
-    this.drawBeatPulse(boxX + boxW - 18, boxY + 18, now);
     this.drawTimingStrip(0, kitHeight, width, stripHeight, now);
   }
 
@@ -210,21 +209,19 @@ export class KitRenderer {
     return this.colors[hit.score?.verdict ?? "unscored"];
   }
 
-  private drawBeatPulse(cx: number, cy: number, now: number): void {
-    const { ctx } = this;
+  /**
+   * The metronome's click, shown on the strip's "on the click" line, where
+   * the hits land too: how strongly it shows now (1 at the click, fading to
+   * 0) and whether it's beat 1. Nothing shows while the metronome is stopped.
+   */
+  private beatPulse(now: number): { pulse: number; downbeat: boolean } {
     let current = null;
     for (const beat of this.state.beats) {
       if (beat.time <= now) current = beat;
       else break;
     }
     const age = current ? now - current.time : Infinity;
-    const pulse = age < BEAT_PULSE_MS ? 1 - age / BEAT_PULSE_MS : 0;
-    ctx.beginPath();
-    ctx.arc(cx, cy, 8 + 4 * pulse, 0, Math.PI * 2);
-    ctx.fillStyle = current?.downbeat ? this.colors.downbeat : this.colors.beat;
-    ctx.globalAlpha = 0.15 + 0.85 * pulse;
-    ctx.fill();
-    ctx.globalAlpha = 1;
+    return { pulse: age < BEAT_PULSE_MS ? 1 - age / BEAT_PULSE_MS : 0, downbeat: current?.downbeat ?? false };
   }
 
   private drawTimingStrip(x: number, y: number, w: number, h: number, now: number): void {
@@ -254,6 +251,21 @@ export class KitRenderer {
     }
     ctx.stroke();
 
+    // The click flashes along the center line, stronger on beat 1.
+    const { pulse, downbeat } = this.beatPulse(now);
+    const clickColor = downbeat ? this.colors.downbeat : this.colors.beat;
+    if (pulse > 0) {
+      ctx.globalAlpha = pulse;
+      ctx.strokeStyle = clickColor;
+      ctx.lineWidth = downbeat ? 3 : 2;
+      ctx.beginPath();
+      ctx.moveTo(centerX, top);
+      ctx.lineTo(centerX, bottom);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.lineWidth = 1;
+    }
+
     ctx.font = "600 11px system-ui, sans-serif";
     ctx.textBaseline = "alphabetic";
     ctx.fillStyle = this.colors.early;
@@ -265,6 +277,13 @@ export class KitRenderer {
     ctx.fillStyle = this.colors.label;
     ctx.textAlign = "center";
     ctx.fillText("on the click", centerX, y + 15);
+    if (pulse > 0) {
+      // The label lights up with the click.
+      ctx.globalAlpha = pulse;
+      ctx.fillStyle = clickColor;
+      ctx.fillText("on the click", centerX, y + 15);
+      ctx.globalAlpha = 1;
+    }
 
     // One lane per pad, so patterns like "kick always late" are visible.
     const laneH = (bottom - top) / PAD_LANES.length;
