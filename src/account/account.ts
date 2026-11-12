@@ -16,11 +16,11 @@ export type Account =
   /** Offline, a preview, local development, or the server not answering. */
   | { status: "unavailable" }
   | { status: "signed-out"; providers: Provider[] }
-  | { status: "signed-in"; provider: Provider; providers: Provider[] };
+  | { status: "signed-in"; provider: Provider; name: string | null; avatarUrl: string | null; providers: Provider[] };
 
 /** What /api/me answers (see worker/index.ts). */
 interface MeResponse {
-  user: { provider: Provider } | null;
+  user: { provider: Provider; name: string | null; avatarUrl: string | null } | null;
   providers: Provider[];
 }
 
@@ -33,7 +33,12 @@ function parseMe(body: unknown): MeResponse | null {
   const providers = body.providers.filter(isProvider);
   const { user } = body;
   if (user === null) return { user: null, providers };
-  if (isRecord(user) && isProvider(user.provider)) return { user: { provider: user.provider }, providers };
+  if (isRecord(user) && isProvider(user.provider)) {
+    const name = typeof user.name === "string" && user.name !== "" ? user.name : null;
+    // Only HTTPS pictures, as the server and the CSP allow.
+    const avatarUrl = typeof user.avatarUrl === "string" && user.avatarUrl.startsWith("https://") ? user.avatarUrl : null;
+    return { user: { provider: user.provider, name, avatarUrl }, providers };
+  }
   return null;
 }
 
@@ -45,7 +50,7 @@ export async function fetchAccount(signal?: AbortSignal): Promise<Account> {
     const me = parseMe(await res.json());
     if (!me) return { status: "unavailable" };
     return me.user
-      ? { status: "signed-in", provider: me.user.provider, providers: me.providers }
+      ? { status: "signed-in", ...me.user, providers: me.providers }
       : { status: "signed-out", providers: me.providers };
   } catch (error) {
     if (signal?.aborted) throw error;

@@ -21,8 +21,20 @@ function serve(body: unknown, init: ResponseInit = {}) {
 
 describe("fetchAccount", () => {
   it("reads signed-in and signed-out answers", async () => {
-    serve({ user: { provider: "google" }, providers: ["github", "google"] });
-    expect(await fetchAccount()).toEqual({ status: "signed-in", provider: "google", providers: ["github", "google"] });
+    serve({
+      user: { provider: "google", name: "Bea Beats", avatarUrl: "https://lh3.googleusercontent.com/a/x" },
+      providers: ["github", "google"],
+    });
+    expect(await fetchAccount()).toEqual({
+      status: "signed-in",
+      provider: "google",
+      name: "Bea Beats",
+      avatarUrl: "https://lh3.googleusercontent.com/a/x",
+      providers: ["github", "google"],
+    });
+    // Before the first sign-in with this version: no name or picture yet. A non-HTTPS picture is dropped.
+    serve({ user: { provider: "github", name: null, avatarUrl: "http://x.example/a.png" }, providers: ["github"] });
+    expect(await fetchAccount()).toMatchObject({ status: "signed-in", name: null, avatarUrl: null });
     serve({ user: null, providers: ["github", "someday"] });
     expect(await fetchAccount()).toEqual({ status: "signed-out", providers: ["github"] });
   });

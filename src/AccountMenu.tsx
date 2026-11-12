@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { PROVIDER_LABEL, type Account, type SignInResult } from "./account/account";
-import { ProviderLogo } from "./account/ProviderLogo";
+import { Avatar } from "./account/Avatar";
 import { AccountSection } from "./AccountSection";
 
 interface Props {
@@ -35,19 +35,20 @@ export function AccountMenu({ account, signInResult, open, onToggle, onSignOut }
 
   if (account.status !== "signed-in" && account.status !== "signed-out") return null;
   const signedIn = account.status === "signed-in";
+  const who = signedIn ? (account.name ?? `signed in with ${PROVIDER_LABEL[account.provider]}`) : "";
 
   return (
     <div className="account-menu-anchor">
       <button
         ref={buttonRef}
-        className={`account-button ${signedIn ? `signed-in ${account.provider}` : "secondary"} ${open ? "selected" : ""}`}
+        className={`account-button ${signedIn ? `signed-in ${account.provider} ${account.avatarUrl ? "has-picture" : ""}` : "secondary"} ${open ? "selected" : ""}`}
         aria-expanded={open}
         aria-controls="account-menu"
-        aria-label={signedIn ? `Account: signed in with ${PROVIDER_LABEL[account.provider]}` : undefined}
-        title={signedIn ? `Signed in with ${PROVIDER_LABEL[account.provider]}` : undefined}
+        aria-label={signedIn ? `Account: ${who}` : undefined}
+        title={signedIn ? `${account.name ? `${account.name} · ` : ""}Signed in with ${PROVIDER_LABEL[account.provider]}` : undefined}
         onClick={onToggle}
       >
-        {signedIn ? <ProviderLogo provider={account.provider} size={20} /> : "Sign in"}
+        {signedIn ? <Avatar provider={account.provider} url={account.avatarUrl} size={36} /> : "Sign in"}
       </button>
       {open && (
         // A non-modal <dialog>: the page stays usable, and a press outside closes it.

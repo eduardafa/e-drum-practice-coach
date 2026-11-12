@@ -105,7 +105,7 @@
         <p><strong>In short:</strong></p>
         <ul>
           <li>You can practice without an account. Then nothing about you leaves your browser.</li>
-          <li>If you sign in, the app keeps only which service you used (GitHub or Google) and that service's account number for you. Never your email, name or picture.</li>
+          <li>If you sign in, the app keeps which service you used (GitHub or Google), that service's account number for you, and your name and profile picture from it, to show who's signed in. Never your email.</li>
           <li>No analytics, no ads, no tracking cookies. Nothing is sold or shared.</li>
         </ul>
       </div>
@@ -133,6 +133,11 @@
               <td>Until you ask for your account to be deleted</td>
             </tr>
             <tr>
+              <td>Your name and a link to your profile picture, as GitHub or Google show them</td>
+              <td>To show who's signed in, in the account menu</td>
+              <td>Updated each time you sign in; deleted with your account</td>
+            </tr>
+            <tr>
               <td>A session for each signed-in browser (a scrambled form of the sign-in cookie, and when it expires)</td>
               <td>To keep you signed in</td>
               <td>Up to 30 days, renewed while you keep using the app, or until you sign out</td>
@@ -145,7 +150,7 @@
           </tbody>
         </table>
       </div>
-      <p>The app asks GitHub for no permissions beyond your public profile, reads only your account number from it, and discards the access it was given. From Google it asks only for basic sign-in (<code>openid</code>): no email, no profile, no access to anything else in your account.</p>
+      <p>The app asks GitHub for no permissions beyond your public profile, reads your account number, name and picture from it, and discards the access it was given. From Google it asks only for basic sign-in and your public profile (<code>openid</code> and <code>profile</code>): your account number, name and picture. Never your email, and no access to anything else in your account.</p>
 
       <h2>Cookies</h2>
       <p>Only two, both needed for signing in, and neither used for tracking:</p>
@@ -157,6 +162,7 @@
 
       <h2>Where it lives</h2>
       <p>The app runs on <a href="https://www.cloudflare.com/privacypolicy/">Cloudflare</a>. Signed-in data is stored in a Cloudflare D1 database in Eastern North America. Like any website host, Cloudflare handles your IP address and browser details to deliver the site and protect it from attacks, under its own privacy policy. The app itself doesn't log or keep them.</p>
+      <p>Your profile picture loads straight from GitHub's or Google's image servers, so they see your browser fetch it, as they do whenever you see your picture elsewhere. No referrer is sent with it.</p>
       <p>When you sign in, <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement">GitHub's</a> or <a href="https://policies.google.com/privacy">Google's</a> privacy policy applies to what happens on their pages.</p>
 
       <h2>Deleting your data</h2>
