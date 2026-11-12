@@ -163,7 +163,7 @@ function Result({
       {negative && (
         <p className="calibration-note warn-note">
           A negative result usually means playing ahead of the click, not a delay in your setup. Using it would count
-          your early hits as on time. Keeping the offset at 0 ms keeps them visible, so you can practise them away.
+          your early hits as on time. Keeping the offset at 0 ms keeps them visible, so you can practice them away.
         </p>
       )}
       <LevelSuggestion spreadMs={spreadMs} currentLevel={currentLevel} onSwitchLevel={onSwitchLevel} />

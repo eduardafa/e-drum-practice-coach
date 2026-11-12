@@ -51,7 +51,7 @@ export interface Progress {
 const isSession = (r: HistoryRecord): r is SessionRecord => r.kind === "session";
 
 /** The exercises with saved sessions, most recently played first. */
-export function practisedExercises(records: readonly HistoryRecord[]): { id: string; name: string }[] {
+export function practicedExercises(records: readonly HistoryRecord[]): { id: string; name: string }[] {
   const seen = new Map<string, string>();
   // Records come newest first, so the first name seen is the latest one.
   for (const r of records) if (isSession(r) && !seen.has(r.exerciseId)) seen.set(r.exerciseId, r.exerciseName);

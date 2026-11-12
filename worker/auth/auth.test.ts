@@ -189,11 +189,11 @@ describe("finishing sign-in", () => {
     expect((await callback(env, "google", `code=abc&state=${state}`, cookie)).headers.get("Location")).toMatch(/failed$/);
   });
 
-  it("reports a declined consent screen as cancelled", async () => {
+  it("reports a declined consent screen as canceled", async () => {
     const env = setup();
     const { cookie, state } = await start(env, "github");
     const res = await callback(env, "github", `error=access_denied&state=${state}`, cookie);
-    expect(res.headers.get("Location")).toBe(`${ORIGIN}/?signin=cancelled`);
+    expect(res.headers.get("Location")).toBe(`${ORIGIN}/?signin=canceled`);
   });
 
   it("fails cleanly when the provider rejects the code", async () => {

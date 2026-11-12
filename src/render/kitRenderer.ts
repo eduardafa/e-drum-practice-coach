@@ -123,7 +123,7 @@ export class KitRenderer {
     const stripHeight = Math.max(90, height * 0.22);
     const kitHeight = height - stripHeight;
 
-    // Fit a 1.6:1 box for the kit, centred in the kit area.
+    // Fit a 1.6:1 box for the kit, centered in the kit area.
     const boxH = Math.min(kitHeight * 0.96, (width * 0.96) / 1.6);
     const boxW = boxH * 1.6;
     const boxX = (width - boxW) / 2;

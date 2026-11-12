@@ -27,7 +27,7 @@ reports are about:
 ## How the project protects itself
 
 - Dependencies are scanned by Trivy and Dependabot. Package versions younger than 3 days aren't installed.
-- The code and workflows are analysed by CodeQL. The workflows are also audited by zizmor and actionlint,
+- The code and workflows are analyzed by CodeQL. The workflows are also audited by zizmor and actionlint,
   and every action is pinned to a commit SHA.
 - Secret scanning with push protection is on.
 - `main` only accepts pull requests that pass all of these checks.

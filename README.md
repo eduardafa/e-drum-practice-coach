@@ -9,7 +9,7 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
 ## v1 features
 
 - Connect to the kit over USB with Web MIDI. The kit is selected automatically, and hot-plugging works.
-- Live kit view on Canvas 2D at 60fps. Pads flash by how hard they were hit and are coloured by
+- Live kit view on Canvas 2D at 60fps. Pads flash by how hard they were hit and are colored by
   timing: early is blue, on time is green, late is orange.
 - Lookahead metronome on Web Audio, with tempo, beats per bar, subdivisions and an accented downbeat.
 - A "How to play with the metronome" guide for new drummers: counting "1 & 2 &", and four steps to the money
@@ -24,7 +24,7 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
   offset. It adapts to your skill level (Beginner, Intermediate, Advanced) and keeps listening until the
   measurement is precise, so steadier playing finishes sooner.
 - Exercise library: browse the grooves and rudiments, each with its time signature, tempo range and a drum-tab
-  preview (with the sticking for rudiments). Listen plays one loop with synthesised drum sounds and a click on
+  preview (with the sticking for rudiments). Listen plays one loop with synthesized drum sounds and a click on
   every beat. Choosing an exercise sets the metronome to fit it, at your last tempo for that exercise or its
   suggested tempo. It works with the keyboard: <kbd>Tab</kbd> and <kbd>Enter</kbd>, <kbd>Esc</kbd> to close.
 - Drum notation: the chosen exercise appears as standard drum notation above the kit view, with a playhead
@@ -35,7 +35,7 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
   missed, extra hits, timing, consistency and a per-pad breakdown, with retry and 5 BPM slower/faster.
   Accuracy is partial credit by default (full credit inside the on-time window, less the further off a hit is)
   or strict (only on-time notes count), chosen in Settings; extra hits count against both.
-- Tempo trainer: practise an exercise in rounds that speed up as you play cleanly. After each round the tempo
+- Tempo trainer: practice an exercise in rounds that speed up as you play cleanly. After each round the tempo
   goes up a step (default 4 BPM) at 90% or more, down a step below 70%, and otherwise stays, until you pass a
   round at your target tempo. A short pause and a count-in at the new tempo separate the rounds, and a chart
   shows each round's tempo and accuracy.
@@ -52,7 +52,7 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
 - Timing by hand, foot and pad over the same range: each one's average lean (early or late) and how much it
   varies, with the biggest tendency spelled out and a practice tip, e.g. "Your left hand drags: it's 12 ms late
   on average. Try slow single strokes". Rudiments use their sticking; grooves assume a right-handed setup.
-- Pad heatmap: the kit drawn from above with each pad coloured by how often or how hard it was hit, for a range
+- Pad heatmap: the kit drawn from above with each pad colored by how often or how hard it was hit, for a range
   of history or the session just played, with a legend, a table, and a note on whether accents and ghost notes
   sound different enough.
 - Keyboard fallback for trying the app without a kit.
@@ -169,7 +169,7 @@ stored as a timing grid. Each MIDI hit is then compared with the nearest grid po
 ```
 src/
   midi/     Web MIDI connection and MIDI byte parsing
-  audio/    metronome scheduler, worker timer, clock mapping, synthesised click and drum voices, previews
+  audio/    metronome scheduler, worker timer, clock mapping, synthesized click and drum voices, previews
   timing/   timing grid and hit scoring
   kit/      Nitro Max note map and pad layout
   exercises/ exercise format (48 ticks per quarter), drum-tab builder, validator, starter library, preview timing

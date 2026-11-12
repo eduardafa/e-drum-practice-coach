@@ -13,7 +13,7 @@ interface Props {
 const RESULT_TEXT: Record<SignInResult, string> = {
   ok: "You're signed in.",
   failed: "Sign-in didn't work. Please try again.",
-  cancelled: "Sign-in was cancelled. Nothing changed.",
+  canceled: "Sign-in was canceled. Nothing changed.",
   unavailable: "That sign-in option isn't set up yet.",
 };
 

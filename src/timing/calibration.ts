@@ -1,5 +1,5 @@
 /**
- * Latency calibration maths. The drummer plays along to a click; each hit's
+ * Latency calibration math. The drummer plays along to a click; each hit's
  * raw delta (hit time minus click time, with no latency offset applied) is
  * collected, and the system latency is estimated from those deltas.
  *
@@ -52,7 +52,7 @@ export type CalibrationResult =
       rejected: number;
     };
 
-/** Value at fraction `q` (0–1) of sorted values, interpolating between neighbours. */
+/** Value at fraction `q` (0–1) of sorted values, interpolating between neighbors. */
 export function quantile(sorted: readonly number[], q: number): number {
   if (sorted.length === 0) throw new Error("quantile of an empty list");
   const pos = (sorted.length - 1) * q;

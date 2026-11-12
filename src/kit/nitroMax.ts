@@ -20,7 +20,7 @@ export type PadId =
 export interface PadInfo {
   id: PadId;
   label: string;
-  /** Centre and radius in normalized kit coordinates (0..1 on both axes; y grows down). */
+  /** Center and radius in normalized kit coordinates (0..1 on both axes; y grows down). */
   x: number;
   y: number;
   r: number;

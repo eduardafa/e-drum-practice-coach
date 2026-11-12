@@ -4,7 +4,7 @@
  * Days are calendar dates (Temporal.PlainDate), never 24-hour blocks: a
  * session counts for the date it was played on in the time zone it was
  * played in. So 23:59 and 00:01 are two days, a 23- or 25-hour
- * daylight-saving day is still one day, and travelling doesn't move past
+ * daylight-saving day is still one day, and traveling doesn't move past
  * sessions to another date.
  */
 import type { HistoryRecord, SessionRecord } from "./record";
@@ -19,7 +19,7 @@ const isSession = (r: HistoryRecord): r is SessionRecord => r.kind === "session"
 export interface Streak {
   /** Days in a row with practice, ending today, or yesterday if not yet today. */
   current: number;
-  practisedToday: boolean;
+  practicedToday: boolean;
   longest: number;
 }
 
@@ -31,10 +31,10 @@ export interface Streak {
  */
 export function streak(records: readonly HistoryRecord[], today: Temporal.PlainDate): Streak {
   const days = new Set(records.filter(isSession).map((r) => practiceDate(r).toString()));
-  const practisedToday = days.has(today.toString());
+  const practicedToday = days.has(today.toString());
 
   let current = 0;
-  let day = practisedToday ? today : today.subtract({ days: 1 });
+  let day = practicedToday ? today : today.subtract({ days: 1 });
   while (days.has(day.toString())) {
     current++;
     day = day.subtract({ days: 1 });
@@ -48,7 +48,7 @@ export function streak(records: readonly HistoryRecord[], today: Temporal.PlainD
     longest = Math.max(longest, run);
     previous = d;
   }
-  return { current, practisedToday, longest };
+  return { current, practicedToday, longest };
 }
 
 /** Total time spent in sessions on a calendar date. */

@@ -3,7 +3,7 @@
  *
  * Counts carry the time each click is heard (on the same clock the scoring
  * uses), their position in the bar and the bar number. The playhead sits at
- * the latest count heard and moves towards the next one in proportion to the
+ * the latest count heard and moves toward the next one in proportion to the
  * time passed, so it follows the audio rather than counting frames, and
  * can't drift.
  */

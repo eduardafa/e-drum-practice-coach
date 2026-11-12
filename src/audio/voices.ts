@@ -1,5 +1,5 @@
 /**
- * Synthesised sounds: the metronome click and a simple voice per pad for
+ * Synthesized sounds: the metronome click and a simple voice per pad for
  * exercise previews. Built from oscillators and filtered noise, so no samples
  * are shipped (smaller bundle, no licensing questions). They only need to
  * tell the pads apart, not to sound like a real kit.

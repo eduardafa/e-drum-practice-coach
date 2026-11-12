@@ -6,7 +6,7 @@
  * Dates are Temporal strings: the start as an Instant (an exact moment) and
  * the length as a Duration. The time zone the session was played in is kept
  * too, so a session counts for the calendar day it was played on, even after
- * travelling. Hit timing never touches Temporal: it stays on performance.now().
+ * traveling. Hit timing never touches Temporal: it stays on performance.now().
  *
  * Each record carries what later stats need without looking anything up:
  * the exercise's voices (pad, dynamic, hand per note), every note's result

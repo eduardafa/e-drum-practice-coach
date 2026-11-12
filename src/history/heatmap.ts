@@ -82,7 +82,7 @@ export function heatmap(records: readonly HistoryRecord[], from: Temporal.PlainD
   };
 }
 
-// ---- Colour bins -------------------------------------------------------------
+// ---- Color bins -------------------------------------------------------------
 
 /**
  * Color steps, least to most. The colors are theme tokens (--heat-0 to
@@ -104,7 +104,7 @@ export interface Bin {
 /**
  * The legend's bins. Hits split 1..max into five equal ranges (fewer when
  * there are fewer than five distinct counts); strength uses the fixed MIDI
- * range, so colours mean the same thing whatever was played.
+ * range, so colors mean the same thing whatever was played.
  */
 export function bins(measure: HeatMeasure, maxHits: number): Bin[] {
   const top = measure === "strength" ? 127 : Math.max(1, maxHits);
