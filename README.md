@@ -48,6 +48,9 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
 - Timing by hand, foot and pad over the same range: each one's average lean (early or late) and how much it
   varies, with the biggest tendency spelled out and a practice tip, e.g. "Your left hand drags: it's 12 ms late
   on average. Try slow single strokes". Rudiments use their sticking; grooves assume a right-handed setup.
+- Pad heatmap: the kit drawn from above with each pad coloured by how often or how hard it was hit, for a range
+  of history or the session just played, with a legend, a table, and a note on whether accents and ghost notes
+  sound different enough.
 - Keyboard fallback for trying the app without a kit.
 
 ## Running it
@@ -149,7 +152,7 @@ src/
   exercises/ exercise format (48 ticks per quarter), drum-tab builder, validator, starter library, preview timing
   playalong/ expected-note timeline, hit matching, sessions and accuracy scoring
   live/     Coach (wiring) and LiveState (shared per-hit state)
-  history/  practice history records (Temporal dates), streaks, progress by day and week, timing per limb and pad, IndexedDB store
+  history/  practice history records (Temporal dates), streaks, progress by day and week, timing per limb and pad, pad heatmap, IndexedDB store
   guide/    the metronome guide's steps, as data
   notation/ rhythm spelling, VexFlow engraving (loaded on demand) and the playhead mapping
   render/   Canvas 2D kit renderer

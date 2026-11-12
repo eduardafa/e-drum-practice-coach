@@ -5,6 +5,8 @@ import type { AccuracyMode } from "./playalong/results";
 import { PROGRESS_RANGES, practisedExercises, rangeStart, type ProgressRange } from "./history/progress";
 import { ProgressSection } from "./ProgressSection";
 import { TimingSection } from "./TimingSection";
+import { PadHeatmap } from "./PadHeatmap";
+import { heatmap } from "./history/heatmap";
 import { releasing } from "./releasing";
 
 export type HistoryStatus = "loading" | "ready" | "off";
@@ -18,6 +20,8 @@ interface Props {
   onClear: () => void;
   onClose: () => void;
 }
+
+const SCOPE: Record<ProgressRange, string> = { "7d": "the last 7 days", "30d": "the last 30 days", all: "all sessions" };
 
 /** The list stays quick to scan; older entries still count for streaks. */
 const SHOWN = 100;
@@ -138,6 +142,7 @@ export function HistoryPanel({ records, status, accuracyMode, selectedExerciseId
                 range={range}
               />
               <TimingSection records={records} from={rangeStart(range, today)} />
+              <PadHeatmap heat={heatmap(records, rangeStart(range, today))} scope={SCOPE[range]} />
             </>
           )}
 

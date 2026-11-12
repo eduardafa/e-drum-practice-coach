@@ -10,6 +10,7 @@
  */
 import type { PadId } from "../kit/nitroMax";
 import type { HistoryRecord, SessionRecord } from "./record";
+import { RunningStats } from "./running";
 import { practiceDate } from "./streak";
 
 export type Limb = "RH" | "LH" | "RF" | "LF";
@@ -55,25 +56,12 @@ export interface TimingStats {
   sessions: number;
 }
 
-/** Running sums for a mean and sample standard deviation (Welford). */
+/** Timing so far for one limb or pad. */
 class Acc {
-  n = 0;
+  readonly timing = new RunningStats();
   missed = 0;
-  private mean = 0;
-  private m2 = 0;
-  add(x: number) {
-    this.n++;
-    const d = x - this.mean;
-    this.mean += d / this.n;
-    this.m2 += d * (x - this.mean);
-  }
   stat(): TimingStat {
-    return {
-      hits: this.n,
-      missed: this.missed,
-      meanMs: this.n ? this.mean : null,
-      spreadMs: this.n >= 2 ? Math.sqrt(this.m2 / (this.n - 1)) : null,
-    };
+    return { hits: this.timing.n, missed: this.missed, meanMs: this.timing.mean, spreadMs: this.timing.spread };
   }
 }
 
@@ -101,7 +89,7 @@ export function timingStats(records: readonly HistoryRecord[], from: Temporal.Pl
       const accs = [get(pads, voice.pad), ...(limb ? [get(limbs, limb)] : [])];
       for (const acc of accs) {
         if (deltaMs === null) acc.missed++;
-        else acc.add(deltaMs);
+        else acc.timing.add(deltaMs);
       }
     }
   }
