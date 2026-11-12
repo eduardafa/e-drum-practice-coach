@@ -1,5 +1,6 @@
 import { isSubdivision, type MetronomeSettings } from "./audio/schedule";
 import { KeyboardHint } from "./KeyboardHint";
+import { ThemeSetting } from "./ThemeSetting";
 import { isAccuracyMode, type AccuracyMode } from "./playalong/results";
 import { isSkillLevel, levelForTolerance, SKILL_LEVELS, SKILL_PROFILES, type SkillLevel } from "./profiles";
 import { releasing } from "./releasing";
@@ -49,6 +50,9 @@ export function SettingsPanel({
           Close <kbd>Esc</kbd>
         </button>
       </div>
+
+      <h3>Appearance</h3>
+      <ThemeSetting />
 
       <h3>Metronome</h3>
       <label className="field">

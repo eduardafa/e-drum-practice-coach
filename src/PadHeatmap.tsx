@@ -1,7 +1,5 @@
 import { useMemo, useState } from "react";
 import {
-  HEAT_COLORS,
-  HEAT_INK,
   binOf,
   bins,
   dynamicsNote,
@@ -48,9 +46,9 @@ function describe(pad: PadInfo, p: PadHeat | undefined): string {
 
 /**
  * The kit drawn from above, each pad filled by how often it was hit or how
- * hard on average: one hue, darker for less and lighter for more, with a
- * legend. The drawing is hidden from screen readers; the caption and the
- * table carry the same values.
+ * hard on average: one hue that stands out more for more (lighter on dark,
+ * darker on light), with a legend. The drawing is hidden from screen
+ * readers; the caption and the table carry the same values.
  */
 export function PadHeatmap({ heat, scope }: Props) {
   const [measure, setMeasure] = useState<HeatMeasure>("hits");
@@ -111,15 +109,9 @@ export function PadHeatmap({ heat, scope }: Props) {
               >
                 {/* A bigger, invisible target than the pad itself. */}
                 <circle className="heat-hit" cx={cx} cy={cy} r={Math.max(r, 16) + 4} />
-                <circle
-                  className={bin ? "heat-fill" : "heat-empty"}
-                  cx={cx}
-                  cy={cy}
-                  r={r}
-                  fill={bin ? HEAT_COLORS[bin.step] : undefined}
-                />
+                <circle className={bin ? `heat-fill heat-step-${bin.step}` : "heat-empty"} cx={cx} cy={cy} r={r} />
                 {bin && value !== null && (
-                  <text className="heat-value" x={cx} y={cy} fill={HEAT_INK[bin.step]}>
+                  <text className={`heat-value heat-step-${bin.step}`} x={cx} y={cy}>
                     {Math.round(value)}
                   </text>
                 )}
@@ -140,15 +132,15 @@ export function PadHeatmap({ heat, scope }: Props) {
         </li>
         {binList.map((b) => (
           <li key={b.step}>
-            <span className="heat-swatch" style={SWATCH_STYLES[b.step]} />
+            <span className={`heat-swatch heat-step-${b.step}`} />
             {b.min === b.max ? b.min : `${b.min}–${b.max}`}
           </li>
         ))}
       </ul>
       <p className="hint">
         {measure === "hits"
-          ? "Darker means fewer hits, lighter means more."
-          : "Strength is how hard the kit felt each hit, from 1 (softest) to 127. Darker is softer."}
+          ? "The more a pad stands out, the more you hit it."
+          : "Strength is how hard the kit felt each hit, from 1 (softest) to 127. The more a pad stands out, the harder you hit it."}
       </p>
 
       {note && <p className="heatmap-note">{note}</p>}
@@ -197,9 +189,6 @@ export function PadHeatmap({ heat, scope }: Props) {
     </div>
   );
 }
-
-// Fixed objects, so they're not recreated on each render.
-const SWATCH_STYLES = HEAT_COLORS.map((background) => ({ background }));
 
 function HeatTip({ pad, text }: { pad: PadInfo; text: string }) {
   const style = useMemo(

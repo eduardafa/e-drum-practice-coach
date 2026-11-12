@@ -84,15 +84,17 @@ export function heatmap(records: readonly HistoryRecord[], from: Temporal.PlainD
 
 // ---- Colour bins -------------------------------------------------------------
 
-/** Five steps of one hue, darkest (least) to lightest (most), checked against the dark panel. */
-export const HEAT_COLORS = ["#5640a3", "#6d4fc4", "#8a6de2", "#ad97f1", "#d6ccfa"] as const;
-/** Text on each step: white on the two dark ones, near-black on the light ones. */
-export const HEAT_INK = ["#ffffff", "#ffffff", "#0e1116", "#0e1116", "#0e1116"] as const;
+/**
+ * Color steps, least to most. The colors are theme tokens (--heat-0 to
+ * --heat-4 in App.css, each with its own ink color), checked against the
+ * light and the dark panel.
+ */
+export const HEAT_STEPS = 5;
 
 export type HeatMeasure = "hits" | "strength";
 
 export interface Bin {
-  /** Index into HEAT_COLORS. */
+  /** Color step, 0 (least) to HEAT_STEPS - 1. */
   step: number;
   /** Inclusive range of values in this bin, e.g. 1–25 hits. */
   min: number;
@@ -106,13 +108,13 @@ export interface Bin {
  */
 export function bins(measure: HeatMeasure, maxHits: number): Bin[] {
   const top = measure === "strength" ? 127 : Math.max(1, maxHits);
-  const count = Math.min(HEAT_COLORS.length, top);
+  const count = Math.min(HEAT_STEPS, top);
   const result: Bin[] = [];
   for (let i = 0; i < count; i++) {
     const min = Math.floor((top * i) / count) + 1;
     const max = Math.floor((top * (i + 1)) / count);
     // Spread the used steps across the whole ramp so a few bins still contrast.
-    const step = count === 1 ? HEAT_COLORS.length - 1 : Math.round((i * (HEAT_COLORS.length - 1)) / (count - 1));
+    const step = count === 1 ? HEAT_STEPS - 1 : Math.round((i * (HEAT_STEPS - 1)) / (count - 1));
     result.push({ step, min, max });
   }
   return result;

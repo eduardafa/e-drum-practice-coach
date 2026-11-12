@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Dynamic } from "../exercises/types";
 import type { PadId } from "../kit/nitroMax";
-import { DYNAMIC_GAP, HEAT_COLORS, binOf, bins, dynamicsNote, heatmap, type VelocityStat } from "./heatmap";
+import { DYNAMIC_GAP, HEAT_STEPS, binOf, bins, dynamicsNote, heatmap, type VelocityStat } from "./heatmap";
 import type { ExtraTuple, HistoryRecord, NoteTuple, SessionRecord } from "./record";
 import { RunningStats } from "./running";
 
@@ -125,7 +125,7 @@ describe("bins", () => {
     const two = bins("hits", 2);
     expect(two.map((b) => [b.min, b.max, b.step])).toEqual([
       [1, 1, 0],
-      [2, 2, HEAT_COLORS.length - 1],
+      [2, 2, HEAT_STEPS - 1],
     ]);
     expect(bins("hits", 0)).toHaveLength(1);
   });
