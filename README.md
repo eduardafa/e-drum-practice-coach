@@ -42,6 +42,9 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
 - Practice history: every finished session and tempo-trainer run is saved in your browser (IndexedDB) and listed
   by day, with your streak (days in a row with practice), today's practice time and your longest streak. Nothing
   leaves the device; a later version will sync it to a small backend.
+- Progress charts: for each exercise, accuracy and fastest tempo per day (or per week over longer spans) for the
+  last 7 days, 30 days or all time, with a one-line summary such as "Money beat: 72% → 88% over 2 weeks,
+  70 → 84 BPM" and a table view.
 - Keyboard fallback for trying the app without a kit.
 
 ## Running it
@@ -143,7 +146,7 @@ src/
   exercises/ exercise format (48 ticks per quarter), drum-tab builder, validator, starter library, preview timing
   playalong/ expected-note timeline, hit matching, sessions and accuracy scoring
   live/     Coach (wiring) and LiveState (shared per-hit state)
-  history/  practice history records (Temporal dates), streaks, IndexedDB store
+  history/  practice history records (Temporal dates), streaks, progress by day and week, IndexedDB store
   guide/    the metronome guide's steps, as data
   notation/ rhythm spelling, VexFlow engraving (loaded on demand) and the playhead mapping
   render/   Canvas 2D kit renderer
