@@ -11,6 +11,7 @@ import { finishSignIn, startSignIn } from "./auth/oauth";
 import { PROVIDERS, configuredProviders, type ProviderId } from "./auth/providers";
 import { endSession, readSession } from "./auth/sessions";
 import { json, problem } from "./http";
+import { pullRecords, pushRecords } from "./records";
 
 type Handler = (request: Request, env: Env) => Promise<Response>;
 
@@ -19,6 +20,7 @@ const ROUTES = new Map<string, Partial<Record<string, Handler>>>([
   ["/api/health", { GET: (_, env) => health(env) }],
   ["/api/me", { GET: me }],
   ["/api/auth/signout", { POST: signOut }],
+  ["/api/records", { GET: signedIn(pullRecords), POST: signedIn(pushRecords) }],
   ...PROVIDERS.flatMap((provider): [string, Partial<Record<string, Handler>>][] => [
     [`/api/auth/${provider}/start`, { GET: (_, env) => startSignIn(env, provider) }],
     [`/api/auth/${provider}/callback`, { GET: (request, env) => finishSignIn(request, env, provider) }],
@@ -49,6 +51,17 @@ export async function handle(request: Request, env: Env): Promise<Response> {
   return handler(request, env);
 }
 
+/** Wraps a handler that needs a signed-in user: 401 otherwise. */
+function signedIn(handler: (request: Request, env: Env, userId: string) => Promise<Response>): Handler {
+  return async (request, env) => {
+    const session = await readSession(env.DB, request);
+    if (!session) return problem(401, "signed-out", "Sign in to sync your history.");
+    const res = await handler(request, env, session.userId);
+    if (session.setCookie) res.headers.append("Set-Cookie", session.setCookie);
+    return res;
+  };
+}
+
 /** The Worker answers, and the database answers with the last migration applied. */
 async function health(env: Env): Promise<Response> {
   try {
@@ -62,7 +75,7 @@ async function health(env: Env): Promise<Response> {
 
 export interface MeResponse {
   /** Null when signed out. Name and picture come from the provider at sign-in. */
-  user: { provider: ProviderId; name: string | null; avatarUrl: string | null } | null;
+  user: { id: string; provider: ProviderId; name: string | null; avatarUrl: string | null } | null;
   /** The sign-in options that are set up on the server. */
   providers: ProviderId[];
 }
@@ -71,7 +84,8 @@ export interface MeResponse {
 async function me(request: Request, env: Env): Promise<Response> {
   const session = await readSession(env.DB, request);
   const body: MeResponse = {
-    user: session && { provider: session.provider, name: session.name, avatarUrl: session.avatarUrl },
+    // The ID is this app's own random one: the app keys its sync progress by it.
+    user: session && { id: session.userId, provider: session.provider, name: session.name, avatarUrl: session.avatarUrl },
     providers: configuredProviders(env),
   };
   return json(body, 200, session?.setCookie ? { "Set-Cookie": session.setCookie } : {});

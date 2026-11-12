@@ -140,6 +140,7 @@ describe("finishing sign-in", () => {
     const token = session.split("=")[1] ?? "";
     expect(db?.query("SELECT token_hash FROM sessions")).toEqual([{ token_hash: await sha256Hex(token) }]);
     expect((await me(env, session)).user).toEqual({
+      id: expect.any(String),
       provider: "github",
       name: "Ana Drummer",
       avatarUrl: "https://avatars.githubusercontent.com/u/583231?v=4",

@@ -20,3 +20,8 @@ export function json(body: unknown, status = 200, headers: Record<string, string
 export function problem(status: number, error: string, message: string, headers: Record<string, string> = {}): Response {
   return json({ error, message }, status, headers);
 }
+
+/** A JSON body that's already serialized (e.g. stored records), with the API headers. */
+export function rawJson(text: string, status = 200): Response {
+  return new Response(text, { status, headers: BASE_HEADERS });
+}

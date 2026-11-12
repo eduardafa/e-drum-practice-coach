@@ -19,6 +19,8 @@ interface Props {
   selectedExerciseId: string | null;
   onClear: () => void;
   onBack: () => void;
+  /** Signed in: history syncs with the account. */
+  signedIn: boolean;
 }
 
 const SCOPE: Record<ProgressRange, string> = { "7d": "the last 7 days", "30d": "the last 30 days", all: "all sessions" };
@@ -59,7 +61,7 @@ function entries(records: readonly HistoryRecord[]): HistoryRecord[] {
  * The History page (/history): the streak and progress in a wide main
  * column, the saved sessions beside it (one column on phones).
  */
-export function HistoryPage({ records, status, accuracyMode, selectedExerciseId, onClear, onBack }: Props) {
+export function HistoryPage({ records, status, accuracyMode, selectedExerciseId, onClear, onBack, signedIn }: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   // Arriving on the page, start reading at its title.
   useEffect(() => headingRef.current?.focus(), []);
@@ -211,7 +213,9 @@ export function HistoryPage({ records, status, accuracyMode, selectedExerciseId,
               </div>
             )}
             <p className="hint">
-              Saved in this browser. To keep it on your other devices, sign in from the account button at the top.
+              {signedIn
+                ? "Synced with your account, so it's on every device where you sign in."
+                : "Saved in this browser. To keep it on your other devices, sign in from the account button at the top."}
             </p>
           </div>
         </div>

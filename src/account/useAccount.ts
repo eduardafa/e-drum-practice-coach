@@ -23,5 +23,10 @@ export function useAccount() {
     return true;
   }, []);
 
-  return { account, signOut };
+  /** The server says the session is gone (expired or ended elsewhere). */
+  const markSignedOut = useCallback(() => {
+    setAccount((a) => (a.status === "signed-in" ? { status: "signed-out", providers: a.providers } : a));
+  }, []);
+
+  return { account, signOut, markSignedOut };
 }

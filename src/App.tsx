@@ -16,6 +16,7 @@ import type { Exercise } from "./exercises/types";
 import { LibraryPanel } from "./LibraryPanel";
 import { HistoryPage, type HistoryStatus } from "./HistoryPage";
 import { useAccount } from "./account/useAccount";
+import { useSync } from "./history/useSync";
 import { AccountMenu } from "./AccountMenu";
 import { signInResult as readSignInResult } from "./account/account";
 import { sessionRecord, trainerRecord, type HistoryRecord, type SessionRecord } from "./history/record";
@@ -142,7 +143,7 @@ export default function App() {
   const [view, setView] = useState<View>(() => viewOf(window.location.pathname));
   // Coming back from signing in opens the account menu, with the result.
   const [accountOpen, setAccountOpen] = useState(SIGN_IN_RESULT !== null);
-  const { account, signOut } = useAccount();
+  const { account, signOut, markSignedOut } = useAccount();
   const [history, setHistory] = useState<HistoryRecord[]>([]);
   const [historyStatus, setHistoryStatus] = useState<HistoryStatus>("loading");
   /** The session that just ended, as saved, for the results screen's heatmap. */
@@ -221,10 +222,23 @@ export default function App() {
     void load();
   }, []);
 
-  /** Shows a new record straight away; if it can't be stored, history is switched off. */
+  // While signed in, history syncs with the account: records from other
+  // devices are added here, and this browser's records are uploaded.
+  const reloadHistory = () => {
+    historyStore.all().then(setHistory, (error: unknown) => console.warn("Couldn't reload practice history:", error));
+  };
+  const { status: syncStatus, syncNow } = useSync(
+    account.status === "signed-in" ? account.id : null,
+    historyStore,
+    historyStatus === "ready",
+    reloadHistory,
+    markSignedOut,
+  );
+
+  /** Shows a new record straight away; if it can't be stored, history is switched off. Then syncs it. */
   const saveRecord = (record: HistoryRecord) => {
     setHistory((records) => [record, ...records]);
-    historyStore.add(record).catch((error: unknown) => {
+    historyStore.add(record).then(syncNow, (error: unknown) => {
       console.warn("Couldn't save to practice history:", error);
       setHistoryStatus("off");
     });
@@ -600,6 +614,7 @@ export default function App() {
             account={account}
             signInResult={SIGN_IN_RESULT}
             open={accountOpen}
+            syncStatus={syncStatus}
             onToggle={toggleAccount}
             onSignOut={signOut}
           />
@@ -860,6 +875,7 @@ export default function App() {
             selectedExerciseId={exerciseId}
             onClear={clearHistory}
             onBack={backToPractice}
+            signedIn={account.status === "signed-in"}
           />
         </main>
       )}

@@ -3,12 +3,30 @@ import { PROVIDER_LABEL, signInUrl, type Account, type SignInResult } from "./ac
 import { releasing } from "./releasing";
 import { ProviderLogo } from "./account/ProviderLogo";
 import { Avatar } from "./account/Avatar";
+import type { SyncStatus } from "./history/useSync";
 
 interface Props {
   account: Account;
   /** How the last sign-in went, when the app was just opened by its redirect. */
   signInResult: SignInResult | null;
+  syncStatus: SyncStatus;
   onSignOut: () => Promise<boolean>;
+}
+
+/** How syncing is going, in a few words. */
+function syncText(status: SyncStatus): string {
+  switch (status.state) {
+    case "syncing":
+      return "Syncing your history…";
+    case "synced":
+      return `History synced at ${status.at.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}. It appears on any device where you sign in.`;
+    case "offline":
+      return "You're offline. Your history will sync when you're back online.";
+    case "error":
+      return "Couldn't sync just now. It'll try again in a minute.";
+    case "off":
+      return "History syncs while you're signed in.";
+  }
 }
 
 const RESULT_TEXT: Record<SignInResult, string> = {
@@ -19,7 +37,7 @@ const RESULT_TEXT: Record<SignInResult, string> = {
 };
 
 /** Signing in to sync history across devices: the account menu's content. */
-export function AccountSection({ account, signInResult, onSignOut }: Props) {
+export function AccountSection({ account, signInResult, syncStatus, onSignOut }: Props) {
   const [signingOut, setSigningOut] = useState(false);
   const [signOutFailed, setSignOutFailed] = useState(false);
   // The sign-in message is about the redirect that opened the app; signing out makes it stale.
@@ -56,7 +74,6 @@ export function AccountSection({ account, signInResult, onSignOut }: Props) {
         <>
           <p className="hint">
             Your history is saved in this browser only. Sign in to keep it safe and see it on your other devices.
-            Syncing is coming soon: for now, signing in sets up your account.
           </p>
           {account.providers.length === 0 ? (
             <p className="hint">Sign-in isn't set up yet.</p>
@@ -90,7 +107,9 @@ export function AccountSection({ account, signInResult, onSignOut }: Props) {
                   <ProviderLogo provider={account.provider} size={12} /> Signed in with {PROVIDER_LABEL[account.provider]}
                 </span>
               )}
-              <span>Syncing is coming soon. Until then, history stays in this browser.</span>
+              <span className={`sync-status ${syncStatus.state}`} aria-live="polite">
+                {syncText(syncStatus)}
+              </span>
             </span>
             <button className="secondary" disabled={signingOut} onClick={releasing(() => void signOut())}>
               {signingOut ? "Signing out…" : "Sign out"}
