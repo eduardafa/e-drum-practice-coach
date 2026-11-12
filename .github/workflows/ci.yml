@@ -187,6 +187,13 @@ jobs:
           name: dist
           path: dist/
 
+      # Before the new code goes live, so it never meets an old schema. Migrations are
+      # additive only, so the code still running until the deploy keeps working.
+      # Previews share this database but never migrate it (and their API answers 503).
+      - name: Apply database migrations
+        if: steps.creds.outputs.ok && github.event_name == 'push'
+        run: pnpm exec wrangler d1 migrations apply DB --remote
+
       - name: Deploy
         id: deploy
         if: steps.creds.outputs.ok
