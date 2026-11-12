@@ -16,11 +16,19 @@ export type Account =
   /** Offline, a preview, local development, or the server not answering. */
   | { status: "unavailable" }
   | { status: "signed-out"; providers: Provider[] }
-  | { status: "signed-in"; provider: Provider; name: string | null; avatarUrl: string | null; providers: Provider[] };
+  | {
+      status: "signed-in";
+      /** This app's own ID for the account (sync progress is kept per account). */
+      id: string;
+      provider: Provider;
+      name: string | null;
+      avatarUrl: string | null;
+      providers: Provider[];
+    };
 
 /** What /api/me answers (see worker/index.ts). */
 interface MeResponse {
-  user: { provider: Provider; name: string | null; avatarUrl: string | null } | null;
+  user: { id: string; provider: Provider; name: string | null; avatarUrl: string | null } | null;
   providers: Provider[];
 }
 
@@ -33,11 +41,11 @@ function parseMe(body: unknown): MeResponse | null {
   const providers = body.providers.filter(isProvider);
   const { user } = body;
   if (user === null) return { user: null, providers };
-  if (isRecord(user) && isProvider(user.provider)) {
+  if (isRecord(user) && typeof user.id === "string" && isProvider(user.provider)) {
     const name = typeof user.name === "string" && user.name !== "" ? user.name : null;
     // Only HTTPS pictures, as the server and the CSP allow.
     const avatarUrl = typeof user.avatarUrl === "string" && user.avatarUrl.startsWith("https://") ? user.avatarUrl : null;
-    return { user: { provider: user.provider, name, avatarUrl }, providers };
+    return { user: { id: user.id, provider: user.provider, name, avatarUrl }, providers };
   }
   return null;
 }

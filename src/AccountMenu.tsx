@@ -2,11 +2,13 @@ import { useEffect, useRef } from "react";
 import { PROVIDER_LABEL, type Account, type SignInResult } from "./account/account";
 import { Avatar } from "./account/Avatar";
 import { AccountSection } from "./AccountSection";
+import type { SyncStatus } from "./history/useSync";
 
 interface Props {
   account: Account;
   signInResult: SignInResult | null;
   open: boolean;
+  syncStatus: SyncStatus;
   onToggle: () => void;
   onSignOut: () => Promise<boolean>;
 }
@@ -17,7 +19,7 @@ interface Props {
  * (offline, a preview, local development). Closing follows the app's panel
  * rule: Esc, a press outside, or the button again.
  */
-export function AccountMenu({ account, signInResult, open, onToggle, onSignOut }: Props) {
+export function AccountMenu({ account, signInResult, open, syncStatus, onToggle, onSignOut }: Props) {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDialogElement>(null);
   const wasOpen = useRef(false);
@@ -53,7 +55,7 @@ export function AccountMenu({ account, signInResult, open, onToggle, onSignOut }
       {open && (
         // A non-modal <dialog>: the page stays usable, and a press outside closes it.
         <dialog ref={menuRef} open id="account-menu" className="account-menu" aria-label="Account" tabIndex={-1}>
-          <AccountSection account={account} signInResult={signInResult} onSignOut={onSignOut} />
+          <AccountSection account={account} signInResult={signInResult} syncStatus={syncStatus} onSignOut={onSignOut} />
         </dialog>
       )}
     </div>

@@ -2181,3 +2181,9 @@ button.primary.danger {
   align-items: center;
   gap: 5px;
 }
+
+/* Sync status in the account card: problems in the warning color. */
+.account-text .sync-status.offline,
+.account-text .sync-status.error {
+  color: var(--warn);
+}

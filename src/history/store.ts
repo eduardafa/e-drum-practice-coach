@@ -67,6 +67,16 @@ export class HistoryStore {
     await done(tx);
   }
 
+  /** Stores several records in one transaction (records already present are replaced, unchanged). */
+  async putMany(records: readonly HistoryRecord[]): Promise<void> {
+    if (records.length === 0) return;
+    const db = await this.open();
+    const tx = db.transaction(STORE, "readwrite");
+    const store = tx.objectStore(STORE);
+    for (const record of records) store.put(record);
+    await done(tx);
+  }
+
   async clear(): Promise<void> {
     const db = await this.open();
     const tx = db.transaction(STORE, "readwrite");
