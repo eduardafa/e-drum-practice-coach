@@ -762,7 +762,7 @@ export default function App() {
             <div className="practice-line">
               <span>{historyStatus === "off" ? "History is off in this browser" : practiceSummary}</span>
               <button
-                className={`link-button ${historyOpen ? "selected" : ""}`}
+                className={`secondary history-button ${historyOpen ? "selected" : ""}`}
                 aria-expanded={historyOpen}
                 onClick={releasing(toggleHistory)}
               >

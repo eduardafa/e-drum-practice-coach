@@ -1606,15 +1606,18 @@ button.primary.danger {
 /* Streak and today's time in the side panel, with the link to the history. */
 .practice-line {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 8px;
   font-size: 13px;
   color: var(--muted);
 }
 
-.play .practice-line .link-button {
-  margin: 0;
+/* A real button, so History is easy to find, not just an underlined word. */
+.practice-line .history-button {
+  flex: none;
+  padding: 5px 14px;
+  font-size: 13px;
 }
 
 .link-button.selected {
@@ -1800,23 +1803,24 @@ button.primary.danger {
 
 /* Sign-in buttons in Google's sign-in style for each theme (light: white,
    #747775 outline; dark: #131314, #8e918f outline; 40 px pill), with GitHub's
-   mark in the same shape. */
+   mark in the same shape. Centered, one width, content centered, so the two
+   line up without a gap at the end. */
 .signin-buttons {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
-  margin-top: 12px;
+  margin-top: 14px;
 }
 
 .signin-button {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
-  min-width: 220px;
+  width: min(100%, 240px);
   height: 40px;
-  box-sizing: border-box;
-  padding: 0 16px 0 12px;
+  padding: 0 16px;
   border-radius: 20px;
   border: 1px solid light-dark(#747775, #8e918f);
   background: light-dark(#ffffff, #131314);
