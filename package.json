@@ -7,11 +7,12 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p worker",
     "lint": "oxlint --type-aware --deny-warnings",
     "test": "vitest run",
     "test:watch": "vitest",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "types:worker": "wrangler types --strict-vars=false worker/worker-configuration.d.ts"
   },
   "dependencies": {
     "@vexflow-fonts/academico": "1.0.1",

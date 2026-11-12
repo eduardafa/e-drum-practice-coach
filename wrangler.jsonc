@@ -1,14 +1,33 @@
-// Cloudflare Workers config. The app is static, so this is an assets-only
-// Worker: no script, Cloudflare serves the files in dist/ directly.
+// Cloudflare Workers config. Cloudflare serves the built app in dist/ directly;
+// only /api/* runs the Worker script (worker/index.ts), which keeps synced
+// practice history in a D1 database.
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "e-drum-practice-coach",
+  "main": "worker/index.ts",
   "compatibility_date": "2026-11-01",
   "assets": {
     "directory": "./dist",
     // Unknown paths get index.html, so client-side routes added later work on reload.
-    "not_found_handling": "single-page-application"
+    "not_found_handling": "single-page-application",
+    // Everything else never reaches the script, so the app is served as before.
+    "run_worker_first": ["/api/*"]
   },
+  "vars": {
+    // The API only answers here. Previews share this Worker's database, so
+    // they get 503 instead (see worker/index.ts). For `wrangler dev`, override
+    // it in .dev.vars with APP_ORIGIN=http://localhost:8787.
+    "APP_ORIGIN": "https://e-drum-practice-coach.eduardafa.workers.dev"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "e-drum-practice-coach",
+      "database_id": "b37bf9e3-d0f8-4834-9359-3bf530cfa1be",
+      // Applied by CI before each production deploy.
+      "migrations_dir": "migrations"
+    }
+  ],
   // Production lives on workers.dev; pull requests get aliased version URLs there too.
   "workers_dev": true,
   "preview_urls": true
