@@ -3,9 +3,9 @@
  * swap the returned code for tokens, and how to read the provider's stable
  * user ID from them. That ID is all the app keeps.
  *
- * Neither asks for more than sign-in: GitHub with no scope (public profile
- * only, and only its numeric ID is read), Google with `openid` (no email,
- * no profile).
+ * Neither asks for more than sign-in and a public profile: GitHub with no
+ * scope (its public profile: numeric ID, name, picture), Google with
+ * `openid profile` (ID, name, picture). Never the email.
  */
 import { base64urlDecode } from "./crypto";
 
@@ -31,14 +31,48 @@ export const configuredProviders = (env: Env) => PROVIDERS.filter((id) => creden
 /** Thrown when a provider answers with something unusable; the drummer sees "sign-in failed". */
 export class ProviderError extends Error {}
 
+/** Who signed in, as the provider describes them. */
+export interface Profile {
+  /** The provider's stable user ID. */
+  subject: string;
+  /** Display name, or null if none was given. */
+  name: string | null;
+  /** Profile picture on the provider's own image server, or null. */
+  avatarUrl: string | null;
+}
+
+/** A name to show: trimmed, at most 100 characters. */
+export function cleanName(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const name = value.trim().slice(0, 100);
+  return name === "" ? null : name;
+}
+
+/**
+ * Pictures are only accepted from GitHub's and Google's image servers over
+ * HTTPS, the same hosts the site's Content Security Policy lets images load
+ * from.
+ */
+export function cleanAvatarUrl(value: unknown): string | null {
+  if (typeof value !== "string" || value.length > 500) return null;
+  try {
+    const url = new URL(value);
+    const host = url.hostname;
+    const allowed = host === "avatars.githubusercontent.com" || host.endsWith(".googleusercontent.com");
+    return url.protocol === "https:" && allowed ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 interface ProviderSpec {
   authorizeUrl: string;
   tokenUrl: string;
   scope: string;
   /** Extra authorization parameters. */
   params: Record<string, string>;
-  /** The provider's stable user ID, from the token response. */
-  subject(tokens: Record<string, unknown>, creds: Credentials, now: Date): Promise<string>;
+  /** Who signed in, from the token response. */
+  profile(tokens: Record<string, unknown>, creds: Credentials, now: Date): Promise<Profile>;
 }
 
 const USER_AGENT = "e-drum-practice-coach";
@@ -49,25 +83,30 @@ const SPECS: Record<ProviderId, ProviderSpec> = {
     tokenUrl: "https://github.com/login/oauth/access_token",
     scope: "",
     params: { allow_signup: "true" },
-    async subject(tokens) {
+    async profile(tokens) {
       const token = tokens.access_token;
       if (typeof token !== "string") throw new ProviderError("GitHub sent no access token");
       const res = await fetch("https://api.github.com/user", {
         headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json", "User-Agent": USER_AGENT },
       });
       if (!res.ok) throw new ProviderError(`GitHub user lookup failed: ${res.status}`);
-      const user: { id?: unknown } = await res.json();
+      const user: { id?: unknown; name?: unknown; login?: unknown; avatar_url?: unknown } = await res.json();
       if (typeof user.id !== "number") throw new ProviderError("GitHub user has no ID");
-      // The token is dropped here: it was only needed to read the ID.
-      return String(user.id);
+      // The token is dropped here: it was only needed to read the profile.
+      return {
+        subject: String(user.id),
+        // Not everyone sets a name on GitHub; the username stands in.
+        name: cleanName(user.name) ?? cleanName(user.login),
+        avatarUrl: cleanAvatarUrl(user.avatar_url),
+      };
     },
   },
   google: {
     authorizeUrl: "https://accounts.google.com/o/oauth2/v2/auth",
     tokenUrl: "https://oauth2.googleapis.com/token",
-    scope: "openid",
+    scope: "openid profile",
     params: { prompt: "select_account" },
-    subject(tokens, creds, now) {
+    profile(tokens, creds, now) {
       // The ID token came straight from Google's token endpoint over TLS, in
       // exchange for our client secret, so OpenID Connect (Core 3.1.3.7) lets
       // TLS stand in for checking its signature. Issuer, audience and expiry
@@ -82,7 +121,7 @@ const SPECS: Record<ProviderId, ProviderSpec> = {
         return Promise.reject(new ProviderError("ID token expired"));
       }
       if (typeof claims.sub !== "string" || claims.sub === "") return Promise.reject(new ProviderError("ID token has no subject"));
-      return Promise.resolve(claims.sub);
+      return Promise.resolve({ subject: claims.sub, name: cleanName(claims.name), avatarUrl: cleanAvatarUrl(claims.picture) });
     },
   },
 };
@@ -120,7 +159,7 @@ export function authorizeUrl(id: ProviderId, creds: Credentials, redirectUri: st
   return url.toString();
 }
 
-/** Swaps the authorization code for tokens and returns the provider's user ID. */
+/** Swaps the authorization code for tokens and returns who signed in. */
 export async function identify(
   id: ProviderId,
   creds: Credentials,
@@ -128,7 +167,7 @@ export async function identify(
   redirectUri: string,
   verifier: string,
   now = new Date(),
-): Promise<string> {
+): Promise<Profile> {
   const spec = SPECS[id];
   const res = await fetch(spec.tokenUrl, {
     method: "POST",
@@ -145,5 +184,5 @@ export async function identify(
   // GitHub reports errors with status 200 and an `error` field.
   const tokens: Record<string, unknown> = res.ok ? await res.json() : {};
   if (!res.ok || "error" in tokens) throw new ProviderError(`Token exchange failed: ${res.status} ${typeof tokens.error === "string" ? tokens.error : ""}`);
-  return spec.subject(tokens, creds, now);
+  return spec.profile(tokens, creds, now);
 }

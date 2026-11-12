@@ -16,6 +16,9 @@ const RENEW_BELOW_DAYS = 15;
 export interface Session {
   userId: string;
   provider: ProviderId;
+  /** The user's name and picture from the provider (EDU-54), if known. */
+  name: string | null;
+  avatarUrl: string | null;
   /** Set-Cookie to send back when the session was renewed. */
   setCookie: string | null;
 }
@@ -42,9 +45,11 @@ export async function readSession(db: D1Database, request: Request, now = new Da
   if (!token) return null;
   const hash = await sha256Hex(token);
   const row = await db
-    .prepare("SELECT user_id, provider, expires_at FROM sessions WHERE token_hash = ?")
+    .prepare(
+      "SELECT s.user_id, s.provider, s.expires_at, u.name, u.avatar_url FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?",
+    )
     .bind(hash)
-    .first<{ user_id: string; provider: ProviderId; expires_at: string }>();
+    .first<{ user_id: string; provider: ProviderId; expires_at: string; name: string | null; avatar_url: string | null }>();
   if (!row) return null;
   const expires = new Date(row.expires_at).getTime();
   if (expires <= now.getTime()) return null;
@@ -55,7 +60,7 @@ export async function readSession(db: D1Database, request: Request, now = new Da
     await db.prepare("UPDATE sessions SET expires_at = ? WHERE token_hash = ?").bind(renewed.toISOString(), hash).run();
     setCookie = sessionCookie(token);
   }
-  return { userId: row.user_id, provider: row.provider, setCookie };
+  return { userId: row.user_id, provider: row.provider, name: row.name, avatarUrl: row.avatar_url, setCookie };
 }
 
 /** Ends this browser's session (others stay signed in); returns the Set-Cookie that clears it. */

@@ -2163,3 +2163,31 @@ button.secondary.danger:hover:not(:disabled) {
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 0 28px;
 }
+
+/* ---- Profile picture (EDU-54) ---- */
+
+.avatar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* With a picture, the badge is just the picture, edged so it reads on any panel. */
+.account-button.signed-in.has-picture,
+.account-badge.has-picture {
+  overflow: hidden;
+  background: var(--raised);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.account-badge.has-picture {
+  padding: 0;
+}
+
+.account-provider {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}

@@ -44,7 +44,7 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
   leaves the device yet.
 - Light and dark themes: follows the device's setting, or choose System, Light or Dark in Settings.
 - Sign in with GitHub or Google from the account button in the top bar, to sync history across devices (syncing itself is the
-  next step). The server keeps only the provider's account number, never an email or name. What's stored and
+  next step). The server keeps the provider's account number, your name and profile picture link (shown in the account menu), never your email. What's stored and
   how to delete it is on the privacy page (`public/privacy.html`, served at `/privacy`).
 - Progress charts: for each exercise, accuracy and fastest tempo per day (or per week over longer spans) for the
   last 7 days, 30 days or all time, with a one-line summary such as "Money beat: 72% → 88% over 2 weeks,

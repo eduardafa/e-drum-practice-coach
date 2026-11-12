@@ -61,8 +61,8 @@ async function health(env: Env): Promise<Response> {
 }
 
 export interface MeResponse {
-  /** Null when signed out. */
-  user: { provider: ProviderId } | null;
+  /** Null when signed out. Name and picture come from the provider at sign-in. */
+  user: { provider: ProviderId; name: string | null; avatarUrl: string | null } | null;
   /** The sign-in options that are set up on the server. */
   providers: ProviderId[];
 }
@@ -70,7 +70,10 @@ export interface MeResponse {
 /** Who this browser is signed in as, and how it could sign in. */
 async function me(request: Request, env: Env): Promise<Response> {
   const session = await readSession(env.DB, request);
-  const body: MeResponse = { user: session && { provider: session.provider }, providers: configuredProviders(env) };
+  const body: MeResponse = {
+    user: session && { provider: session.provider, name: session.name, avatarUrl: session.avatarUrl },
+    providers: configuredProviders(env),
+  };
   return json(body, 200, session?.setCookie ? { "Set-Cookie": session.setCookie } : {});
 }
 

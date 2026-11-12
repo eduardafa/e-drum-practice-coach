@@ -2,6 +2,7 @@ import { useState } from "react";
 import { PROVIDER_LABEL, signInUrl, type Account, type SignInResult } from "./account/account";
 import { releasing } from "./releasing";
 import { ProviderLogo } from "./account/ProviderLogo";
+import { Avatar } from "./account/Avatar";
 
 interface Props {
   account: Account;
@@ -70,7 +71,7 @@ export function AccountSection({ account, signInResult, onSignOut }: Props) {
             </div>
           )}
           <p className="hint">
-            The app keeps only your account number from GitHub or Google: never your email or name.{" "}
+            The app keeps your account number, name and picture from GitHub or Google, never your email.{" "}
             <a href="/privacy">Privacy</a>
           </p>
         </>
@@ -79,11 +80,16 @@ export function AccountSection({ account, signInResult, onSignOut }: Props) {
       {account.status === "signed-in" && (
         <>
           <div className="account-card">
-            <span className={`account-badge ${account.provider}`}>
-              <ProviderLogo provider={account.provider} size={22} />
+            <span className={`account-badge ${account.provider} ${account.avatarUrl ? "has-picture" : ""}`}>
+              <Avatar provider={account.provider} url={account.avatarUrl} size={40} />
             </span>
             <span className="account-text">
-              <strong>Signed in with {PROVIDER_LABEL[account.provider]}</strong>
+              <strong>{account.name ?? `Signed in with ${PROVIDER_LABEL[account.provider]}`}</strong>
+              {account.name && (
+                <span className="account-provider">
+                  <ProviderLogo provider={account.provider} size={12} /> Signed in with {PROVIDER_LABEL[account.provider]}
+                </span>
+              )}
               <span>Syncing is coming soon. Until then, history stays in this browser.</span>
             </span>
             <button className="secondary" disabled={signingOut} onClick={releasing(() => void signOut())}>

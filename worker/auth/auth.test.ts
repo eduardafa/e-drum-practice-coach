@@ -46,14 +46,17 @@ const jsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
 /** Fake GitHub: a token endpoint and a user endpoint. */
-function fakeGitHub(userId = 583231) {
+function fakeGitHub(
+  userId = 583231,
+  profile: Record<string, unknown> = { name: "Ana Drummer", avatar_url: "https://avatars.githubusercontent.com/u/583231?v=4" },
+) {
   const calls: { url: string; body: URLSearchParams | null }[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn((input: string, init?: RequestInit) => {
       calls.push({ url: input, body: init?.body instanceof URLSearchParams ? init.body : null });
       if (input === "https://github.com/login/oauth/access_token") return Promise.resolve(jsonResponse({ access_token: "gho_x" }));
-      if (input === "https://api.github.com/user") return Promise.resolve(jsonResponse({ id: userId, login: "someone" }));
+      if (input === "https://api.github.com/user") return Promise.resolve(jsonResponse({ id: userId, login: "someone", ...profile }));
       return Promise.resolve(new Response(null, { status: 404 }));
     }),
   );
@@ -74,6 +77,8 @@ const googleClaims = (over: Record<string, unknown> = {}) => ({
   iss: "https://accounts.google.com",
   aud: "google-client",
   sub: "1098765",
+  name: "Bea Beats",
+  picture: "https://lh3.googleusercontent.com/a/abc=s96-c",
   exp: Math.floor(Date.now() / 1000) + 3600,
   ...over,
 });
@@ -105,9 +110,9 @@ describe("starting sign-in", () => {
     expect(location.searchParams.get("code_challenge")).toBe(base64url(await sha256(verifier ?? "")));
   });
 
-  it("asks Google for openid only", async () => {
+  it("asks Google for openid and profile only, never email", async () => {
     const { location } = await start(setup(), "google");
-    expect(location.searchParams.get("scope")).toBe("openid");
+    expect(location.searchParams.get("scope")).toBe("openid profile");
   });
 
   it("sends the drummer back when a provider isn't set up", async () => {
@@ -134,7 +139,11 @@ describe("finishing sign-in", () => {
     const session = jar(res);
     const token = session.split("=")[1] ?? "";
     expect(db?.query("SELECT token_hash FROM sessions")).toEqual([{ token_hash: await sha256Hex(token) }]);
-    expect((await me(env, session)).user).toEqual({ provider: "github" });
+    expect((await me(env, session)).user).toEqual({
+      provider: "github",
+      name: "Ana Drummer",
+      avatarUrl: "https://avatars.githubusercontent.com/u/583231?v=4",
+    });
   });
 
   it("finds the same user on the next sign-in", async () => {
@@ -155,6 +164,9 @@ describe("finishing sign-in", () => {
     const res = await callback(env, "google", `code=abc&state=${state}`, cookie);
     expect(res.headers.get("Location")).toBe(`${ORIGIN}/?signin=ok`);
     expect(db?.query("SELECT provider, subject FROM identities")).toEqual([{ provider: "google", subject: "1098765" }]);
+    expect(db?.query("SELECT name, avatar_url FROM users")).toEqual([
+      { name: "Bea Beats", avatar_url: "https://lh3.googleusercontent.com/a/abc=s96-c" },
+    ]);
   });
 
   it.each([
@@ -169,6 +181,28 @@ describe("finishing sign-in", () => {
     const res = await callback(env, "google", `code=abc&state=${state}`, cookie);
     expect(res.headers.get("Location")).toBe(`${ORIGIN}/?signin=failed`);
     expect(db?.query("SELECT * FROM users")).toEqual([]);
+  });
+
+  it("refreshes the name and picture at every sign-in", async () => {
+    const env = setup();
+    fakeGitHub();
+    const first = await start(env, "github");
+    await callback(env, "github", `code=c1&state=${first.state}`, first.cookie);
+    vi.unstubAllGlobals();
+    fakeGitHub(583231, { name: "Ana D.", avatar_url: "https://avatars.githubusercontent.com/u/583231?v=5" });
+    const second = await start(env, "github");
+    await callback(env, "github", `code=c2&state=${second.state}`, second.cookie);
+    expect(db?.query("SELECT name, avatar_url FROM users")).toEqual([
+      { name: "Ana D.", avatar_url: "https://avatars.githubusercontent.com/u/583231?v=5" },
+    ]);
+  });
+
+  it("uses the GitHub username when no name is set, and ignores pictures from other hosts", async () => {
+    const env = setup();
+    fakeGitHub(1, { name: null, avatar_url: "https://evil.example/me.png" });
+    const { cookie, state } = await start(env, "github");
+    await callback(env, "github", `code=abc&state=${state}`, cookie);
+    expect(db?.query("SELECT name, avatar_url FROM users")).toEqual([{ name: "someone", avatar_url: null }]);
   });
 
   it("refuses a callback whose state doesn't match this browser's cookie, without calling the provider", async () => {
@@ -235,7 +269,7 @@ describe("sessions", () => {
   const t0 = new Date("2026-11-12T12:00:00Z");
 
   async function userAndSession(env: Env) {
-    const userId = await findOrCreateUser(env.DB, "github", "1", t0);
+    const userId = await findOrCreateUser(env.DB, "github", { subject: "1", name: null, avatarUrl: null }, t0);
     return { userId, setCookie: await createSession(env.DB, userId, "github", t0) };
   }
 
@@ -245,7 +279,7 @@ describe("sessions", () => {
     expect(setCookie).toContain(`Max-Age=${SESSION_DAYS * 24 * 60 * 60}`);
 
     const early = await readSession(env.DB, withCookie(setCookie), new Date(t0.getTime() + 5 * DAY));
-    expect(early).toEqual({ userId, provider: "github", setCookie: null });
+    expect(early).toEqual({ userId, provider: "github", name: null, avatarUrl: null, setCookie: null });
 
     const late = await readSession(env.DB, withCookie(setCookie), new Date(t0.getTime() + 20 * DAY));
     expect(late?.setCookie).toMatch(/^__Host-session=/);
@@ -273,5 +307,21 @@ describe("sessions", () => {
     db?.query("DELETE FROM users WHERE id = ?", userId);
     expect(db?.query("SELECT COUNT(*) AS n FROM sessions")).toEqual([{ n: 0 }]);
     expect(db?.query("SELECT COUNT(*) AS n FROM identities")).toEqual([{ n: 0 }]);
+  });
+});
+
+describe("profile cleaning", () => {
+  it("keeps names short and pictures on the providers' own HTTPS hosts", async () => {
+    const { cleanAvatarUrl, cleanName } = await import("./providers");
+    expect(cleanName("  Ana  ")).toBe("Ana");
+    expect(cleanName("")).toBeNull();
+    expect(cleanName(42)).toBeNull();
+    expect(cleanName("x".repeat(300))).toHaveLength(100);
+    expect(cleanAvatarUrl("https://avatars.githubusercontent.com/u/1")).toBe("https://avatars.githubusercontent.com/u/1");
+    expect(cleanAvatarUrl("https://lh3.googleusercontent.com/a/x")).toBe("https://lh3.googleusercontent.com/a/x");
+    expect(cleanAvatarUrl("http://avatars.githubusercontent.com/u/1")).toBeNull();
+    expect(cleanAvatarUrl("https://googleusercontent.com.evil.example/x")).toBeNull();
+    expect(cleanAvatarUrl("javascript:alert(1)")).toBeNull();
+    expect(cleanAvatarUrl(null)).toBeNull();
   });
 });
