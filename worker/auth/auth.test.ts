@@ -169,6 +169,14 @@ describe("finishing sign-in", () => {
     ]);
   });
 
+  it("keeps accented and non-Latin names intact", async () => {
+    const env = setup();
+    fakeGoogle(googleClaims({ name: "Eduarda França · Zoë 李" }));
+    const { cookie, state } = await start(env, "google");
+    await callback(env, "google", `code=abc&state=${state}`, cookie);
+    expect(db?.query("SELECT name FROM users")).toEqual([{ name: "Eduarda França · Zoë 李" }]);
+  });
+
   it.each([
     ["for another app", { aud: "someone-else" }],
     ["expired", { exp: Math.floor(Date.now() / 1000) - 1 }],
