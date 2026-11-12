@@ -17,7 +17,7 @@ const RESULT_TEXT: Record<SignInResult, string> = {
   unavailable: "That sign-in option isn't set up yet.",
 };
 
-/** Signing in to sync history across devices, at the end of the History panel. */
+/** Signing in to sync history across devices: the account menu's content. */
 export function AccountSection({ account, signInResult, onSignOut }: Props) {
   const [signingOut, setSigningOut] = useState(false);
   const [signOutFailed, setSignOutFailed] = useState(false);

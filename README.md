@@ -43,7 +43,7 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
   by day, with your streak (days in a row with practice), today's practice time and your longest streak. Nothing
   leaves the device yet.
 - Light and dark themes: follows the device's setting, or choose System, Light or Dark in Settings.
-- Sign in with GitHub or Google from the History panel, to sync history across devices (syncing itself is the
+- Sign in with GitHub or Google from the account button in the top bar, to sync history across devices (syncing itself is the
   next step). The server keeps only the provider's account number, never an email or name. What's stored and
   how to delete it is on the privacy page (`public/privacy.html`, served at `/privacy`).
 - Progress charts: for each exercise, accuracy and fastest tempo per day (or per week over longer spans) for the
