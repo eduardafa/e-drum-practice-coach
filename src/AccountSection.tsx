@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { PROVIDER_LABEL, signInUrl, type Account, type SignInResult } from "./account/account";
 import { releasing } from "./releasing";
+import { ProviderLogo } from "./account/ProviderLogo";
 
 interface Props {
   account: Account;
@@ -34,7 +35,8 @@ export function AccountSection({ account, signInResult, onSignOut }: Props) {
   return (
     <div className="account">
       <h3>Sync across devices</h3>
-      {signInResult && resultShown && (
+      {/* The signed-in card already says "Signed in", so "ok" only shows if that didn't stick. */}
+      {signInResult && resultShown && !(signInResult === "ok" && account.status === "signed-in") && (
         <p className={`account-result ${signInResult === "ok" ? "" : "warn-note"}`} aria-live="polite">
           {RESULT_TEXT[signInResult]}
         </p>
@@ -52,16 +54,17 @@ export function AccountSection({ account, signInResult, onSignOut }: Props) {
       {account.status === "signed-out" && (
         <>
           <p className="hint">
-            Your history is saved in this browser only. Sign in to keep it safe on the server and see it on your other
-            devices. Syncing is coming soon: for now, signing in only sets up your account.
+            Your history is saved in this browser only. Sign in to keep it safe and see it on your other devices.
+            Syncing is coming soon: for now, signing in sets up your account.
           </p>
           {account.providers.length === 0 ? (
             <p className="hint">Sign-in isn't set up yet.</p>
           ) : (
-            <div className="account-providers">
+            <div className="signin-buttons">
               {account.providers.map((p) => (
-                <a key={p} className="account-link" href={signInUrl(p)}>
-                  Sign in with {PROVIDER_LABEL[p]}
+                <a key={p} className={`signin-button ${p}`} href={signInUrl(p)}>
+                  <ProviderLogo provider={p} />
+                  <span>Sign in with {PROVIDER_LABEL[p]}</span>
                 </a>
               ))}
             </div>
@@ -75,15 +78,21 @@ export function AccountSection({ account, signInResult, onSignOut }: Props) {
 
       {account.status === "signed-in" && (
         <>
-          <p className="account-who">
-            Signed in with {PROVIDER_LABEL[account.provider]}.{" "}
-            <button className="link-button" disabled={signingOut} onClick={releasing(() => void signOut())}>
+          <div className="account-card">
+            <span className={`account-badge ${account.provider}`}>
+              <ProviderLogo provider={account.provider} size={22} />
+            </span>
+            <span className="account-text">
+              <strong>Signed in with {PROVIDER_LABEL[account.provider]}</strong>
+              <span>Syncing is coming soon. Until then, history stays in this browser.</span>
+            </span>
+            <button className="secondary" disabled={signingOut} onClick={releasing(() => void signOut())}>
               {signingOut ? "Signing out…" : "Sign out"}
             </button>
-          </p>
+          </div>
           {signOutFailed && <p className="hint warn-note">Couldn't sign out. Check your connection and try again.</p>}
           <p className="hint">
-            Syncing is coming soon. Until then, your history stays in this browser. <a href="/privacy">Privacy</a>
+            <a href="/privacy">Privacy</a>
           </p>
         </>
       )}
