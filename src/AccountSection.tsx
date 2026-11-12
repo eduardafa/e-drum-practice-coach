@@ -66,7 +66,10 @@ export function AccountSection({ account, signInResult, onSignOut }: Props) {
               ))}
             </div>
           )}
-          <p className="hint">The app keeps only your account number from GitHub or Google: never your email or name.</p>
+          <p className="hint">
+            The app keeps only your account number from GitHub or Google: never your email or name.{" "}
+            <a href="/privacy">Privacy</a>
+          </p>
         </>
       )}
 
@@ -79,7 +82,9 @@ export function AccountSection({ account, signInResult, onSignOut }: Props) {
             </button>
           </p>
           {signOutFailed && <p className="hint warn-note">Couldn't sign out. Check your connection and try again.</p>}
-          <p className="hint">Syncing is coming soon. Until then, your history stays in this browser.</p>
+          <p className="hint">
+            Syncing is coming soon. Until then, your history stays in this browser. <a href="/privacy">Privacy</a>
+          </p>
         </>
       )}
     </div>
