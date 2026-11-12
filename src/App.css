@@ -1914,3 +1914,35 @@ button.primary.danger {
 .account .hint a {
   color: var(--accent);
 }
+
+/* ---- Settings tabs ---- */
+
+.settings-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin: 4px 0 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-tabs button {
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  padding: 8px 10px;
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.settings-tabs button:hover {
+  color: var(--text);
+}
+
+.settings-tabs button.selected {
+  color: var(--text);
+  font-weight: 600;
+  border-bottom-color: var(--accent);
+}
