@@ -34,7 +34,7 @@ interface Colors {
 const readColors = (): Colors =>
   withColorProbe((token) => ({
     background: token("--bg"),
-    drumHead: token("--raised"),
+    drumHead: token("--drum-head"),
     drumRim: token("--pad-rim"),
     cymbal: token("--cymbal"),
     cymbalEdge: token("--cymbal-edge"),

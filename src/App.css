@@ -41,11 +41,13 @@
   --band: light-dark(rgb(26 32 41 / 0.12), rgb(230 237 245 / 0.14));
 
   /* The kit view (canvas). */
-  --pad-rim: light-dark(#9aa4b2, #3a4452);
+  /* Drum heads and rims (not cymbals): the rim at 3:1 on the light page. */
+  --drum-head: light-dark(#d6dde6, #1d232c);
+  --pad-rim: light-dark(#7d8796, #3a4452);
   --cymbal: light-dark(#f4e8c6, #3b3423);
   --cymbal-edge: light-dark(#a8862f, #6e5f37);
-  --strip-tolerance: light-dark(rgb(21 128 61 / 0.12), rgb(61 220 132 / 0.12));
-  --strip-axis: light-dark(#c9d0d9, #2c3440);
+  --strip-tolerance: light-dark(rgb(21 128 61 / 0.24), rgb(61 220 132 / 0.12));
+  --strip-axis: light-dark(#8f99a8, #2c3440);
   --downbeat: light-dark(#b7791f, #ffd166);
 
   /*
