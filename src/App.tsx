@@ -15,6 +15,8 @@ import { metronomeForExercise, startingTempo } from "./exercises/practice";
 import type { Exercise } from "./exercises/types";
 import { LibraryPanel } from "./LibraryPanel";
 import { HistoryPanel, type HistoryStatus } from "./HistoryPanel";
+import { useAccount } from "./account/useAccount";
+import { signInResult as readSignInResult } from "./account/account";
 import { sessionRecord, trainerRecord, type HistoryRecord, type SessionRecord } from "./history/record";
 import { HistoryStore } from "./history/store";
 import { formatPracticeTime, practiceTimeOn, streak } from "./history/streak";
@@ -52,6 +54,9 @@ const saved = loadSettings();
 const BETWEEN_ROUNDS_MS = 3000;
 const coach = new Coach(saved.metronome ?? DEFAULT_METRONOME);
 const historyStore = new HistoryStore();
+
+/** Read once: the sign-in redirect lands on /?signin=<result>. */
+const SIGN_IN_RESULT = readSignInResult(window.location.search);
 // A first-time drummer gets the on-time window of their (default) skill level.
 coach.scoring = saved.scoring ?? {
   ...DEFAULT_SCORING,
@@ -128,7 +133,9 @@ export default function App() {
   /** The last tempo used for each exercise, so choosing one again picks up where the drummer left off. */
   const [exerciseTempos, setExerciseTempos] = useState<Record<string, number>>(saved.exerciseTempos ?? {});
   const [libraryOpen, setLibraryOpen] = useState(false);
-  const [historyOpen, setHistoryOpen] = useState(false);
+  // Coming back from signing in opens History, where the account lives.
+  const [historyOpen, setHistoryOpen] = useState(SIGN_IN_RESULT !== null);
+  const { account, signOut } = useAccount();
   const [history, setHistory] = useState<HistoryRecord[]>([]);
   const [historyStatus, setHistoryStatus] = useState<HistoryStatus>("loading");
   /** The session that just ended, as saved, for the results screen's heatmap. */
@@ -185,6 +192,14 @@ export default function App() {
   if (exerciseId !== null && exerciseTempos[exerciseId] !== metronome.bpm) {
     setExerciseTempos({ ...exerciseTempos, [exerciseId]: metronome.bpm });
   }
+
+  // Drop ?signin= from the address, so reloading doesn't show the message again.
+  useEffect(() => {
+    if (SIGN_IN_RESULT === null) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("signin");
+    window.history.replaceState(null, "", url);
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -572,6 +587,9 @@ export default function App() {
             selectedExerciseId={exerciseId}
             onClear={clearHistory}
             onClose={() => setHistoryOpen(false)}
+            account={account}
+            signInResult={SIGN_IN_RESULT}
+            onSignOut={signOut}
           />
         )}
         {exercise && trainer && trainer.kind !== "round" && !libraryOpen && !historyOpen && !calibrating && (
