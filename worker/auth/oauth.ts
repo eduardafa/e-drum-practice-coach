@@ -13,7 +13,7 @@
  */
 import { OAUTH_COOKIE, clearCookie, cookie, readCookie } from "./cookies";
 import { base64url, randomToken, sha256 } from "./crypto";
-import { authorizeUrl, credentials, identify, type ProviderId } from "./providers";
+import { authorizeUrl, credentials, identify, type Profile, type ProviderId } from "./providers";
 import { createSession } from "./sessions";
 
 /** Long enough to sign in (even creating an account), short enough to go stale. */
@@ -61,8 +61,8 @@ export async function finishSignIn(request: Request, env: Env, provider: Provide
   }
 
   try {
-    const subject = await identify(provider, creds, code, callbackUrl(env, provider), verifier, now);
-    const userId = await findOrCreateUser(env.DB, provider, subject, now);
+    const profile = await identify(provider, creds, code, callbackUrl(env, provider), verifier, now);
+    const userId = await findOrCreateUser(env.DB, provider, profile, now);
     return backToApp(env, "ok", [done, await createSession(env.DB, userId, provider, now)]);
   } catch (error) {
     console.error(`sign-in with ${provider} failed`, error);
@@ -70,18 +70,26 @@ export async function finishSignIn(request: Request, env: Env, provider: Provide
   }
 }
 
-/** The user for this provider account, created on first sign-in. */
-export async function findOrCreateUser(db: D1Database, provider: ProviderId, subject: string, now = new Date()): Promise<string> {
+/**
+ * The user for this provider account, created on first sign-in. The name and
+ * picture are refreshed every time, so changes on GitHub or Google show up
+ * at the next sign-in.
+ */
+export async function findOrCreateUser(db: D1Database, provider: ProviderId, profile: Profile, now = new Date()): Promise<string> {
+  const { subject, name, avatarUrl } = profile;
   const find = db.prepare("SELECT user_id FROM identities WHERE provider = ? AND subject = ?").bind(provider, subject);
   const existing = await find.first<string>("user_id");
-  if (existing) return existing;
+  if (existing) {
+    await db.prepare("UPDATE users SET name = ?, avatar_url = ? WHERE id = ?").bind(name, avatarUrl, existing).run();
+    return existing;
+  }
 
   const userId = crypto.randomUUID();
   const at = now.toISOString();
   try {
     // One transaction, so a user never exists without its identity.
     await db.batch([
-      db.prepare("INSERT INTO users (id, created_at) VALUES (?, ?)").bind(userId, at),
+      db.prepare("INSERT INTO users (id, created_at, name, avatar_url) VALUES (?, ?, ?, ?)").bind(userId, at, name, avatarUrl),
       db.prepare("INSERT INTO identities (provider, subject, user_id, created_at) VALUES (?, ?, ?, ?)").bind(provider, subject, userId, at),
     ]);
     return userId;
