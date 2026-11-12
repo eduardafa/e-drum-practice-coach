@@ -6,9 +6,15 @@ export function base64url(bytes: Uint8Array): string {
   return btoa(s).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
 }
 
+/**
+ * Decodes base64url to text, reading the bytes as UTF-8 (JWT payloads are
+ * UTF-8 JSON). `atob` alone gives one character per byte, which turns "ç"
+ * into "Ã§".
+ */
 export function base64urlDecode(text: string): string {
   const b64 = text.replaceAll("-", "+").replaceAll("_", "/");
-  return atob(b64 + "=".repeat((4 - (b64.length % 4)) % 4));
+  const binary = atob(b64 + "=".repeat((4 - (b64.length % 4)) % 4));
+  return new TextDecoder().decode(Uint8Array.from(binary, (c) => c.charCodeAt(0)));
 }
 
 /** 32 random bytes (256 bits) as base64url: unguessable. */
