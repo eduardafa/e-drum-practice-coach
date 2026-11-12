@@ -14,6 +14,10 @@ import { findExercise } from "./exercises/library";
 import { metronomeForExercise, startingTempo } from "./exercises/practice";
 import type { Exercise } from "./exercises/types";
 import { LibraryPanel } from "./LibraryPanel";
+import { HistoryPanel, type HistoryStatus } from "./HistoryPanel";
+import { sessionRecord, trainerRecord, type HistoryRecord } from "./history/record";
+import { HistoryStore } from "./history/store";
+import { formatPracticeTime, practiceTimeOn, streak } from "./history/streak";
 import { Coach, DEFAULT_METRONOME } from "./live/coach";
 import type { MidiStatus } from "./midi/connection";
 import {
@@ -47,6 +51,7 @@ const saved = loadSettings();
 /** The pause between tempo-trainer rounds, to read the score before the next count-in. */
 const BETWEEN_ROUNDS_MS = 3000;
 const coach = new Coach(saved.metronome ?? DEFAULT_METRONOME);
+const historyStore = new HistoryStore();
 // A first-time drummer gets the on-time window of their (default) skill level.
 coach.scoring = saved.scoring ?? {
   ...DEFAULT_SCORING,
@@ -123,6 +128,11 @@ export default function App() {
   /** The last tempo used for each exercise, so choosing one again picks up where the drummer left off. */
   const [exerciseTempos, setExerciseTempos] = useState<Record<string, number>>(saved.exerciseTempos ?? {});
   const [libraryOpen, setLibraryOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [history, setHistory] = useState<HistoryRecord[]>([]);
+  const [historyStatus, setHistoryStatus] = useState<HistoryStatus>("loading");
+  /** The running tempo-trainer run: its id (rounds point to it) and when it started. */
+  const trainerRun = useRef<{ id: string; start: Temporal.Instant; timeZone: string; perf: number } | null>(null);
   /** The exercise whose preview is playing in the library, or null. */
   const [previewingId, setPreviewingId] = useState<string | null>(null);
   /** The tempo trainer: null when off; "round" while a round is being played (no panel then). */
@@ -174,6 +184,62 @@ export default function App() {
     setExerciseTempos({ ...exerciseTempos, [exerciseId]: metronome.bpm });
   }
 
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setHistory(await historyStore.all());
+        setHistoryStatus("ready");
+      } catch (error) {
+        console.warn("Practice history is unavailable:", error);
+        setHistoryStatus("off");
+      }
+    };
+    void load();
+  }, []);
+
+  /** Shows a new record straight away; if it can't be stored, history is switched off. */
+  const saveRecord = (record: HistoryRecord) => {
+    setHistory((records) => [record, ...records]);
+    historyStore.add(record).catch((error: unknown) => {
+      console.warn("Couldn't save to practice history:", error);
+      setHistoryStatus("off");
+    });
+  };
+  const saveRecordRef = useRef(saveRecord);
+  useEffect(() => {
+    saveRecordRef.current = saveRecord;
+  });
+
+  // Every session that finishes by itself is saved, including tempo-trainer rounds.
+  useEffect(
+    () =>
+      coach.onSessionEnd((session, timing) => {
+        saveRecordRef.current(
+          sessionRecord(
+            { id: crypto.randomUUID(), start: timing.start, durationMs: timing.durationMs, timeZone: timing.timeZone },
+            {
+              exercise: session.exercise,
+              bpm: session.bpm,
+              loops: session.loops,
+              scoring: coach.scoring,
+              results: session.results(),
+              outcomes: session.outcomes(),
+              trainerRunId: trainerRun.current?.id ?? null,
+            },
+          ),
+        );
+      }),
+    [],
+  );
+
+  const clearHistory = () => {
+    setHistory([]);
+    historyStore.clear().catch((error: unknown) => {
+      console.warn("Couldn't clear practice history:", error);
+      setHistoryStatus("off");
+    });
+  };
+
   const sessionView = useMemo<SessionView | null>(
     () => stats.session && { ...stats.session, accuracy: stats.session.accuracy[accuracyMode] },
     [stats.session, accuracyMode],
@@ -201,6 +267,7 @@ export default function App() {
       closeLibrary();
       return;
     }
+    setHistoryOpen(false);
     setSettingsOpen(false);
     setGuideOpen(false);
     setLibraryOpen(true);
@@ -239,9 +306,10 @@ export default function App() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.code === "Escape" && (settingsOpen || guideOpen || libraryOpen)) {
+      if (e.code === "Escape" && (settingsOpen || guideOpen || libraryOpen || historyOpen)) {
         setSettingsOpen(false);
         setGuideOpen(false);
+        setHistoryOpen(false);
         closeLibrary();
         return;
       }
@@ -262,9 +330,17 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   });
 
+  const toggleHistory = () => {
+    closeLibrary();
+    setSettingsOpen(false);
+    setGuideOpen(false);
+    setHistoryOpen((open) => !open);
+  };
+
   // Only one panel is open over the kit view at a time.
   const openGuide = () => {
     closeLibrary();
+    setHistoryOpen(false);
     setSettingsOpen(false);
     setGuideFirstOpen(!guideSeen);
     setGuideOpen(true);
@@ -273,6 +349,7 @@ export default function App() {
 
   const toggleSettings = () => {
     closeLibrary();
+    setHistoryOpen(false);
     setGuideOpen(false);
     setSettingsOpen((open) => !open);
   };
@@ -281,6 +358,7 @@ export default function App() {
   const startSession = async (bpm: number) => {
     if (!exercise || coach.calibrating) return;
     closeLibrary();
+    setHistoryOpen(false);
     setGuideOpen(false);
     setSettingsOpen(false);
     const settings = await coach.startSession(exercise, sessionLoops, bpm);
@@ -300,6 +378,12 @@ export default function App() {
   };
 
   const startTrainer = (config: TrainerConfig) => {
+    trainerRun.current = {
+      id: crypto.randomUUID(),
+      start: Temporal.Now.instant(),
+      timeZone: Temporal.Now.timeZoneId(),
+      perf: performance.now(),
+    };
     setTrainerConfig(config);
     setTrainerRounds([]);
     setTrainer({ kind: "round" });
@@ -318,6 +402,23 @@ export default function App() {
     setTrainerRounds((rounds) => [...rounds, { bpm: finished.bpm, accuracy, outcome: next.outcome }]);
     setTrainer(next.outcome === "done" ? { kind: "finished", reason: "target" } : { kind: "between", nextBpm: next.bpm });
   }
+
+  // A finished trainer run (target reached, or stopped after at least one round) is saved once.
+  useEffect(() => {
+    const run = trainerRun.current;
+    if (trainer?.kind !== "finished" || !run || !exercise || !trainerConfig) return;
+    trainerRun.current = null;
+    if (trainerRounds.length === 0) return;
+    saveRecordRef.current(
+      trainerRecord(
+        { id: run.id, start: run.start, durationMs: performance.now() - run.perf, timeZone: run.timeZone },
+        exercise,
+        trainerConfig,
+        trainerRounds,
+        trainer.reason,
+      ),
+    );
+  }, [trainer, exercise, trainerConfig, trainerRounds]);
 
   // Between rounds: a short pause to read the score, then the next round starts with a count-in.
   useEffect(() => {
@@ -347,6 +448,16 @@ export default function App() {
     setSkillLevel(level);
     setScoring((s) => ({ ...s, toleranceMs: SKILL_PROFILES[level].toleranceMs }));
   };
+
+  const todayKey = Temporal.Now.plainDateISO().toString();
+  const practiceSummary = useMemo(() => {
+    const today = Temporal.PlainDate.from(todayKey);
+    const { current } = streak(history, today);
+    const time = practiceTimeOn(history, today);
+    if (history.length === 0) return "No practice saved yet";
+    const days = current === 1 ? "1-day streak" : `${current}-day streak`;
+    return time.total("seconds") > 0 ? `${days} · ${formatPracticeTime(time)} today` : days;
+  }, [history, todayKey]);
 
   const suggestion =
     stats.scored >= MIN_HITS_FOR_SUGGESTION && stats.spreadMs !== null
@@ -451,7 +562,16 @@ export default function App() {
             onClose={closeLibrary}
           />
         )}
-        {exercise && trainer && trainer.kind !== "round" && !libraryOpen && !calibrating && (
+        {historyOpen && !calibrating && (
+          <HistoryPanel
+            records={history}
+            status={historyStatus}
+            accuracyMode={accuracyMode}
+            onClear={clearHistory}
+            onClose={() => setHistoryOpen(false)}
+          />
+        )}
+        {exercise && trainer && trainer.kind !== "round" && !libraryOpen && !historyOpen && !calibrating && (
           <TrainerPanel
             exercise={exercise}
             stage={trainer}
@@ -465,7 +585,7 @@ export default function App() {
             }}
           />
         )}
-        {exercise && !trainer && stats.session?.phase === "done" && coach.session && !libraryOpen && !calibrating && (
+        {exercise && !trainer && stats.session?.phase === "done" && coach.session && !libraryOpen && !historyOpen && !calibrating && (
           <ResultsPanel
             exercise={exercise}
             results={coach.session.results()}
@@ -615,6 +735,18 @@ export default function App() {
                 </button>
               </div>
             </output>
+          )}
+          {historyStatus !== "loading" && (
+            <div className="practice-line">
+              <span>{historyStatus === "off" ? "History is off in this browser" : practiceSummary}</span>
+              <button
+                className={`link-button ${historyOpen ? "selected" : ""}`}
+                aria-expanded={historyOpen}
+                onClick={releasing(toggleHistory)}
+              >
+                History
+              </button>
+            </div>
           )}
           {/* Until the guide is opened, the first-visit prompt above stands in for this link. */}
           {guideSeen && (

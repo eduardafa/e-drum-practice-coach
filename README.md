@@ -39,6 +39,9 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
   goes up a step (default 4 BPM) at 90% or more, down a step below 70%, and otherwise stays, until you pass a
   round at your target tempo. A short pause and a count-in at the new tempo separate the rounds, and a chart
   shows each round's tempo and accuracy.
+- Practice history: every finished session and tempo-trainer run is saved in your browser (IndexedDB) and listed
+  by day, with your streak (days in a row with practice), today's practice time and your longest streak. Nothing
+  leaves the device; a later version will sync it to a small backend.
 - Keyboard fallback for trying the app without a kit.
 
 ## Running it
@@ -140,6 +143,7 @@ src/
   exercises/ exercise format (48 ticks per quarter), drum-tab builder, validator, starter library, preview timing
   playalong/ expected-note timeline, hit matching, sessions and accuracy scoring
   live/     Coach (wiring) and LiveState (shared per-hit state)
+  history/  practice history records (Temporal dates), streaks, IndexedDB store
   guide/    the metronome guide's steps, as data
   notation/ rhythm spelling, VexFlow engraving (loaded on demand) and the playhead mapping
   render/   Canvas 2D kit renderer

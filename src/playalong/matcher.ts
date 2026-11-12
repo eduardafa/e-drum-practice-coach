@@ -24,11 +24,13 @@ export interface PlayedHit {
   zone: string | null;
   /** performance.now() ms, before latency correction. */
   time: number;
+  /** MIDI velocity, 1 to 127, kept for practice history. */
+  velocity?: number;
 }
 
 export type NoteResult =
   | { status: "pending" }
-  | { status: "hit"; deltaMs: number; verdict: Verdict }
+  | { status: "hit"; deltaMs: number; verdict: Verdict; velocity?: number }
   | { status: "missed" };
 
 export type MatchEvent =
@@ -62,11 +64,15 @@ export function voiceMatches(note: ExpectedNote, hit: PlayedHit): boolean {
   return true;
 }
 
+function hitResult(deltaMs: number, verdict: Verdict, velocity: number | undefined): NoteResult {
+  return velocity === undefined ? { status: "hit", deltaMs, verdict } : { status: "hit", deltaMs, verdict, velocity };
+}
+
 export class NoteMatcher {
   private readonly results: NoteResult[];
   /** Every note before this index is resolved. */
   private cursor = 0;
-  private extras = 0;
+  private readonly extras: PlayedHit[] = [];
   /**
    * The widest window. Windows differ per note, so window starts aren't in time
    * order; scans stop once a note is further away than any window could reach.
@@ -107,14 +113,14 @@ export class NoteMatcher {
       // A flam's other stroke: keep whichever is closer to the beat.
       if (!best.flam) return this.extra(hit);
       if (Math.abs(deltaMs) < Math.abs(current.deltaMs)) {
-        this.results[best.id] = { status: "hit", deltaMs, verdict: classify(deltaMs, this.scoring.toleranceMs) };
+        this.results[best.id] = hitResult(deltaMs, classify(deltaMs, this.scoring.toleranceMs), hit.velocity);
       }
       return { kind: "flamStroke", note: best };
     }
     if (current.status === "missed") return this.extra(hit);
 
     const verdict = classify(deltaMs, this.scoring.toleranceMs);
-    this.results[best.id] = { status: "hit", deltaMs, verdict };
+    this.results[best.id] = hitResult(deltaMs, verdict, hit.velocity);
     return { kind: "hit", note: best, deltaMs, verdict };
   }
 
@@ -142,7 +148,7 @@ export class NoteMatcher {
       early: 0,
       late: 0,
       missed: 0,
-      extra: this.extras,
+      extra: this.extras.length,
       pending: 0,
     };
     for (const r of this.results) {
@@ -158,8 +164,13 @@ export class NoteMatcher {
     return s;
   }
 
+  /** Hits that matched no note, in the order played. */
+  extraHits(): readonly PlayedHit[] {
+    return this.extras;
+  }
+
   private extra(hit: PlayedHit): MatchEvent {
-    this.extras++;
+    this.extras.push(hit);
     return { kind: "extra", hit };
   }
 }

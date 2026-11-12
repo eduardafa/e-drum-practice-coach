@@ -81,6 +81,15 @@ export class PlayAlongSession {
     );
   }
 
+  /** Every expected note with its result, and the hits that matched no note: what practice history keeps. */
+  outcomes(): { notes: { note: ExpectedNote; result: NoteResult }[]; extraHits: readonly PlayedHit[] } {
+    const matcher = this.matcher;
+    return {
+      notes: this.notes.map((note) => ({ note, result: matcher?.resultOf(note) ?? { status: "pending" } })),
+      extraHits: matcher?.extraHits() ?? [],
+    };
+  }
+
   /**
    * The latest result for each note of the exercise (by index into
    * exercise.notes): this loop's if resolved, otherwise the previous loop's,
