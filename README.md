@@ -66,6 +66,16 @@ pnpm typecheck     # tsc (TypeScript 7)
 pnpm build         # type-check + production build
 ```
 
+To run the API locally as well, in Cloudflare's runtime:
+
+```sh
+pnpm build
+pnpm exec wrangler d1 migrations apply DB --local
+pnpm exec wrangler dev --var APP_ORIGIN:http://localhost:8787   # http://localhost:8787
+```
+
+After changing bindings or vars in `wrangler.jsonc`, run `pnpm types:worker` to regenerate the Worker types.
+
 Plug the kit in over USB, click **Connect kit**, allow MIDI access, then press **M** to start the
 metronome. Before your first session, click **Calibrate latency** and hit any pad on each click, so
 the scores account for your setup's delay.
@@ -75,10 +85,13 @@ Without a kit: <kbd>Space</kbd> kick, <kbd>S</kbd> snare, <kbd>A</kbd> hi-hat, <
 
 ## Deployment
 
-The app is static and runs on Cloudflare Workers (static assets only, no server code). CI deploys it:
+The app runs on Cloudflare Workers. Cloudflare serves the built app straight from `dist/`; only `/api/*`
+runs Worker code (`worker/`), which will keep synced practice history in a D1 database. CI deploys it:
 
-- **Merge to `main`**: deploys to production, after lint, type-check, tests and build pass.
-- **Pull request**: uploads a preview version and comments its URL on the PR.
+- **Merge to `main`**: applies new database migrations (`migrations/`), then deploys to production, after
+  lint, type-check, tests and build pass.
+- **Pull request**: uploads a preview version and comments its URL on the PR. Previews share the
+  production database, so their API answers 503 and they never run migrations.
 
 The deploy uses the exact build the checks produced. Config lives in `wrangler.jsonc`, and response headers
 (Content Security Policy, a Permissions-Policy that allows MIDI only for this site, caching) live in
@@ -156,6 +169,8 @@ src/
   guide/    the metronome guide's steps, as data
   notation/ rhythm spelling, VexFlow engraving (loaded on demand) and the playhead mapping
   render/   Canvas 2D kit renderer
+worker/     the API Worker (only /api/*), its generated types, and a D1 stand-in for tests
+migrations/ D1 schema, as numbered SQL files
 ```
 
 ## Roadmap

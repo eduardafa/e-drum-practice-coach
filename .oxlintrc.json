@@ -57,6 +57,7 @@
   },
   "ignorePatterns": [
     "dist",
-    "node_modules"
+    "node_modules",
+    "worker/worker-configuration.d.ts"
   ]
 }

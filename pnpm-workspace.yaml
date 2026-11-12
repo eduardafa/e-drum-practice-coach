@@ -1,6 +1,7 @@
 # Dependency build scripts are blocked unless listed here. esbuild and workerd come with
-# wrangler; their scripts are only needed for local `wrangler dev` and bundling Worker code,
-# not for deploying static assets, so they stay off.
+# wrangler; their install scripts only verify the platform binary, which pnpm already
+# installs as an optional dependency. Bundling the Worker and `wrangler dev` work without
+# them, so they stay off.
 allowBuilds:
   esbuild: false
   workerd: false
