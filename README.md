@@ -40,12 +40,14 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
   round at your target tempo. A short pause and a count-in at the new tempo separate the rounds, and a chart
   shows each round's tempo and accuracy.
 - Practice history, on its own page at `/history`: every finished session and tempo-trainer run is saved in your
-  browser (IndexedDB) and listed by day, with your streak (days in a row with practice), today's practice time and your longest streak. Nothing
-  leaves the device yet.
+  browser (IndexedDB) and listed by day, with your streak (days in a row with practice), today's practice time and your longest streak. Signed out, nothing
+  leaves the device.
 - Light and dark themes: follows the device's setting, or choose System, Light or Dark in Settings.
-- Sign in with GitHub or Google from the account button in the top bar, to sync history across devices (syncing itself is the
-  next step). The server keeps the provider's account number, your name and profile picture link (shown in the account menu), never your email. What's stored and
-  how to delete it is on the privacy page (`public/privacy.html`, served at `/privacy`).
+- Sign in with GitHub or Google from the account button in the top bar, and history syncs across devices
+  automatically: each finished session uploads right away, and other devices' sessions arrive when the app opens
+  or you return to it. Offline, it catches up later. The server keeps the provider's account number, your name
+  and profile picture link, and your practice records, never your email. What's stored and how to delete it is
+  on the privacy page (`public/privacy.html`, served at `/privacy`).
 - Progress charts: for each exercise, accuracy and fastest tempo per day (or per week over longer spans) for the
   last 7 days, 30 days or all time, with a one-line summary such as "Money beat: 72% → 88% over 2 weeks,
   70 → 84 BPM" and a table view.
@@ -95,7 +97,7 @@ Without a kit: <kbd>Space</kbd> kick, <kbd>S</kbd> snare, <kbd>A</kbd> hi-hat, <
 ## Deployment
 
 The app runs on Cloudflare Workers. Cloudflare serves the built app straight from `dist/`; only `/api/*`
-runs Worker code (`worker/`): sign-in with GitHub or Google, and (soon) synced practice history in a D1
+runs Worker code (`worker/`): sign-in with GitHub or Google, and synced practice history in a D1
 database. CI deploys it:
 
 - **Merge to `main`**: applies new database migrations (`migrations/`), then deploys to production, after
