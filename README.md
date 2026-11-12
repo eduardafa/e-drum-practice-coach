@@ -46,8 +46,9 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
 - Sign in with GitHub or Google from the account button in the top bar, and history syncs across devices
   automatically: each finished session uploads right away, and other devices' sessions arrive when the app opens
   or you return to it. Offline, it catches up later. The server keeps the provider's account number, your name
-  and profile picture link, and your practice records, never your email. What's stored and how to delete it is
-  on the privacy page (`public/privacy.html`, served at `/privacy`).
+  and profile picture link, and your practice records, never your email. The account menu can delete the
+  account and everything synced to it, and clearing history can also delete the synced copy. What's stored and
+  how to delete it is on the privacy page (`public/privacy.html`, served at `/privacy`).
 - Progress charts: for each exercise, accuracy and fastest tempo per day (or per week over longer spans) for the
   last 7 days, 30 days or all time, with a one-line summary such as "Money beat: 72% → 88% over 2 weeks,
   70 → 84 BPM" and a table view.
