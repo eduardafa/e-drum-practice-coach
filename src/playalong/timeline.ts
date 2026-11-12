@@ -41,7 +41,7 @@ export function msPerTick(exercise: Pick<Exercise, "timeSignature">, bpm: number
 
 /**
  * The expected notes for every loop, sorted by time. Each note's window is
- * half the gap to its nearest neighbour on the same pad, capped at
+ * half the gap to its nearest neighbor on the same pad, capped at
  * maxWindowMs, so windows on a pad never overlap and a hit can belong to at
  * most one note.
  */
@@ -65,7 +65,7 @@ export function buildTimeline(exercise: Exercise, options: TimelineOptions): Exp
     });
   }
 
-  // Narrow each window to half the gap to its neighbours on the same pad.
+  // Narrow each window to half the gap to its neighbors on the same pad.
   const lastByPad = new Map<PadId, ExpectedNote>();
   for (const note of notes) {
     const prev = lastByPad.get(note.pad);

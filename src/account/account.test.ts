@@ -42,7 +42,7 @@ describe("fetchAccount", () => {
 describe("signInResult", () => {
   it("reads the result the server redirected back with", () => {
     expect(signInResult("?signin=ok")).toBe("ok");
-    expect(signInResult("?x=1&signin=cancelled")).toBe("cancelled");
+    expect(signInResult("?x=1&signin=canceled")).toBe("canceled");
     expect(signInResult("?signin=<script>")).toBeNull();
     expect(signInResult("")).toBeNull();
   });

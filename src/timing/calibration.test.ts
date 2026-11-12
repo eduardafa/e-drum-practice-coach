@@ -10,7 +10,7 @@ import {
 } from "./calibration";
 
 describe("quantile and median", () => {
-  it("interpolates between neighbours", () => {
+  it("interpolates between neighbors", () => {
     expect(quantile([1, 2, 3, 4], 0.5)).toBe(2.5);
     expect(quantile([10, 20, 30, 40, 50], 0.25)).toBe(20);
   });

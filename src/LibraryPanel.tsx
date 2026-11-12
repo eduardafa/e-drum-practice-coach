@@ -150,7 +150,7 @@ function ExerciseCard({
           {previewing ? "■ Stop" : `▶ Listen · ${bpm} BPM`}
         </button>
         <button className="primary" onClick={() => onSelect(exercise.id)} aria-describedby={titleId}>
-          {selected ? "Keep this one" : "Practise this"}
+          {selected ? "Keep this one" : "Practice this"}
         </button>
       </div>
     </li>

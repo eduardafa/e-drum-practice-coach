@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { progress, progressSummary, practisedExercises, weekStart, type Progress } from "./progress";
+import { progress, progressSummary, practicedExercises, weekStart, type Progress } from "./progress";
 import type { HistoryRecord } from "./record";
 
 interface Opts {
@@ -148,14 +148,14 @@ describe("progress by week", () => {
   });
 });
 
-describe("practisedExercises", () => {
+describe("practicedExercises", () => {
   it("lists exercises most recently played first, with their latest name", () => {
     const records = [
       session("2026-11-11T10:00", { exerciseId: "single-strokes", exerciseName: "Singles" }),
       session("2026-11-10T10:00", { exerciseName: "Money beat" }),
       session("2026-11-09T10:00", { exerciseId: "single-strokes", exerciseName: "Old name" }),
     ];
-    expect(practisedExercises(records)).toEqual([
+    expect(practicedExercises(records)).toEqual([
       { id: "single-strokes", name: "Singles" },
       { id: "rock-8ths", name: "Money beat" },
     ]);

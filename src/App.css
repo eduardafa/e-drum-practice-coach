@@ -6,7 +6,7 @@
  *
  * Contrast (WCAG): text and muted text at least 4.5:1 on panel and page;
  * control outlines at least 3:1; early / on time / late at least 3:1 and
- * always labelled in words or ms as well.
+ * always labeled in words or ms as well.
  */
 :root {
   color-scheme: light dark;
@@ -214,7 +214,7 @@ button.primary kbd {
   opacity: 0.6;
 }
 
-/* Centre a key hint (Start M, Close Esc) on the button's text instead of its baseline. */
+/* Center a key hint (Start M, Close Esc) on the button's text instead of its baseline. */
 button:has(> kbd) {
   display: inline-flex;
   align-items: center;
@@ -995,7 +995,7 @@ fieldset.group.play {
   stroke-linejoin: round;
 }
 
-/* A 2px panel-coloured ring keeps each dot distinct where it sits on the line. */
+/* A 2px panel-colored ring keeps each dot distinct where it sits on the line. */
 .chart-dot {
   fill: var(--accent);
   stroke: var(--panel);
@@ -1326,7 +1326,7 @@ fieldset.group.play {
   stroke-linecap: round;
 }
 
-/* The surface-coloured ring keeps dots readable where they sit on the line. */
+/* The surface-colored ring keeps dots readable where they sit on the line. */
 .progress-plot .dot {
   fill: var(--accent);
   stroke: var(--panel);
@@ -1471,7 +1471,7 @@ fieldset.group.play {
   background: var(--border);
 }
 
-.timing-centre {
+.timing-center {
   position: absolute;
   left: 50%;
   top: 0;
@@ -1488,7 +1488,7 @@ fieldset.group.play {
   background: var(--band);
 }
 
-/* Early and late wear the same colours as the hit marks everywhere else; the words say it too. */
+/* Early and late wear the same colors as the hit marks everywhere else; the words say it too. */
 .timing-dot {
   position: absolute;
   top: 2px;

@@ -2,8 +2,8 @@
  * Sessions: who a browser is signed in as. The browser keeps a random token
  * in the session cookie; the database keeps its SHA-256, so a copy of the
  * database can't be used to sign in. Sessions last 30 days and are renewed
- * when used in their second half, so a drummer who practises at least once a
- * fortnight stays signed in.
+ * when used in their second half, so a drummer who practices at least once every
+ * two weeks stays signed in.
  */
 import { SESSION_COOKIE, clearCookie, cookie, readCookie } from "./cookies";
 import { randomToken, sha256Hex } from "./crypto";

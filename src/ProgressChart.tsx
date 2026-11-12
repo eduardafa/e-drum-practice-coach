@@ -49,7 +49,7 @@ function fittedTicks(values: readonly number[]): number[] {
 
 /**
  * A single-measure line chart over calendar dates: one series, so no legend
- * (the title names it). The latest value is labelled at the end of the line;
+ * (the title names it). The latest value is labeled at the end of the line;
  * hovering shows any point. The drawing is hidden from screen readers: the
  * summary sentence and the table view next to it carry the same values.
  */

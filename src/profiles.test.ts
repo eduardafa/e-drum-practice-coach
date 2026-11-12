@@ -17,7 +17,7 @@ describe("skill profiles", () => {
 });
 
 describe("levelForTolerance", () => {
-  it("recognises each level's window", () => {
+  it("recognizes each level's window", () => {
     expect(levelForTolerance(70)).toBe("firstSteps");
     expect(levelForTolerance(35)).toBe("beginner");
     expect(levelForTolerance(10)).toBe("advanced");

@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { HistoryRecord, SessionRecord, TrainerRecord } from "./history/record";
 import { formatPracticeTime, practiceDate, practiceTimeOn, streak } from "./history/streak";
 import type { AccuracyMode } from "./playalong/results";
-import { PROGRESS_RANGES, practisedExercises, rangeStart, type ProgressRange } from "./history/progress";
+import { PROGRESS_RANGES, practicedExercises, rangeStart, type ProgressRange } from "./history/progress";
 import { ProgressSection } from "./ProgressSection";
 import { TimingSection } from "./TimingSection";
 import { PadHeatmap } from "./PadHeatmap";
@@ -17,7 +17,7 @@ interface Props {
   records: readonly HistoryRecord[];
   status: HistoryStatus;
   accuracyMode: AccuracyMode;
-  /** The exercise on the stand, charted first when it has been practised. */
+  /** The exercise on the stand, charted first when it has been practiced. */
   selectedExerciseId: string | null;
   onClear: () => void;
   onClose: () => void;
@@ -76,7 +76,7 @@ export function HistoryPanel({
   const [confirming, setConfirming] = useState(false);
   const [range, setRange] = useState<ProgressRange>("30d");
   const today = Temporal.Now.plainDateISO();
-  const { current, practisedToday, longest } = streak(records, today);
+  const { current, practicedToday, longest } = streak(records, today);
   const todayTime = practiceTimeOn(records, today);
   const sessions = records.filter((r) => r.kind === "session").length;
 
@@ -117,7 +117,7 @@ export function HistoryPanel({
             <div>
               <dt>Today</dt>
               <dd>{formatPracticeTime(todayTime)}</dd>
-              <dd className="tile-note">practised</dd>
+              <dd className="tile-note">practiced</dd>
             </div>
             <div>
               <dt>Longest</dt>
@@ -126,14 +126,14 @@ export function HistoryPanel({
             </div>
           </dl>
           <p className="hint">
-            {current > 0 && !practisedToday
+            {current > 0 && !practicedToday
               ? "Play a session today to keep your streak going."
               : sessions === 0
                 ? "Finish a play-along session and it appears here. Days in a row with at least one session make your streak."
                 : "Days in a row with at least one finished session make your streak."}
           </p>
 
-          {practisedExercises(records).length > 0 && (
+          {practicedExercises(records).length > 0 && (
             <>
               <h3>Progress</h3>
               {/* One range for everything below it, so the charts and timing agree. */}

@@ -59,7 +59,7 @@ export type CalibrationProgress =
       phase: "listening";
       clicksHeard: number;
       maxClicks: number;
-      /** Hits counted towards the estimate so far. */
+      /** Hits counted toward the estimate so far. */
       hits: number;
       /** Current uncertainty of the estimate, or null before there are enough hits. */
       uncertaintyMs: number | null;

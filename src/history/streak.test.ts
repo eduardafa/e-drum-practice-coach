@@ -41,17 +41,17 @@ describe("practiceDate", () => {
 describe("streak", () => {
   it("counts days in a row ending today", () => {
     const records = [session("2026-11-09T18:00"), session("2026-11-10T18:00"), session("2026-11-11T08:00")];
-    expect(streak(records, day("2026-11-11"))).toEqual({ current: 3, practisedToday: true, longest: 3 });
+    expect(streak(records, day("2026-11-11"))).toEqual({ current: 3, practicedToday: true, longest: 3 });
   });
 
   it("keeps a streak that reached yesterday alive until today ends", () => {
     const records = [session("2026-11-09T18:00"), session("2026-11-10T18:00")];
-    expect(streak(records, day("2026-11-11"))).toMatchObject({ current: 2, practisedToday: false });
+    expect(streak(records, day("2026-11-11"))).toMatchObject({ current: 2, practicedToday: false });
   });
 
   it("breaks after a whole day without practice, but remembers the longest", () => {
     const records = [session("2026-11-01T18:00"), session("2026-11-02T18:00"), session("2026-11-03T18:00"), session("2026-11-09T18:00")];
-    expect(streak(records, day("2026-11-11"))).toEqual({ current: 0, practisedToday: false, longest: 3 });
+    expect(streak(records, day("2026-11-11"))).toEqual({ current: 0, practicedToday: false, longest: 3 });
   });
 
   it("treats 23:59 and 00:01 as two days, and two sessions on one day as one", () => {
