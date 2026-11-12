@@ -127,7 +127,7 @@ export function binOf(value: number | null, binList: readonly Bin[]): Bin | null
 
 // ---- Dynamics in words -------------------------------------------------------
 
-/** RunningStatsents and ghost notes closer than this (in velocity) don't sound different enough. */
+/** Accents and ghost notes closer than this (in velocity) don't sound different enough. */
 export const DYNAMIC_GAP = 25;
 
 /**
