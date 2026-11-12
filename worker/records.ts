@@ -14,6 +14,11 @@ export const PUSH_MAX_BYTES = 1_000_000;
 export const RECORD_MAX_BYTES = 64_000;
 /** Records per download page. */
 export const PULL_LIMIT = 200;
+/**
+ * Synced history per drummer: about 5,000 sessions, years of daily practice.
+ * It keeps one account from filling the shared free database.
+ */
+export const USER_MAX_BYTES = 25_000_000;
 
 const ID_PATTERN = /^[A-Za-z0-9_-]{1,100}$/;
 
@@ -72,12 +77,31 @@ export async function pushRecords(request: Request, env: Env, userId: string, no
 
   let stored = 0;
   if (rows.length > 0) {
+    // The running total (kept on the user) is checked first; records already
+    // on the server count against it once more here, so the check is cautious.
+    const used = (await env.DB.prepare("SELECT record_bytes FROM users WHERE id = ?").bind(userId).first<number>("record_bytes")) ?? 0;
+    const incoming = rows.reduce((n, r) => n + r.body.length, 0);
+    if (used + incoming > USER_MAX_BYTES) {
+      return problem(413, "storage-full", "Your synced history has reached its size limit.");
+    }
+
     const at = now.toISOString();
     const insert = env.DB.prepare(
       "INSERT INTO records (user_id, id, body, received_at) VALUES (?, ?, ?, ?) ON CONFLICT (user_id, id) DO NOTHING",
     );
     const results = await env.DB.batch(rows.map((r) => insert.bind(userId, r.id, r.body, at)));
-    stored = results.reduce((n, r) => n + (r.meta.changes ?? 0), 0);
+    let bytes = 0;
+    results.forEach((r, i) => {
+      if ((r.meta.changes ?? 0) > 0) {
+        stored++;
+        bytes += rows[i]?.body.length ?? 0;
+      }
+    });
+    if (stored > 0) {
+      await env.DB.prepare("UPDATE users SET record_count = record_count + ?, record_bytes = record_bytes + ? WHERE id = ?")
+        .bind(stored, bytes, userId)
+        .run();
+    }
   }
   const result: PushResult = { stored, known: rows.length - stored, rejected };
   return json(result);
@@ -93,4 +117,13 @@ export async function pullRecords(request: Request, env: Env, userId: string): P
   const next = page.at(-1)?.seq ?? after;
   // The bodies are stored as JSON already, so they're joined rather than parsed and re-serialized.
   return rawJson(`{"records":[${page.map((r) => r.body).join(",")}],"next":${next},"more":${results.length > PULL_LIMIT}}`);
+}
+
+/** Deletes every synced record of this user (the clear-history option "also from my account"). */
+export async function deleteRecords(_request: Request, env: Env, userId: string): Promise<Response> {
+  const [deleted] = await env.DB.batch([
+    env.DB.prepare("DELETE FROM records WHERE user_id = ?").bind(userId),
+    env.DB.prepare("UPDATE users SET record_count = 0, record_bytes = 0 WHERE id = ?").bind(userId),
+  ]);
+  return json({ deleted: deleted?.meta.changes ?? 0 });
 }

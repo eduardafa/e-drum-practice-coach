@@ -33,6 +33,12 @@
       "migrations_dir": "migrations"
     }
   ],
+  // Cloudflare's rate limiting (per location, approximate): sync calls per
+  // account, and sign-in attempts per IP address. Over the limit, 429.
+  "ratelimits": [
+    { "name": "API_LIMIT", "namespace_id": "1001", "simple": { "limit": 120, "period": 60 } },
+    { "name": "AUTH_LIMIT", "namespace_id": "1002", "simple": { "limit": 20, "period": 60 } }
+  ],
   // Production lives on workers.dev; pull requests get aliased version URLs there too.
   "workers_dev": true,
   "preview_urls": true
