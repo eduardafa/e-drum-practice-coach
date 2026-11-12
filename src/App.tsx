@@ -567,6 +567,7 @@ export default function App() {
             records={history}
             status={historyStatus}
             accuracyMode={accuracyMode}
+            selectedExerciseId={exerciseId}
             onClear={clearHistory}
             onClose={() => setHistoryOpen(false)}
           />
