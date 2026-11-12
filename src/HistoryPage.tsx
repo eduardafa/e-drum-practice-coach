@@ -17,7 +17,8 @@ interface Props {
   accuracyMode: AccuracyMode;
   /** The exercise on the stand, charted first when it has been practiced. */
   selectedExerciseId: string | null;
-  onClear: () => void;
+  /** Clears history here and, if asked, the account's synced copy; false if that part failed. */
+  onClear: (alsoAccount: boolean) => Promise<boolean>;
   onBack: () => void;
   /** Signed in: history syncs with the account. */
   signedIn: boolean;
@@ -66,6 +67,8 @@ export function HistoryPage({ records, status, accuracyMode, selectedExerciseId,
   // Arriving on the page, start reading at its title.
   useEffect(() => headingRef.current?.focus(), []);
   const [confirming, setConfirming] = useState(false);
+  const [alsoAccount, setAlsoAccount] = useState(false);
+  const [clearFailed, setClearFailed] = useState(false);
   const [range, setRange] = useState<ProgressRange>("30d");
   const today = Temporal.Now.plainDateISO();
   const { current, practicedToday, longest } = streak(records, today);
@@ -187,15 +190,21 @@ export function HistoryPage({ records, status, accuracyMode, selectedExerciseId,
                 {confirming ? (
                   <>
                     <p>
-                      Delete all {sessions} {sessions === 1 ? "session" : "sessions"} and your streak? This can't be
-                      undone.
+                      Delete all {sessions} {sessions === 1 ? "session" : "sessions"} and your streak from this browser?
+                      This can't be undone.
                     </p>
+                    {signedIn && (
+                      <label className="field checkbox history-clear-account">
+                        <input type="checkbox" checked={alsoAccount} onChange={(e) => setAlsoAccount(e.target.checked)} />
+                        <span>Also delete it from your account, so it's gone from every device</span>
+                      </label>
+                    )}
                     <div className="calibration-actions">
                       <button
                         className="primary danger"
                         onClick={releasing(() => {
                           setConfirming(false);
-                          onClear();
+                          void onClear(signedIn && alsoAccount).then((ok) => setClearFailed(!ok));
                         })}
                       >
                         Delete history
@@ -211,6 +220,11 @@ export function HistoryPage({ records, status, accuracyMode, selectedExerciseId,
                   </button>
                 )}
               </div>
+            )}
+            {clearFailed && (
+              <p className="hint warn-note">
+                History was cleared here, but couldn't be deleted from your account. Check your connection and try again.
+              </p>
             )}
             <p className="hint">
               {signedIn

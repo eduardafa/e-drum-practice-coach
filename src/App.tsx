@@ -17,6 +17,8 @@ import { LibraryPanel } from "./LibraryPanel";
 import { HistoryPage, type HistoryStatus } from "./HistoryPage";
 import { useAccount } from "./account/useAccount";
 import { useSync } from "./history/useSync";
+import { localLedger } from "./history/sync";
+import { deleteAccount, deleteSyncedHistory } from "./account/account";
 import { AccountMenu } from "./AccountMenu";
 import { signInResult as readSignInResult } from "./account/account";
 import { sessionRecord, trainerRecord, type HistoryRecord, type SessionRecord } from "./history/record";
@@ -227,9 +229,13 @@ export default function App() {
   const reloadHistory = () => {
     historyStore.all().then(setHistory, (error: unknown) => console.warn("Couldn't reload practice history:", error));
   };
+  // Which records were synced with which account (kept in localStorage).
+  const [ledger] = useState(localLedger);
+  const userId = account.status === "signed-in" ? account.id : null;
   const { status: syncStatus, syncNow } = useSync(
-    account.status === "signed-in" ? account.id : null,
+    userId,
     historyStore,
+    ledger,
     historyStatus === "ready",
     reloadHistory,
     markSignedOut,
@@ -270,13 +276,58 @@ export default function App() {
     [],
   );
 
-  const clearHistory = () => {
+  /**
+   * Clears this browser's history and, if asked (signed in only), the copy
+   * synced to the account too. Other devices keep their own copies either
+   * way. Resolves false if the account's copy couldn't be deleted.
+   */
+  const clearHistory = async (alsoAccount: boolean): Promise<boolean> => {
     setHistory([]);
-    historyStore.clear().catch((error: unknown) => {
+    try {
+      await historyStore.clear();
+    } catch (error) {
       console.warn("Couldn't clear practice history:", error);
       setHistoryStatus("off");
-    });
+    }
+    if (!alsoAccount || !userId) return true;
+    try {
+      await deleteSyncedHistory();
+      return true;
+    } catch (error) {
+      console.warn("Couldn't delete synced history:", error);
+      return false;
+    }
   };
+
+  /** Deletes the account and everything synced to it; history in this browser stays. */
+  const deleteMyAccount = async (): Promise<boolean> => {
+    if (!userId) return false;
+    try {
+      await deleteAccount();
+    } catch (error) {
+      console.warn("Couldn't delete the account:", error);
+      return false;
+    }
+    ledger.forget(userId);
+    markSignedOut();
+    return true;
+  };
+
+  /** For a shared computer: remove this account's synced records from this browser, then sign out. */
+  const signOutAndRemove = async (): Promise<boolean> => {
+    if (!userId) return false;
+    const ok = await signOut();
+    if (!ok) return false;
+    try {
+      await historyStore.deleteMany(ledger.ownedBy(userId));
+    } catch (error) {
+      console.warn("Couldn't remove history from this browser:", error);
+    }
+    ledger.forget(userId);
+    reloadHistory();
+    return true;
+  };
+
 
   const sessionView = useMemo<SessionView | null>(
     () => stats.session && { ...stats.session, accuracy: stats.session.accuracy[accuracyMode] },
@@ -617,6 +668,8 @@ export default function App() {
             syncStatus={syncStatus}
             onToggle={toggleAccount}
             onSignOut={signOut}
+            onSignOutAndRemove={signOutAndRemove}
+            onDeleteAccount={deleteMyAccount}
           />
           <MidiPanel status={midi} />
         </div>
