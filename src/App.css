@@ -1673,34 +1673,104 @@ button.primary.danger {
   border-top: 1px solid var(--border);
 }
 
-.account-providers {
+/* Sign-in buttons in the providers' dark styles: Google's dark theme
+   (#131314, grey outline, pill), and GitHub's mark beside it in the same shape. */
+.signin-buttons {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 12px;
 }
 
-/* Links that look like secondary buttons: signing in leaves the page. */
-.account-link {
-  display: inline-block;
-  color: var(--text);
+.signin-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 220px;
+  height: 40px;
+  box-sizing: border-box;
+  padding: 0 16px 0 12px;
+  border-radius: 20px;
+  border: 1px solid #8e918f;
+  background: #131314;
+  color: #e3e3e3;
+  font-size: 14px;
+  font-weight: 500;
   text-decoration: none;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 7px 14px;
 }
 
-.account-link:hover {
-  border-color: var(--muted);
+.signin-button.github svg {
+  color: #ffffff;
 }
 
-.account-link:focus-visible {
+.signin-button:hover {
+  background: #1e1f20;
+}
+
+.signin-button:focus-visible,
+.account .hint a:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
-.account-who {
-  margin: 8px 0 0;
+.account-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.account-badge {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+/* GitHub's mark on its own dark; Google's G on white, as Google shows it. */
+.account-badge.github {
+  background: #24292f;
+  color: #ffffff;
+}
+
+.account-badge.google {
+  background: #ffffff;
+}
+
+.account-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.account-text span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+@media (max-width: 480px) {
+  .account-card {
+    flex-wrap: wrap;
+  }
+
+  /* Text takes the row beside the logo; Sign out moves under it. */
+  .account-text {
+    flex-basis: calc(100% - 52px);
+  }
+
+  .account-card button {
+    margin-left: 52px;
+  }
 }
 
 .account-result {
