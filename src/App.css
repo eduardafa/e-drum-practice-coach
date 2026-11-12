@@ -1174,3 +1174,91 @@ fieldset.group.play {
   box-shadow: inset 0 0 0 2px var(--warn);
   pointer-events: none;
 }
+
+/* Practice history: opens on the right, next to the side panel's History link. */
+.overlay.history {
+  right: 16px;
+}
+
+.history-tiles {
+  margin: 12px 0 6px;
+}
+
+.overlay .warn-note {
+  color: var(--warn);
+}
+
+.history-day h3 {
+  margin-top: 14px;
+}
+
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.history-list li {
+  display: grid;
+  grid-template-columns: max-content 1fr auto;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.history-time {
+  white-space: nowrap;
+}
+
+.history-time,
+.history-detail {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.history-what {
+  min-width: 0;
+}
+
+.history-detail {
+  display: block;
+}
+
+.history-score {
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.history-clear {
+  margin-top: 14px;
+}
+
+.history-clear p {
+  margin: 0 0 8px;
+}
+
+button.primary.danger {
+  background: #ff6b6b;
+  color: #2a0606;
+}
+
+/* Streak and today's time in the side panel, with the link to the history. */
+.practice-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.play .practice-line .link-button {
+  margin: 0;
+}
+
+.link-button.selected {
+  text-decoration-thickness: 2px;
+}

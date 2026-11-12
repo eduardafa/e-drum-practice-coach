@@ -23,6 +23,15 @@ export const DEFAULT_METRONOME: MetronomeSettings = {
   clickSubdivisions: false,
 };
 
+/** When a session started: the wall-clock moment for history, and performance.now() to measure its length. */
+export interface SessionTiming {
+  start: Temporal.Instant;
+  timeZone: string;
+  durationMs: number;
+}
+
+export type SessionEndListener = (session: PlayAlongSession, timing: SessionTiming) => void;
+
 export class Coach {
   readonly midi = new MidiConnection();
   readonly grid = new TimingGrid();
@@ -38,6 +47,8 @@ export class Coach {
   /** Bars started since the metronome started; -1 before the first downbeat. */
   private bar = -1;
   private playAlong: PlayAlongSession | null = null;
+  private sessionStart: { at: Temporal.Instant; timeZone: string; perf: number } | null = null;
+  private sessionEndListeners = new Set<SessionEndListener>();
 
   constructor(settings: MetronomeSettings = DEFAULT_METRONOME) {
     this.metronome = new Metronome(settings, this.grid);
@@ -96,17 +107,30 @@ export class Coach {
     };
     this.metronome.setSettings(settings);
     this.playAlong = new PlayAlongSession(exercise, loops, settings.bpm, this.scoring);
+    // Read the wall clock once per session, for history only; timing never uses it.
+    this.sessionStart = { at: Temporal.Now.instant(), timeZone: Temporal.Now.timeZoneId(), perf: performance.now() };
     this.live.resetSession();
     this.bar = -1;
     await this.metronome.start();
     return settings;
   }
 
+  /** Called once when a session finishes by itself (not when it's stopped or abandoned). */
+  onSessionEnd(listener: SessionEndListener): () => void {
+    this.sessionEndListeners.add(listener);
+    return () => this.sessionEndListeners.delete(listener);
+  }
+
   /** Resolves missed notes up to `now`, and stops the clicks once the session is over. Call often. */
   tickSession(now: number): void {
     const session = this.playAlong;
     if (!session) return;
+    const wasDone = session.phase === "done";
     session.tick(now);
+    if (!wasDone && session.phase === "done" && this.sessionStart) {
+      const { at, timeZone, perf } = this.sessionStart;
+      for (const l of this.sessionEndListeners) l(session, { start: at, timeZone, durationMs: now - perf });
+    }
     if (session.phase === "done" && this.metronome.running) this.metronome.stop();
   }
 
