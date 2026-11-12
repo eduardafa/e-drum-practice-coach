@@ -799,7 +799,8 @@ fieldset.group.play {
   margin: 0;
 }
 
-.overlay h3 {
+.overlay h3,
+.account-menu h3 {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -1945,4 +1946,99 @@ button.primary.danger {
   color: var(--text);
   font-weight: 600;
   border-bottom-color: var(--accent);
+}
+
+/* ---- Account menu (top bar) ---- */
+
+.topbar {
+  position: relative;
+}
+
+.topbar h1 {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+
+/* The menu lines up with the top bar's right edge (not the button), so it
+   stays on screen on phones, where Connect kit sits to the button's right. */
+.account-menu-anchor {
+  position: static;
+}
+
+.account-button.secondary {
+  padding: 7px 14px;
+}
+
+/* Signed in: the provider's mark in a round badge, as on the account card. */
+.account-button.signed-in {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--control-border);
+  cursor: pointer;
+}
+
+.account-button.signed-in.github {
+  background: #24292f;
+  color: #ffffff;
+}
+
+.account-button.signed-in.google {
+  background: #ffffff;
+}
+
+.account-button.signed-in.selected {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.account-menu {
+  /* Undo the browser's centered <dialog> defaults. */
+  position: absolute;
+  inset: calc(100% + 4px) 16px auto auto;
+  margin: 0;
+  color: var(--text);
+  z-index: 30;
+  width: min(340px, calc(100vw - 32px));
+  padding: 4px 16px 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px var(--shadow);
+}
+
+.account-menu:focus {
+  outline: none;
+}
+
+/* Inside the menu the section needs no divider above it. */
+.account-menu .account {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+/* In the menu, Sign out sits under the text so the text keeps its width. */
+.account-menu .account-card {
+  flex-wrap: wrap;
+}
+
+.account-menu .account-text {
+  flex-basis: calc(100% - 52px);
+}
+
+.account-menu .account-card button {
+  margin-left: 52px;
 }

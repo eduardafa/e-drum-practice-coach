@@ -16,6 +16,7 @@ import type { Exercise } from "./exercises/types";
 import { LibraryPanel } from "./LibraryPanel";
 import { HistoryPanel, type HistoryStatus } from "./HistoryPanel";
 import { useAccount } from "./account/useAccount";
+import { AccountMenu } from "./AccountMenu";
 import { signInResult as readSignInResult } from "./account/account";
 import { sessionRecord, trainerRecord, type HistoryRecord, type SessionRecord } from "./history/record";
 import { HistoryStore } from "./history/store";
@@ -133,8 +134,9 @@ export default function App() {
   /** The last tempo used for each exercise, so choosing one again picks up where the drummer left off. */
   const [exerciseTempos, setExerciseTempos] = useState<Record<string, number>>(saved.exerciseTempos ?? {});
   const [libraryOpen, setLibraryOpen] = useState(false);
-  // Coming back from signing in opens History, where the account lives.
-  const [historyOpen, setHistoryOpen] = useState(SIGN_IN_RESULT !== null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  // Coming back from signing in opens the account menu, with the result.
+  const [accountOpen, setAccountOpen] = useState(SIGN_IN_RESULT !== null);
   const { account, signOut } = useAccount();
   const [history, setHistory] = useState<HistoryRecord[]>([]);
   const [historyStatus, setHistoryStatus] = useState<HistoryStatus>("loading");
@@ -284,6 +286,7 @@ export default function App() {
       closeLibrary();
       return;
     }
+    setAccountOpen(false);
     setHistoryOpen(false);
     setSettingsOpen(false);
     setGuideOpen(false);
@@ -321,8 +324,9 @@ export default function App() {
     }
   };
 
-  const panelOpen = settingsOpen || guideOpen || libraryOpen || historyOpen;
+  const panelOpen = settingsOpen || guideOpen || libraryOpen || historyOpen || accountOpen;
   const closePanels = () => {
+    setAccountOpen(false);
     setSettingsOpen(false);
     setGuideOpen(false);
     setHistoryOpen(false);
@@ -358,7 +362,7 @@ export default function App() {
     const close = closeFront();
     if (!close) return;
     const onPointerDown = (e: PointerEvent) => {
-      if (e.target instanceof Element && e.target.closest(".overlay, .guide, .calibration, [aria-expanded]")) return;
+      if (e.target instanceof Element && e.target.closest(".overlay, .guide, .calibration, .account-menu, [aria-expanded]")) return;
       close();
     };
     document.addEventListener("pointerdown", onPointerDown);
@@ -389,7 +393,14 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   });
 
+  const toggleAccount = () => {
+    const next = !accountOpen;
+    closePanels();
+    setAccountOpen(next);
+  };
+
   const toggleHistory = () => {
+    setAccountOpen(false);
     closeLibrary();
     setSettingsOpen(false);
     setGuideOpen(false);
@@ -399,6 +410,7 @@ export default function App() {
   // Only one panel is open over the kit view at a time.
   const openGuide = () => {
     closeLibrary();
+    setAccountOpen(false);
     setHistoryOpen(false);
     setSettingsOpen(false);
     setGuideFirstOpen(!guideSeen);
@@ -408,6 +420,7 @@ export default function App() {
 
   const toggleSettings = () => {
     closeLibrary();
+    setAccountOpen(false);
     setHistoryOpen(false);
     setGuideOpen(false);
     setSettingsOpen((open) => !open);
@@ -558,7 +571,16 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <h1>E-drum Practice Coach</h1>
-        <MidiPanel status={midi} />
+        <div className="topbar-actions">
+          <AccountMenu
+            account={account}
+            signInResult={SIGN_IN_RESULT}
+            open={accountOpen}
+            onToggle={toggleAccount}
+            onSignOut={signOut}
+          />
+          <MidiPanel status={midi} />
+        </div>
       </header>
 
       <main className="stage">
@@ -630,9 +652,6 @@ export default function App() {
             selectedExerciseId={exerciseId}
             onClear={clearHistory}
             onClose={() => setHistoryOpen(false)}
-            account={account}
-            signInResult={SIGN_IN_RESULT}
-            onSignOut={signOut}
           />
         )}
         {showTrainer && exercise && trainer && trainer.kind !== "round" && (
