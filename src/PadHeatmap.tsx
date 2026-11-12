@@ -76,7 +76,7 @@ export function PadHeatmap({ heat, scope }: Props) {
       <div className="heatmap-head">
         <h4 className="progress-subhead">Pads in {scope}</h4>
         <fieldset className="library-filters heatmap-measure">
-          <legend className="visually-hidden">Colour pads by</legend>
+          <legend className="visually-hidden">Color pads by</legend>
           {MEASURES.map((m) => (
             <button
               key={m.id}

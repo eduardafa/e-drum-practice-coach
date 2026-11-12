@@ -9,7 +9,7 @@
  *    a sign-in they didn't start in this browser), swaps the code for the
  *    provider's user ID (sending the verifier, so a stolen code is useless),
  *    finds or creates the user, starts a session, and returns to the app with
- *    ?signin=ok, failed, cancelled or unavailable.
+ *    ?signin=ok, failed, canceled or unavailable.
  */
 import { OAUTH_COOKIE, clearCookie, cookie, readCookie } from "./cookies";
 import { base64url, randomToken, sha256 } from "./crypto";
@@ -19,7 +19,7 @@ import { createSession } from "./sessions";
 /** Long enough to sign in (even creating an account), short enough to go stale. */
 const OAUTH_COOKIE_SECONDS = 10 * 60;
 
-export type SignInResult = "ok" | "failed" | "cancelled" | "unavailable";
+export type SignInResult = "ok" | "failed" | "canceled" | "unavailable";
 
 const callbackUrl = (env: Env, provider: ProviderId) => `${env.APP_ORIGIN}/api/auth/${provider}/callback`;
 
@@ -52,7 +52,7 @@ export async function finishSignIn(request: Request, env: Env, provider: Provide
 
   // The drummer said no, or closed the consent screen.
   const declined = url.searchParams.get("error");
-  if (declined) return backToApp(env, declined === "access_denied" ? "cancelled" : "failed", [done]);
+  if (declined) return backToApp(env, declined === "access_denied" ? "canceled" : "failed", [done]);
 
   const [cookieProvider, state, verifier] = (readCookie(request, OAUTH_COOKIE) ?? "").split(".");
   const code = url.searchParams.get("code");

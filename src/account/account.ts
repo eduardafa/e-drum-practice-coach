@@ -61,10 +61,10 @@ export async function signOut(): Promise<void> {
 
 export const signInUrl = (provider: Provider) => `/api/auth/${provider}/start`;
 
-export type SignInResult = "ok" | "failed" | "cancelled" | "unavailable";
+export type SignInResult = "ok" | "failed" | "canceled" | "unavailable";
 
 /** The ?signin= result the server redirected back with, if any. */
 export function signInResult(search: string): SignInResult | null {
   const value = new URLSearchParams(search).get("signin");
-  return value === "ok" || value === "failed" || value === "cancelled" || value === "unavailable" ? value : null;
+  return value === "ok" || value === "failed" || value === "canceled" || value === "unavailable" ? value : null;
 }

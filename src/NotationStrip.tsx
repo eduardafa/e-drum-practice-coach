@@ -88,23 +88,23 @@ export function NotationStrip({
       host.replaceChildren();
       return;
     }
-    let cancelled = false;
+    let canceled = false;
     const engrave = async () => {
       setStatus("loading");
       try {
         const engraver = await import("./notation/engrave");
         await engraver.loadNotationFonts();
-        if (cancelled) return;
+        if (canceled) return;
         setLayout(engraver.engraveExercise(exercise, host));
         setStatus("ready");
       } catch (error) {
         console.error(error);
-        if (!cancelled) setStatus("error");
+        if (!canceled) setStatus("error");
       }
     };
     void engrave();
     return () => {
-      cancelled = true;
+      canceled = true;
       setLayout(null);
       setStatus("idle");
     };
@@ -172,7 +172,7 @@ export function NotationStrip({
           aria-expanded={libraryOpen}
           disabled={busy}
           // Keeps focus (unlike most buttons here) so it gets it back when the library closes.
-          // Space can't press it again: the drum keys' default action is cancelled.
+          // Space can't press it again: the drum keys' default action is canceled.
           onClick={onBrowse}
           title="Browse the grooves and rudiments"
         >

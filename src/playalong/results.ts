@@ -11,7 +11,7 @@
  *   (notes + extra hits) too.
  * Extra hits are in both denominators, so hitting every pad can't score well.
  *
- * Plain data in, plain data out: serialisable for practice history later.
+ * Plain data in, plain data out: serializable for practice history later.
  */
 import type { PadId } from "../kit/nitroMax";
 import type { NoteResult } from "./matcher";

@@ -2,8 +2,8 @@ import type { Provider } from "./account";
 
 /**
  * The providers' own marks, as their sign-in branding rules ask: GitHub's
- * mark in one colour (here white), Google's "G" in its four colours, never
- * recoloured. Inline SVG, so no request leaves the site. Decorative: the
+ * mark in one color (here white), Google's "G" in its four colors, never
+ * recolored. Inline SVG, so no request leaves the site. Decorative: the
  * button or card next to it names the provider in text.
  */
 export function ProviderLogo({ provider, size = 20 }: { provider: Provider; size?: number }) {

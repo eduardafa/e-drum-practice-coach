@@ -3,7 +3,7 @@
  * mapping from time to position can be tested without a browser.
  */
 
-/** Where one note of the exercise is drawn: its index in exercise.notes and its notehead's centre. */
+/** Where one note of the exercise is drawn: its index in exercise.notes and its notehead's center. */
 export interface NoteMark {
   index: number;
   x: number;

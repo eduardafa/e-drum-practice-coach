@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ProgressChart } from "./ProgressChart";
 import {
   formatPercent,
-  practisedExercises,
+  practicedExercises,
   progress,
   progressSummary,
   type ProgressRange,
@@ -13,7 +13,7 @@ import type { AccuracyMode } from "./playalong/results";
 interface Props {
   records: readonly HistoryRecord[];
   accuracyMode: AccuracyMode;
-  /** The exercise on the stand, shown first when it has been practised. */
+  /** The exercise on the stand, shown first when it has been practiced. */
   selectedExerciseId: string | null;
   today: Temporal.PlainDate;
   range: ProgressRange;
@@ -37,7 +37,7 @@ const FIRST_DAY = localeFirstDay();
 export function ProgressSection({ records, accuracyMode, selectedExerciseId, today, range }: Props) {
   const [chosenId, setChosenId] = useState<string | null>(null);
 
-  const exercises = practisedExercises(records);
+  const exercises = practicedExercises(records);
   const exercise =
     exercises.find((e) => e.id === chosenId) ?? exercises.find((e) => e.id === selectedExerciseId) ?? exercises[0];
   if (!exercise) return null;

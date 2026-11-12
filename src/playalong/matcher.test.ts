@@ -130,7 +130,7 @@ describe("NoteMatcher: fast notes and flams", () => {
     // Single strokes at 160 BPM: sixteenths are 93.75 ms apart, windows about 47 ms.
     const { notes, matcher } = setup(exercise("single-strokes"), SCORING, 160);
     const [a, b, c] = notes;
-    // Hit a late and b early: each must land on its own note, not on the neighbour.
+    // Hit a late and b early: each must land on its own note, not on the neighbor.
     expect(matcher.hit(on(a, 40))).toMatchObject({ kind: "hit", note: a, deltaMs: 40 });
     expect(matcher.hit(on(b, -40))).toMatchObject({ kind: "hit", note: b, deltaMs: -40 });
     expect(matcher.hit(on(c, 0))).toMatchObject({ kind: "hit", note: c });
@@ -168,7 +168,7 @@ describe("NoteMatcher: fast notes and flams", () => {
 });
 
 describe("NoteMatcher: a whole run", () => {
-  it("summarises a loop with every kind of outcome", () => {
+  it("summarizes a loop with every kind of outcome", () => {
     const { notes, matcher } = setup(exercise("rock-8ths"), SCORING, 120, 2);
     // Play everything perfectly except: skip the first snare, rush the first kick, add one stray crash.
     const skipped = firstSnare(notes);

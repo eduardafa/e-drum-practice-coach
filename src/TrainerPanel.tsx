@@ -194,7 +194,7 @@ function TempoChart({ rounds, config }: { rounds: readonly RoundRecord[]; config
         <text className="chart-axis" x={CHART.left - 6} y={y(config.targetBpm) + 4} textAnchor="end">
           {config.targetBpm}
         </text>
-        {/* At the left end, clear of the latest rounds, which climb towards the right. */}
+        {/* At the left end, clear of the latest rounds, which climb toward the right. */}
         <text className="chart-axis" x={CHART.left + 4} y={y(config.targetBpm) - 5}>
           target
         </text>

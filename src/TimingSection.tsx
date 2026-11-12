@@ -102,7 +102,7 @@ function TimingRow({ label, stat }: { label: string; stat: TimingStat }) {
     <li className="timing-row">
       <span className="timing-label">{label}</span>
       <span className="timing-track" aria-hidden>
-        <span className="timing-centre" />
+        <span className="timing-center" />
         {bandStyle && <span className="timing-band" style={bandStyle} />}
         {meanMs !== null && <span className={`timing-dot ${lean}`} style={dotStyle} />}
       </span>

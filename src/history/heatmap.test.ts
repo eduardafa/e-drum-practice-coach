@@ -121,7 +121,7 @@ describe("bins", () => {
     ]);
   });
 
-  it("uses fewer bins for small counts, spread across the whole colour ramp", () => {
+  it("uses fewer bins for small counts, spread across the whole color ramp", () => {
     const two = bins("hits", 2);
     expect(two.map((b) => [b.min, b.max, b.step])).toEqual([
       [1, 1, 0],
