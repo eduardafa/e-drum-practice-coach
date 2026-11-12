@@ -1,6 +1,5 @@
 import { useRef, useState, type KeyboardEvent } from "react";
 import { isSubdivision, type MetronomeSettings } from "./audio/schedule";
-import { KeyboardHint } from "./KeyboardHint";
 import { ThemeSetting } from "./ThemeSetting";
 import { isAccuracyMode, type AccuracyMode } from "./playalong/results";
 import { isSkillLevel, levelForTolerance, SKILL_LEVELS, SKILL_PROFILES, type SkillLevel } from "./profiles";
@@ -26,7 +25,6 @@ interface Props {
 const TABS = [
   { id: "metronome", label: "Metronome" },
   { id: "scoring", label: "Scoring" },
-  { id: "keyboard", label: "Keyboard" },
   { id: "appearance", label: "Appearance" },
 ] as const;
 
@@ -226,12 +224,6 @@ export function SettingsPanel({
               : "Only hits inside your on-time window count. Clear and demanding."}{" "}
             Both are shown at the end of a session.
           </p>
-        </div>
-      )}
-
-      {tab === "keyboard" && (
-        <div id="settings-panel-keyboard" role="tabpanel" aria-labelledby="settings-tab-keyboard">
-          <KeyboardHint />
         </div>
       )}
 

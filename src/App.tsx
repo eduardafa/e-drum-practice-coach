@@ -797,7 +797,7 @@ export default function App() {
           )}
         </fieldset>
 
-        {/* Settings always lists the keys; here only while no kit is playing. */}
+        {/* The keys, while no kit is playing. */}
         {!(midi.state === "ready" && midi.selectedId) && <KeyboardHint />}
       </aside>
     </div>
