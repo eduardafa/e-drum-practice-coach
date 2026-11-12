@@ -1556,3 +1556,111 @@ button.primary.danger {
 .link-button.selected {
   text-decoration-thickness: 2px;
 }
+
+/* Pad heatmap: the kit from above, pads filled on one violet scale (see HEAT_COLORS). */
+.heatmap-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 10px;
+}
+
+.heatmap-measure {
+  margin: 0;
+}
+
+.heatmap-caption,
+.heatmap-note {
+  margin: 4px 0;
+  font-size: 13px;
+}
+
+.heatmap-plot {
+  position: relative;
+  margin-top: 4px;
+}
+
+.heatmap-plot svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: pan-y;
+}
+
+.heat-hit {
+  fill: transparent;
+}
+
+.heat-empty {
+  fill: #1d232c;
+  stroke: #3a4452;
+  stroke-width: 1.5;
+}
+
+.heat-fill {
+  stroke: var(--panel);
+  stroke-width: 2;
+}
+
+.heat-pad.active .heat-fill,
+.heat-pad.active .heat-empty {
+  stroke: var(--text);
+}
+
+.heat-value {
+  font-size: 12px;
+  font-weight: 650;
+  text-anchor: middle;
+  dominant-baseline: central;
+  font-variant-numeric: tabular-nums;
+}
+
+.heat-label {
+  fill: var(--muted);
+  font-size: 11px;
+  text-anchor: middle;
+}
+
+.heat-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.heat-legend li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.heat-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.heat-swatch.empty {
+  background: #1d232c;
+  box-shadow: inset 0 0 0 1px #3a4452;
+}
+
+.progress-table .heat-dynamic th,
+.progress-table .heat-dynamic td {
+  color: var(--muted);
+}
+
+.results-heatmap {
+  margin: 10px 0;
+}
+
+.results-heatmap > summary {
+  cursor: pointer;
+  font-size: 13px;
+}

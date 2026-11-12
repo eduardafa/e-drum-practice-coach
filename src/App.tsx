@@ -15,7 +15,7 @@ import { metronomeForExercise, startingTempo } from "./exercises/practice";
 import type { Exercise } from "./exercises/types";
 import { LibraryPanel } from "./LibraryPanel";
 import { HistoryPanel, type HistoryStatus } from "./HistoryPanel";
-import { sessionRecord, trainerRecord, type HistoryRecord } from "./history/record";
+import { sessionRecord, trainerRecord, type HistoryRecord, type SessionRecord } from "./history/record";
 import { HistoryStore } from "./history/store";
 import { formatPracticeTime, practiceTimeOn, streak } from "./history/streak";
 import { Coach, DEFAULT_METRONOME } from "./live/coach";
@@ -131,6 +131,8 @@ export default function App() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [history, setHistory] = useState<HistoryRecord[]>([]);
   const [historyStatus, setHistoryStatus] = useState<HistoryStatus>("loading");
+  /** The session that just ended, as saved, for the results screen's heatmap. */
+  const [lastSession, setLastSession] = useState<SessionRecord | null>(null);
   /** The running tempo-trainer run: its id (rounds point to it) and when it started. */
   const trainerRun = useRef<{ id: string; start: Temporal.Instant; timeZone: string; perf: number } | null>(null);
   /** The exercise whose preview is playing in the library, or null. */
@@ -214,20 +216,20 @@ export default function App() {
   useEffect(
     () =>
       coach.onSessionEnd((session, timing) => {
-        saveRecordRef.current(
-          sessionRecord(
-            { id: crypto.randomUUID(), start: timing.start, durationMs: timing.durationMs, timeZone: timing.timeZone },
-            {
-              exercise: session.exercise,
-              bpm: session.bpm,
-              loops: session.loops,
-              scoring: coach.scoring,
-              results: session.results(),
-              outcomes: session.outcomes(),
-              trainerRunId: trainerRun.current?.id ?? null,
-            },
-          ),
+        const record = sessionRecord(
+          { id: crypto.randomUUID(), start: timing.start, durationMs: timing.durationMs, timeZone: timing.timeZone },
+          {
+            exercise: session.exercise,
+            bpm: session.bpm,
+            loops: session.loops,
+            scoring: coach.scoring,
+            results: session.results(),
+            outcomes: session.outcomes(),
+            trainerRunId: trainerRun.current?.id ?? null,
+          },
         );
+        setLastSession(record);
+        saveRecordRef.current(record);
       }),
     [],
   );
@@ -593,6 +595,7 @@ export default function App() {
             mode={accuracyMode}
             bpm={coach.session.bpm}
             loops={coach.session.loops}
+            record={lastSession}
             onRetry={(change) => void startSession(stepBpm(coach.session?.bpm ?? metronome.bpm, change))}
             onClose={() => coach.endSession()}
           />

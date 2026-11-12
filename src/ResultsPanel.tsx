@@ -1,4 +1,7 @@
+import { heatmap } from "./history/heatmap";
+import type { SessionRecord } from "./history/record";
 import { NITRO_MAX_PADS } from "./kit/nitroMax";
+import { PadHeatmap } from "./PadHeatmap";
 import type { Exercise } from "./exercises/types";
 import type { AccuracyMode, SessionResults } from "./playalong/results";
 import { releasing } from "./releasing";
@@ -10,6 +13,8 @@ interface Props {
   mode: AccuracyMode;
   bpm: number;
   loops: number;
+  /** This session as saved to history, for the pad heatmap. */
+  record: SessionRecord | null;
   onRetry: (tempoChange: number) => void;
   onClose: () => void;
 }
@@ -33,7 +38,7 @@ function tendency(meanMs: number | null): string {
 }
 
 /** The end-of-session screen: accuracy, what happened to the notes, and how each pad went. */
-export function ResultsPanel({ exercise, results, mode, bpm, loops, onRetry, onClose }: Props) {
+export function ResultsPanel({ exercise, results, mode, bpm, loops, record, onRetry, onClose }: Props) {
   const other: AccuracyMode = mode === "partial" ? "strict" : "partial";
   return (
     <section className="calibration results" aria-labelledby="results-title">
@@ -89,6 +94,13 @@ export function ResultsPanel({ exercise, results, mode, bpm, loops, onRetry, onC
           ))}
         </tbody>
       </table>
+
+      {record && (
+        <details className="results-heatmap">
+          <summary>Pad heatmap: how often and how hard</summary>
+          <PadHeatmap heat={heatmap([record])} scope="this session" />
+        </details>
+      )}
 
       <div className="calibration-actions">
         <button className="primary" onClick={releasing(() => onRetry(0))}>
