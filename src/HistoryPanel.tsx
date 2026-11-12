@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { HistoryRecord, SessionRecord, TrainerRecord } from "./history/record";
 import { formatPracticeTime, practiceDate, practiceTimeOn, streak } from "./history/streak";
 import type { AccuracyMode } from "./playalong/results";
+import { ProgressSection } from "./ProgressSection";
 import { releasing } from "./releasing";
 
 export type HistoryStatus = "loading" | "ready" | "off";
@@ -10,6 +11,8 @@ interface Props {
   records: readonly HistoryRecord[];
   status: HistoryStatus;
   accuracyMode: AccuracyMode;
+  /** The exercise on the stand, charted first when it has been practised. */
+  selectedExerciseId: string | null;
   onClear: () => void;
   onClose: () => void;
 }
@@ -47,7 +50,7 @@ function entries(records: readonly HistoryRecord[]): HistoryRecord[] {
 }
 
 /** Practice history: the streak, today's time and every saved session, newest first. */
-export function HistoryPanel({ records, status, accuracyMode, onClear, onClose }: Props) {
+export function HistoryPanel({ records, status, accuracyMode, selectedExerciseId, onClear, onClose }: Props) {
   const [confirming, setConfirming] = useState(false);
   const today = Temporal.Now.plainDateISO();
   const { current, practisedToday, longest } = streak(records, today);
@@ -107,9 +110,17 @@ export function HistoryPanel({ records, status, accuracyMode, onClear, onClose }
                 : "Days in a row with at least one finished session make your streak."}
           </p>
 
+          <ProgressSection
+            records={records}
+            accuracyMode={accuracyMode}
+            selectedExerciseId={selectedExerciseId}
+            today={today}
+          />
+
+          {groups.length > 0 && <h3 className="history-sessions">Sessions</h3>}
           {groups.map((g) => (
             <div key={g.date.toString()} className="history-day">
-              <h3>{dayLabel(g.date, today)}</h3>
+              <h4>{dayLabel(g.date, today)}</h4>
               <ul className="history-list">
                 {g.items.map((r) => (
                   <li key={r.id}>

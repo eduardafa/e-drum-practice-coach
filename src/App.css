@@ -1188,8 +1188,156 @@ fieldset.group.play {
   color: var(--warn);
 }
 
-.history-day h3 {
-  margin-top: 14px;
+.history-day h4 {
+  margin: 12px 0 2px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Progress charts: accuracy and fastest tempo for one exercise over time. */
+.progress-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 6px 0 4px;
+}
+
+.progress-filters .library-filters {
+  margin: 0;
+}
+
+.progress-exercise select {
+  max-width: 100%;
+}
+
+.progress-summary {
+  margin: 8px 0 4px;
+  font-size: 13px;
+}
+
+.progress-chart {
+  margin: 10px 0 0;
+}
+
+.progress-chart figcaption {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.progress-plot {
+  position: relative;
+}
+
+.progress-plot svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  touch-action: pan-y;
+}
+
+.progress-plot .grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.progress-plot .tick {
+  fill: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-plot .end-label {
+  fill: var(--text);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.progress-plot .series {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+/* The surface-coloured ring keeps dots readable where they sit on the line. */
+.progress-plot .dot {
+  fill: var(--accent);
+  stroke: var(--panel);
+  stroke-width: 2;
+}
+
+.progress-plot .dot.active {
+  fill: var(--text);
+}
+
+.progress-plot .crosshair {
+  stroke: var(--muted);
+  stroke-width: 1;
+}
+
+.chart-tip {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 10px));
+  display: flex;
+  flex-direction: column;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.chart-tip.left {
+  transform: translate(calc(-100% + 12px), calc(-100% - 10px));
+}
+
+.chart-tip strong {
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-tip span {
+  color: var(--muted);
+}
+
+.progress-table {
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.progress-table summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.progress-table table {
+  width: 100%;
+  margin-top: 4px;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-table th,
+.progress-table td {
+  padding: 3px 6px;
+  border-bottom: 1px solid var(--border);
+  text-align: right;
+  font-weight: 400;
+}
+
+.progress-table thead th {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.progress-table th:first-child {
+  text-align: left;
 }
 
 .history-list {
