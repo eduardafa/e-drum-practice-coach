@@ -41,7 +41,9 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
   shows each round's tempo and accuracy.
 - Practice history: every finished session and tempo-trainer run is saved in your browser (IndexedDB) and listed
   by day, with your streak (days in a row with practice), today's practice time and your longest streak. Nothing
-  leaves the device; a later version will sync it to a small backend.
+  leaves the device yet.
+- Sign in with GitHub or Google from the History panel, to sync history across devices (syncing itself is the
+  next step). The server keeps only the provider's account number, never an email or name.
 - Progress charts: for each exercise, accuracy and fastest tempo per day (or per week over longer spans) for the
   last 7 days, 30 days or all time, with a one-line summary such as "Money beat: 72% → 88% over 2 weeks,
   70 → 84 BPM" and a table view.
@@ -76,6 +78,11 @@ pnpm exec wrangler dev --var APP_ORIGIN:http://localhost:8787   # http://localho
 
 After changing bindings or vars in `wrangler.jsonc`, run `pnpm types:worker` to regenerate the Worker types.
 
+Sign-in needs OAuth credentials. The client IDs are in `wrangler.jsonc`; the secrets are Worker secrets
+(`wrangler secret put GITHUB_CLIENT_SECRET`, `GOOGLE_CLIENT_SECRET`). Locally, put test values in a
+git-ignored `.dev.vars` file and pass the IDs and origin with `--var`. GitHub and Google only redirect to
+the registered production address, so a full sign-in can only be completed there.
+
 Plug the kit in over USB, click **Connect kit**, allow MIDI access, then press **M** to start the
 metronome. Before your first session, click **Calibrate latency** and hit any pad on each click, so
 the scores account for your setup's delay.
@@ -86,7 +93,8 @@ Without a kit: <kbd>Space</kbd> kick, <kbd>S</kbd> snare, <kbd>A</kbd> hi-hat, <
 ## Deployment
 
 The app runs on Cloudflare Workers. Cloudflare serves the built app straight from `dist/`; only `/api/*`
-runs Worker code (`worker/`), which will keep synced practice history in a D1 database. CI deploys it:
+runs Worker code (`worker/`): sign-in with GitHub or Google, and (soon) synced practice history in a D1
+database. CI deploys it:
 
 - **Merge to `main`**: applies new database migrations (`migrations/`), then deploys to production, after
   lint, type-check, tests and build pass.
