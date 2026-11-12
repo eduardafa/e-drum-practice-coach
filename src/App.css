@@ -1243,10 +1243,6 @@ fieldset.group.play {
 }
 
 /* Practice history: opens on the right, next to the side panel's History link. */
-.overlay.history {
-  right: 16px;
-}
-
 .history-tiles {
   margin: 12px 0 6px;
 }
@@ -2041,4 +2037,129 @@ button.primary.danger {
 
 .account-menu .account-card button {
   margin-left: 52px;
+}
+
+/* ---- History page (/history) ---- */
+
+/* Practice stays mounted (the kit view and MIDI keep running) but hidden. */
+.stage[hidden],
+.controls[hidden] {
+  display: none;
+}
+
+.app.history-view {
+  grid-template-columns: 1fr;
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "top"
+    "page";
+}
+
+.history-view-main {
+  grid-area: page;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.history-page {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 20px 24px 48px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.history-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.history-page h2 {
+  font-size: 22px;
+  margin: 0;
+}
+
+.history-page h2:focus {
+  outline: none;
+}
+
+.history-page h3 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin: 20px 0 6px;
+}
+
+.history-page .warn-note {
+  color: var(--warn);
+}
+
+.history-page button.secondary kbd {
+  opacity: 0.7;
+}
+
+/* The main column (streak, progress, timing, heatmap) and the session list. */
+.history-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 32px;
+  align-items: start;
+}
+
+.history-side {
+  position: sticky;
+  top: 0;
+  padding: 4px 0 0 24px;
+  border-left: 1px solid var(--border);
+}
+
+/* Timing and the heatmap side by side when there's room. */
+.history-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
+  align-items: start;
+}
+
+.history-page .tiles {
+  max-width: 520px;
+}
+
+button.secondary.danger {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+button.secondary.danger:hover:not(:disabled) {
+  background: var(--tint);
+  border-color: var(--danger);
+}
+
+@media (max-width: 900px) {
+  .history-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .history-side {
+    position: static;
+    padding: 0;
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .history-page {
+    padding: 16px 16px 40px;
+  }
+}
+
+/* Accuracy and tempo side by side when there's room, so each chart keeps
+   about its drawn size (384 px) instead of stretching across the page. */
+.progress-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 0 28px;
 }

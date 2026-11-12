@@ -77,22 +77,24 @@ export function ProgressSection({ records, accuracyMode, selectedExerciseId, tod
         <p className="hint">Nothing in this range yet. Try All time.</p>
       ) : (
         <>
-          <ProgressChart
-            title={`Accuracy per ${per}${accuracyMode === "strict" ? " (strict)" : ""}`}
-            measure="accuracy"
-            points={points}
-            grouping={grouping}
-            from={from}
-            to={today}
-          />
-          <ProgressChart
-            title={`Fastest tempo per ${per} (BPM)`}
-            measure="bpm"
-            points={points}
-            grouping={grouping}
-            from={from}
-            to={today}
-          />
+          <div className="progress-charts">
+            <ProgressChart
+              title={`Accuracy per ${per}${accuracyMode === "strict" ? " (strict)" : ""}`}
+              measure="accuracy"
+              points={points}
+              grouping={grouping}
+              from={from}
+              to={today}
+            />
+            <ProgressChart
+              title={`Fastest tempo per ${per} (BPM)`}
+              measure="bpm"
+              points={points}
+              grouping={grouping}
+              from={from}
+              to={today}
+            />
+          </div>
           <details className="progress-table">
             <summary>Show as a table</summary>
             <table>

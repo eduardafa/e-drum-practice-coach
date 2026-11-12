@@ -14,7 +14,7 @@ import { findExercise } from "./exercises/library";
 import { metronomeForExercise, startingTempo } from "./exercises/practice";
 import type { Exercise } from "./exercises/types";
 import { LibraryPanel } from "./LibraryPanel";
-import { HistoryPanel, type HistoryStatus } from "./HistoryPanel";
+import { HistoryPage, type HistoryStatus } from "./HistoryPage";
 import { useAccount } from "./account/useAccount";
 import { AccountMenu } from "./AccountMenu";
 import { signInResult as readSignInResult } from "./account/account";
@@ -55,6 +55,10 @@ const saved = loadSettings();
 const BETWEEN_ROUNDS_MS = 3000;
 const coach = new Coach(saved.metronome ?? DEFAULT_METRONOME);
 const historyStore = new HistoryStore();
+
+/** The two pages: practice at /, history at /history. */
+type View = "practice" | "history";
+const viewOf = (path: string): View => (path.replace(/\/+$/, "") === "/history" ? "history" : "practice");
 
 /** Read once: the sign-in redirect lands on /?signin=<result>. */
 const SIGN_IN_RESULT = readSignInResult(window.location.search);
@@ -134,7 +138,8 @@ export default function App() {
   /** The last tempo used for each exercise, so choosing one again picks up where the drummer left off. */
   const [exerciseTempos, setExerciseTempos] = useState<Record<string, number>>(saved.exerciseTempos ?? {});
   const [libraryOpen, setLibraryOpen] = useState(false);
-  const [historyOpen, setHistoryOpen] = useState(false);
+  // Reloading /history opens History directly; back and forward switch pages.
+  const [view, setView] = useState<View>(() => viewOf(window.location.pathname));
   // Coming back from signing in opens the account menu, with the result.
   const [accountOpen, setAccountOpen] = useState(SIGN_IN_RESULT !== null);
   const { account, signOut } = useAccount();
@@ -287,7 +292,6 @@ export default function App() {
       return;
     }
     setAccountOpen(false);
-    setHistoryOpen(false);
     setSettingsOpen(false);
     setGuideOpen(false);
     setLibraryOpen(true);
@@ -324,21 +328,20 @@ export default function App() {
     }
   };
 
-  const panelOpen = settingsOpen || guideOpen || libraryOpen || historyOpen || accountOpen;
+  const panelOpen = settingsOpen || guideOpen || libraryOpen || accountOpen;
   const closePanels = () => {
     setAccountOpen(false);
     setSettingsOpen(false);
     setGuideOpen(false);
-    setHistoryOpen(false);
     closeLibrary();
   };
   const closeTrainer = () => {
     coach.endSession();
     setTrainer(null);
   };
-  const showTrainer = Boolean(exercise && trainer && trainer.kind !== "round" && !libraryOpen && !historyOpen && !calibrating);
+  const showTrainer = Boolean(exercise && trainer && trainer.kind !== "round" && !libraryOpen && view === "practice" && !calibrating);
   const showResults = Boolean(
-    exercise && !trainer && stats.session?.phase === "done" && coach.session && !libraryOpen && !historyOpen && !calibrating,
+    exercise && !trainer && stats.session?.phase === "done" && coach.session && !libraryOpen && view === "practice" && !calibrating,
   );
 
   /**
@@ -376,6 +379,11 @@ export default function App() {
         close();
         return;
       }
+      // On the History page, Esc goes back like its button; no drum or metronome keys there.
+      if (view === "history") {
+        if (e.code === "Escape") backToPractice();
+        return;
+      }
       // While browsing, keys move around the library: Space and Enter press its buttons, not the drums.
       if (libraryOpen) return;
       if (e.repeat || e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
@@ -399,19 +407,37 @@ export default function App() {
     setAccountOpen(next);
   };
 
-  const toggleHistory = () => {
-    setAccountOpen(false);
-    closeLibrary();
-    setSettingsOpen(false);
-    setGuideOpen(false);
-    setHistoryOpen((open) => !open);
+  // History is a page of its own, with its own address, so the browser's
+  // back button returns to practice. No router: two pages and pushState.
+  useEffect(() => {
+    const onPop = () => setView(viewOf(window.location.pathname));
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  useEffect(() => {
+    document.title = view === "history" ? "History · E-drum Practice Coach" : "E-drum Practice Coach";
+  }, [view]);
+
+  const openHistory = () => {
+    closePanels();
+    window.history.pushState({ view: "history" }, "", "/history");
+    setView("history");
+  };
+
+  const backToPractice = () => {
+    // Opened from practice: going back keeps the browser's history tidy.
+    const state: unknown = window.history.state;
+    if (typeof state === "object" && state !== null && "view" in state && state.view === "history") window.history.back();
+    else {
+      window.history.pushState(null, "", "/");
+      setView("practice");
+    }
   };
 
   // Only one panel is open over the kit view at a time.
   const openGuide = () => {
     closeLibrary();
     setAccountOpen(false);
-    setHistoryOpen(false);
     setSettingsOpen(false);
     setGuideFirstOpen(!guideSeen);
     setGuideOpen(true);
@@ -421,7 +447,6 @@ export default function App() {
   const toggleSettings = () => {
     closeLibrary();
     setAccountOpen(false);
-    setHistoryOpen(false);
     setGuideOpen(false);
     setSettingsOpen((open) => !open);
   };
@@ -430,7 +455,6 @@ export default function App() {
   const startSession = async (bpm: number) => {
     if (!exercise || coach.calibrating) return;
     closeLibrary();
-    setHistoryOpen(false);
     setGuideOpen(false);
     setSettingsOpen(false);
     const settings = await coach.startSession(exercise, sessionLoops, bpm);
@@ -568,7 +592,7 @@ export default function App() {
   const updateScoring = (patch: Partial<ScoringOptions>) => setScoring((s) => ({ ...s, ...patch }));
 
   return (
-    <div className="app">
+    <div className={`app ${view === "history" ? "history-view" : ""}`}>
       <header className="topbar">
         <h1>E-drum Practice Coach</h1>
         <div className="topbar-actions">
@@ -583,7 +607,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="stage">
+      <main className="stage" hidden={view === "history"}>
         <NotationStrip
           coach={coach}
           exercise={exercise}
@@ -644,16 +668,6 @@ export default function App() {
             onClose={closeLibrary}
           />
         )}
-        {historyOpen && !calibrating && (
-          <HistoryPanel
-            records={history}
-            status={historyStatus}
-            accuracyMode={accuracyMode}
-            selectedExerciseId={exerciseId}
-            onClear={clearHistory}
-            onClose={() => setHistoryOpen(false)}
-          />
-        )}
         {showTrainer && exercise && trainer && trainer.kind !== "round" && (
           <TrainerPanel
             exercise={exercise}
@@ -690,7 +704,7 @@ export default function App() {
         )}
       </main>
 
-      <aside className="controls">
+      <aside className="controls" hidden={view === "history"}>
         <fieldset className="group play" disabled={calibrating}>
           {!guideSeen && (
             <output className="suggestion first-visit">
@@ -820,11 +834,7 @@ export default function App() {
           {historyStatus !== "loading" && (
             <div className="practice-line">
               <span>{historyStatus === "off" ? "History is off in this browser" : practiceSummary}</span>
-              <button
-                className={`secondary history-button ${historyOpen ? "selected" : ""}`}
-                aria-expanded={historyOpen}
-                onClick={releasing(toggleHistory)}
-              >
+              <button className="secondary history-button" onClick={releasing(openHistory)}>
                 History
               </button>
             </div>
@@ -840,6 +850,19 @@ export default function App() {
         {/* The keys, while no kit is playing. */}
         {!(midi.state === "ready" && midi.selectedId) && <KeyboardHint />}
       </aside>
+
+      {view === "history" && (
+        <main className="history-view-main">
+          <HistoryPage
+            records={history}
+            status={historyStatus}
+            accuracyMode={accuracyMode}
+            selectedExerciseId={exerciseId}
+            onClear={clearHistory}
+            onBack={backToPractice}
+          />
+        </main>
+      )}
     </div>
   );
 }
