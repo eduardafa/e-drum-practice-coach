@@ -40,13 +40,7 @@ export function CalibrationPanel({
   const progress = useProgress(coach);
   const profile = SKILL_PROFILES[level];
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.code === "Escape") onClose(null);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  // Esc and a press outside cancel, like the Cancel button (handled in App).
 
   return (
     <section className="calibration" aria-labelledby="calibration-title">

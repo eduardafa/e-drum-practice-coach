@@ -328,16 +328,38 @@ export default function App() {
     setHistoryOpen(false);
     closeLibrary();
   };
+  const closeTrainer = () => {
+    coach.endSession();
+    setTrainer(null);
+  };
+  const showTrainer = Boolean(exercise && trainer && trainer.kind !== "round" && !libraryOpen && !historyOpen && !calibrating);
+  const showResults = Boolean(
+    exercise && !trainer && stats.session?.phase === "done" && coach.session && !libraryOpen && !historyOpen && !calibrating,
+  );
 
-  // Pressing outside an open panel closes it, like Esc. Presses inside a
-  // panel are its own, and the buttons that open a panel (they carry
-  // aria-expanded) toggle it themselves. Calibration, the trainer and
-  // results aren't closed this way: a stray click mustn't end a run.
+  /**
+   * What the Close (or Cancel) button of the panel in front does, or null
+   * when nothing closable is open. Esc and a press outside both run it, so
+   * every panel with a Close button closes the same three ways. Between
+   * trainer rounds there's only "Stop the trainer", so nothing closes then.
+   */
+  const closeFront = (): (() => void) | null => {
+    if (panelOpen) return closePanels;
+    if (calibrating) return () => endCalibration(null);
+    if (showTrainer && (trainer?.kind === "setup" || trainer?.kind === "finished")) return closeTrainer;
+    if (showResults) return () => coach.endSession();
+    return null;
+  };
+
+  // A press outside the panel in front closes it. Presses inside a panel are
+  // its own, and the buttons that open one (they carry aria-expanded) toggle
+  // it themselves.
   useEffect(() => {
-    if (!panelOpen) return;
+    const close = closeFront();
+    if (!close) return;
     const onPointerDown = (e: PointerEvent) => {
-      if (e.target instanceof Element && e.target.closest(".overlay, .guide, [aria-expanded]")) return;
-      closePanels();
+      if (e.target instanceof Element && e.target.closest(".overlay, .guide, .calibration, [aria-expanded]")) return;
+      close();
     };
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
@@ -345,8 +367,9 @@ export default function App() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.code === "Escape" && panelOpen) {
-        closePanels();
+      const close = e.code === "Escape" ? closeFront() : null;
+      if (close) {
+        close();
         return;
       }
       // While browsing, keys move around the library: Space and Enter press its buttons, not the drums.
@@ -505,11 +528,12 @@ export default function App() {
       ? `${SKILL_PROFILES[skillLevel].label} · ±${scoring.toleranceMs} ms window`
       : `${SKILL_PROFILES[skillLevel].label} · custom ±${scoring.toleranceMs} ms window`;
 
-  const endCalibration = (offsetMs: number | null) => {
+  // A declaration, so the close rule above can refer to it.
+  function endCalibration(offsetMs: number | null) {
     coach.endCalibration();
     setCalibrating(false);
     if (offsetMs !== null) setScoring((s) => ({ ...s, latencyOffsetMs: offsetMs }));
-  };
+  }
 
   /**
    * Choosing an exercise sets the metronome to fit it: the drummer's last tempo for it (or its
@@ -611,7 +635,7 @@ export default function App() {
             onSignOut={signOut}
           />
         )}
-        {exercise && trainer && trainer.kind !== "round" && !libraryOpen && !historyOpen && !calibrating && (
+        {showTrainer && exercise && trainer && trainer.kind !== "round" && (
           <TrainerPanel
             exercise={exercise}
             stage={trainer}
@@ -619,13 +643,10 @@ export default function App() {
             rounds={trainerRounds}
             onStart={startTrainer}
             onStop={stopTrainer}
-            onClose={() => {
-              coach.endSession();
-              setTrainer(null);
-            }}
+            onClose={closeTrainer}
           />
         )}
-        {exercise && !trainer && stats.session?.phase === "done" && coach.session && !libraryOpen && !historyOpen && !calibrating && (
+        {showResults && exercise && coach.session && (
           <ResultsPanel
             exercise={exercise}
             results={coach.session.results()}
