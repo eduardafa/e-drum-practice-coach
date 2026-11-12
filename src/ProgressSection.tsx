@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { ProgressChart } from "./ProgressChart";
 import {
-  PROGRESS_RANGES,
   formatPercent,
   practisedExercises,
   progress,
@@ -17,6 +16,7 @@ interface Props {
   /** The exercise on the stand, shown first when it has been practised. */
   selectedExerciseId: string | null;
   today: Temporal.PlainDate;
+  range: ProgressRange;
 }
 
 /** The locale's first day of the week (1 = Monday … 7 = Sunday); Monday if the browser can't say. */
@@ -34,9 +34,8 @@ function localeFirstDay(): number {
 const FIRST_DAY = localeFirstDay();
 
 /** Accuracy and tempo over time for one exercise, in the history panel. */
-export function ProgressSection({ records, accuracyMode, selectedExerciseId, today }: Props) {
+export function ProgressSection({ records, accuracyMode, selectedExerciseId, today, range }: Props) {
   const [chosenId, setChosenId] = useState<string | null>(null);
-  const [range, setRange] = useState<ProgressRange>("30d");
 
   const exercises = practisedExercises(records);
   const exercise =
@@ -56,32 +55,19 @@ export function ProgressSection({ records, accuracyMode, selectedExerciseId, tod
 
   return (
     <section className="progress" aria-labelledby="progress-title">
-      <h3 id="progress-title">Progress</h3>
-      <div className="progress-filters">
-        <label className="progress-exercise">
-          <span className="visually-hidden">Exercise</span>
-          <select value={exercise.id} onChange={(e) => setChosenId(e.target.value)}>
-            {exercises.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <fieldset className="library-filters">
-          <legend className="visually-hidden">Range</legend>
-          {PROGRESS_RANGES.map((r) => (
-            <button
-              key={r.id}
-              className={`secondary ${range === r.id ? "selected" : ""}`}
-              aria-pressed={range === r.id}
-              onClick={() => setRange(r.id)}
-            >
-              {r.label}
-            </button>
+      <h4 id="progress-title" className="progress-subhead">
+        Accuracy and tempo
+      </h4>
+      <label className="progress-exercise">
+        <span className="visually-hidden">Exercise</span>
+        <select value={exercise.id} onChange={(e) => setChosenId(e.target.value)}>
+          {exercises.map((e) => (
+            <option key={e.id} value={e.id}>
+              {e.name}
+            </option>
           ))}
-        </fieldset>
-      </div>
+        </select>
+      </label>
 
       <p className="progress-summary" aria-live="polite">
         {progressSummary(exercise.name, data)}

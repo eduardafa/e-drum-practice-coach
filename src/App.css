@@ -1195,16 +1195,14 @@ fieldset.group.play {
 }
 
 /* Progress charts: accuracy and fastest tempo for one exercise over time. */
-.progress-filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 10px;
-  margin: 6px 0 4px;
+.progress-range {
+  margin: 4px 0 2px;
 }
 
-.progress-filters .library-filters {
-  margin: 0;
+.progress-subhead {
+  margin: 16px 0 6px;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .progress-exercise select {
@@ -1338,6 +1336,154 @@ fieldset.group.play {
 
 .progress-table th:first-child {
   text-align: left;
+}
+
+/* Timing per hand, foot and pad: the biggest tendency, then a track per row. */
+.tendency {
+  padding: 8px 12px;
+  border-left: 3px solid var(--accent);
+  border-radius: 4px;
+  background: var(--bg);
+}
+
+.tendency p {
+  margin: 0;
+}
+
+.tendency-headline {
+  font-weight: 600;
+}
+
+.tendency-tip {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.timing-rows {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+
+.timing-row {
+  display: grid;
+  grid-template-columns: 84px 1fr 118px;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.timing-axis {
+  padding: 0;
+  border: 0;
+}
+
+.timing-scale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.timing-label {
+  font-size: 13px;
+}
+
+/* From 50 ms early (left) to 50 ms late (right), the click in the middle. */
+.timing-track {
+  position: relative;
+  height: 14px;
+}
+
+.timing-track::before {
+  content: "";
+  position: absolute;
+  inset: 6px 0 auto;
+  height: 1px;
+  background: var(--border);
+}
+
+.timing-centre {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--muted);
+}
+
+.timing-band {
+  position: absolute;
+  top: 3px;
+  height: 8px;
+  border-radius: 4px;
+  background: rgb(230 237 245 / 0.14);
+}
+
+/* Early and late wear the same colours as the hit marks everywhere else; the words say it too. */
+.timing-dot {
+  position: absolute;
+  top: 2px;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--panel);
+}
+
+.timing-dot.close {
+  background: #3ddc84;
+}
+
+.timing-dot.early {
+  background: #4ea8ff;
+}
+
+.timing-dot.late {
+  background: #ff9f43;
+}
+
+.timing-value {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.timing-detail {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* Narrow screens: the name and values on one line, the track full width below. */
+@media (max-width: 480px) {
+  .timing-row {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "label value"
+      "track track";
+    row-gap: 4px;
+  }
+
+  .timing-label {
+    grid-area: label;
+  }
+
+  .timing-value {
+    grid-area: value;
+  }
+
+  .timing-track,
+  .timing-scale {
+    grid-area: track;
+  }
+
+  .timing-axis > span:empty {
+    display: none;
+  }
 }
 
 .history-list {
