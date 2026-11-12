@@ -45,6 +45,9 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
 - Progress charts: for each exercise, accuracy and fastest tempo per day (or per week over longer spans) for the
   last 7 days, 30 days or all time, with a one-line summary such as "Money beat: 72% → 88% over 2 weeks,
   70 → 84 BPM" and a table view.
+- Timing by hand, foot and pad over the same range: each one's average lean (early or late) and how much it
+  varies, with the biggest tendency spelled out and a practice tip, e.g. "Your left hand drags: it's 12 ms late
+  on average. Try slow single strokes". Rudiments use their sticking; grooves assume a right-handed setup.
 - Keyboard fallback for trying the app without a kit.
 
 ## Running it
@@ -146,7 +149,7 @@ src/
   exercises/ exercise format (48 ticks per quarter), drum-tab builder, validator, starter library, preview timing
   playalong/ expected-note timeline, hit matching, sessions and accuracy scoring
   live/     Coach (wiring) and LiveState (shared per-hit state)
-  history/  practice history records (Temporal dates), streaks, progress by day and week, IndexedDB store
+  history/  practice history records (Temporal dates), streaks, progress by day and week, timing per limb and pad, IndexedDB store
   guide/    the metronome guide's steps, as data
   notation/ rhythm spelling, VexFlow engraving (loaded on demand) and the playhead mapping
   render/   Canvas 2D kit renderer
