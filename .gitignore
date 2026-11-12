@@ -5,3 +5,4 @@ dist
 .DS_Store
 docs/decisions/
 docs/code-explained/
+.dev.vars*

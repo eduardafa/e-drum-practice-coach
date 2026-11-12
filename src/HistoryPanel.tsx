@@ -8,6 +8,8 @@ import { TimingSection } from "./TimingSection";
 import { PadHeatmap } from "./PadHeatmap";
 import { heatmap } from "./history/heatmap";
 import { releasing } from "./releasing";
+import { AccountSection } from "./AccountSection";
+import type { Account, SignInResult } from "./account/account";
 
 export type HistoryStatus = "loading" | "ready" | "off";
 
@@ -19,6 +21,10 @@ interface Props {
   selectedExerciseId: string | null;
   onClear: () => void;
   onClose: () => void;
+  account: Account;
+  /** Set when the app was opened by the sign-in redirect. */
+  signInResult: SignInResult | null;
+  onSignOut: () => Promise<boolean>;
 }
 
 const SCOPE: Record<ProgressRange, string> = { "7d": "the last 7 days", "30d": "the last 30 days", all: "all sessions" };
@@ -56,7 +62,17 @@ function entries(records: readonly HistoryRecord[]): HistoryRecord[] {
 }
 
 /** Practice history: the streak, today's time and every saved session, newest first. */
-export function HistoryPanel({ records, status, accuracyMode, selectedExerciseId, onClear, onClose }: Props) {
+export function HistoryPanel({
+  records,
+  status,
+  accuracyMode,
+  selectedExerciseId,
+  onClear,
+  onClose,
+  account,
+  signInResult,
+  onSignOut,
+}: Props) {
   const [confirming, setConfirming] = useState(false);
   const [range, setRange] = useState<ProgressRange>("30d");
   const today = Temporal.Now.plainDateISO();
@@ -195,9 +211,10 @@ export function HistoryPanel({ records, status, accuracyMode, selectedExerciseId
               )}
             </div>
           )}
-          <p className="hint">Saved in this browser only. Nothing is sent anywhere.</p>
         </>
       )}
+
+      <AccountSection account={account} signInResult={signInResult} onSignOut={onSignOut} />
     </section>
   );
 }

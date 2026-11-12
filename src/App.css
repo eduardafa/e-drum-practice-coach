@@ -1664,3 +1664,46 @@ button.primary.danger {
   cursor: pointer;
   font-size: 13px;
 }
+
+/* ---- Account: signing in to sync (History panel) ---- */
+
+.account {
+  margin-top: 20px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.account-providers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* Links that look like secondary buttons: signing in leaves the page. */
+.account-link {
+  display: inline-block;
+  color: var(--text);
+  text-decoration: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 14px;
+}
+
+.account-link:hover {
+  border-color: var(--muted);
+}
+
+.account-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.account-who {
+  margin: 8px 0 0;
+}
+
+.account-result {
+  margin: 8px 0 0;
+  font-size: 13px;
+}

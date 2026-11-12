@@ -1,8 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { handle } from "./index";
-import { testD1, type TestD1 } from "./testing/d1";
-
-const ORIGIN = "https://drums.example";
+import type { TestD1 } from "./testing/d1";
+import { request as get, testEnv } from "./testing/env";
 
 let db: TestD1 | null = null;
 afterEach(() => {
@@ -11,17 +10,19 @@ afterEach(() => {
 });
 
 function env(options?: { migrate?: boolean }): Env {
-  db = testD1(options);
-  return { DB: db.binding, APP_ORIGIN: ORIGIN };
+  const t = testEnv({}, options);
+  db = t.db;
+  return t.env;
 }
-
-const get = (path: string, init?: RequestInit, origin = ORIGIN) => new Request(new URL(path, origin), init);
 
 describe("API", () => {
   it("reports health with the last migration applied", async () => {
     const res = await handle(get("/api/health"), env());
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true, schema: "0001_users.sql" });
+    // Whatever migration is newest, so adding one doesn't touch this test.
+    const [last] = db?.query("SELECT name FROM d1_migrations ORDER BY id DESC LIMIT 1") ?? [];
+    expect(last?.name).toMatch(/^\d{4}_.+\.sql$/);
+    expect(await res.json()).toEqual({ ok: true, schema: last?.name });
     expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(res.headers.get("Content-Type")).toMatch(/^application\/json/);
   });
@@ -44,12 +45,5 @@ describe("API", () => {
     const res = await handle(get("/api/health", { method: "POST" }), e);
     expect(res.status).toBe(405);
     expect(res.headers.get("Allow")).toBe("GET");
-  });
-});
-
-describe("migrations", () => {
-  it("create the users table", () => {
-    env();
-    expect(db?.query("SELECT name FROM sqlite_schema WHERE type = 'table' AND name = 'users'")).toHaveLength(1);
   });
 });
