@@ -183,7 +183,7 @@ export class Coach {
   private handleMidi({ event, time }: TimedMidiEvent): void {
     if (event.kind !== "noteOn") return;
     const mapping = lookupNote(event.note);
-    this.playAlong?.hit({ pad: mapping?.pad ?? null, zone: mapping?.zone ?? null, time });
+    this.playAlong?.hit({ pad: mapping?.pad ?? null, zone: mapping?.zone ?? null, time, velocity: event.velocity });
     if (this.calibration) {
       this.calibration.addHit(time);
       if (this.calibration.finished) this.stopCalibrationClicks();

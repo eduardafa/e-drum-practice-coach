@@ -84,6 +84,15 @@ describe("NoteMatcher: misses and extras", () => {
     expect(matcher.hit(on(snare, 10))).toMatchObject({ kind: "extra" });
   });
 
+  it("keeps each hit's velocity and every extra hit, for practice history", () => {
+    const { notes, matcher } = rock();
+    const snare = firstSnare(notes);
+    matcher.hit({ ...on(snare, 3), velocity: 96 });
+    matcher.hit({ pad: "tom1", zone: "head", time: snare.time, velocity: 40 });
+    expect(matcher.resultOf(snare)).toEqual({ status: "hit", deltaMs: 3, verdict: "onTime", velocity: 96 });
+    expect(matcher.extraHits()).toEqual([{ pad: "tom1", zone: "head", time: snare.time, velocity: 40 }]);
+  });
+
   it("counts an unmapped hit as extra", () => {
     const { notes, matcher } = rock();
     expect(matcher.hit({ pad: null, zone: null, time: notes[0].time })).toMatchObject({ kind: "extra" });
