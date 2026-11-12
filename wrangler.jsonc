@@ -22,7 +22,7 @@
     // secrets are set with `wrangler secret put GITHUB_CLIENT_SECRET` (and
     // GOOGLE_CLIENT_SECRET). A provider without both stays hidden.
     "GITHUB_CLIENT_ID": "Ov23li1mOUnX2p0O2p0h",
-    "GOOGLE_CLIENT_ID": ""
+    "GOOGLE_CLIENT_ID": "646327812271-uc1kvovvgrmekdqmfq7kdlrgtqgttito.apps.googleusercontent.com"
   },
   "d1_databases": [
     {
