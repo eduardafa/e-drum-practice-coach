@@ -17,7 +17,12 @@
     // The API only answers here. Previews share this Worker's database, so
     // they get 503 instead (see worker/index.ts). For `wrangler dev`, override
     // it in .dev.vars with APP_ORIGIN=http://localhost:8787.
-    "APP_ORIGIN": "https://e-drum-practice-coach.eduardafa.workers.dev"
+    "APP_ORIGIN": "https://e-drum-practice-coach.eduardafa.workers.dev",
+    // OAuth client IDs are public (they appear in the sign-in URL). The matching
+    // secrets are set with `wrangler secret put GITHUB_CLIENT_SECRET` (and
+    // GOOGLE_CLIENT_SECRET). A provider without both stays hidden.
+    "GITHUB_CLIENT_ID": "",
+    "GOOGLE_CLIENT_ID": ""
   },
   "d1_databases": [
     {

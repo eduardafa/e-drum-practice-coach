@@ -7,12 +7,23 @@
  * previews are versions of this same Worker with the same database, so on
  * any other host it refuses with 503 rather than touch production data.
  */
+import { finishSignIn, startSignIn } from "./auth/oauth";
+import { PROVIDERS, configuredProviders, type ProviderId } from "./auth/providers";
+import { endSession, readSession } from "./auth/sessions";
 import { json, problem } from "./http";
 
-/** Paths the API knows, with the methods each accepts (for 405 vs 404). */
-const ROUTES: Record<string, readonly string[]> = {
-  "/api/health": ["GET"],
-};
+type Handler = (request: Request, env: Env) => Promise<Response>;
+
+/** Every route: path, then method. */
+const ROUTES = new Map<string, Partial<Record<string, Handler>>>([
+  ["/api/health", { GET: (_, env) => health(env) }],
+  ["/api/me", { GET: me }],
+  ["/api/auth/signout", { POST: signOut }],
+  ...PROVIDERS.flatMap((provider): [string, Partial<Record<string, Handler>>][] => [
+    [`/api/auth/${provider}/start`, { GET: (_, env) => startSignIn(env, provider) }],
+    [`/api/auth/${provider}/callback`, { GET: (request, env) => finishSignIn(request, env, provider) }],
+  ]),
+]);
 
 export async function handle(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
@@ -20,17 +31,22 @@ export async function handle(request: Request, env: Env): Promise<Response> {
     return problem(503, "unavailable", "Sync only runs on the main site, not on previews.");
   }
 
-  const methods = ROUTES[url.pathname];
+  const methods = ROUTES.get(url.pathname);
   if (!methods) return problem(404, "not-found", "No such API route.");
-  if (!methods.includes(request.method)) {
-    return problem(405, "method-not-allowed", `Use ${methods.join(" or ")}.`, { Allow: methods.join(", ") });
+  const handler = methods[request.method];
+  if (!handler) {
+    const allowed = Object.keys(methods).join(", ");
+    return problem(405, "method-not-allowed", `Use ${allowed}.`, { Allow: allowed });
   }
 
-  switch (url.pathname) {
-    case "/api/health":
-      return health(env);
+  // Anything that changes data must come from the app itself. SameSite=Lax
+  // already keeps the session cookie off cross-site POSTs; this is the
+  // second lock (and covers browsers that don't do SameSite).
+  if (request.method !== "GET" && request.headers.get("Origin") !== env.APP_ORIGIN) {
+    return problem(403, "forbidden", "Requests that change data must come from the app.");
   }
-  return problem(404, "not-found", "No such API route.");
+
+  return handler(request, env);
 }
 
 /** The Worker answers, and the database answers with the last migration applied. */
@@ -42,6 +58,24 @@ async function health(env: Env): Promise<Response> {
     console.error("health: database check failed", error);
     return problem(503, "database", "The database isn't answering.");
   }
+}
+
+export interface MeResponse {
+  /** Null when signed out. */
+  user: { provider: ProviderId } | null;
+  /** The sign-in options that are set up on the server. */
+  providers: ProviderId[];
+}
+
+/** Who this browser is signed in as, and how it could sign in. */
+async function me(request: Request, env: Env): Promise<Response> {
+  const session = await readSession(env.DB, request);
+  const body: MeResponse = { user: session && { provider: session.provider }, providers: configuredProviders(env) };
+  return json(body, 200, session?.setCookie ? { "Set-Cookie": session.setCookie } : {});
+}
+
+async function signOut(request: Request, env: Env): Promise<Response> {
+  return new Response(null, { status: 204, headers: { "Set-Cookie": await endSession(env.DB, request), "Cache-Control": "no-store" } });
 }
 
 export default {

@@ -1,8 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { handle } from "./index";
-import { testD1, type TestD1 } from "./testing/d1";
-
-const ORIGIN = "https://drums.example";
+import type { TestD1 } from "./testing/d1";
+import { request as get, testEnv } from "./testing/env";
 
 let db: TestD1 | null = null;
 afterEach(() => {
@@ -11,17 +10,16 @@ afterEach(() => {
 });
 
 function env(options?: { migrate?: boolean }): Env {
-  db = testD1(options);
-  return { DB: db.binding, APP_ORIGIN: ORIGIN };
+  const t = testEnv({}, options);
+  db = t.db;
+  return t.env;
 }
-
-const get = (path: string, init?: RequestInit, origin = ORIGIN) => new Request(new URL(path, origin), init);
 
 describe("API", () => {
   it("reports health with the last migration applied", async () => {
     const res = await handle(get("/api/health"), env());
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true, schema: "0001_users.sql" });
+    expect(await res.json()).toEqual({ ok: true, schema: "0002_sign_in.sql" });
     expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(res.headers.get("Content-Type")).toMatch(/^application\/json/);
   });
@@ -48,8 +46,9 @@ describe("API", () => {
 });
 
 describe("migrations", () => {
-  it("create the users table", () => {
+  it("create the users, identities and sessions tables", () => {
     env();
-    expect(db?.query("SELECT name FROM sqlite_schema WHERE type = 'table' AND name = 'users'")).toHaveLength(1);
+    const tables = db?.query("SELECT name FROM sqlite_schema WHERE type = 'table' AND name IN ('users', 'identities', 'sessions')");
+    expect(tables).toHaveLength(3);
   });
 });
