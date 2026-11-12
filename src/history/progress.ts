@@ -20,6 +20,13 @@ export const PROGRESS_RANGES: readonly { id: ProgressRange; label: string }[] = 
   { id: "all", label: "All time" },
 ];
 
+/** The first date in a range ending `today` (both included), or null for all time. */
+export function rangeStart(range: ProgressRange, today: Temporal.PlainDate): Temporal.PlainDate | null {
+  if (range === "7d") return today.subtract({ days: 6 });
+  if (range === "30d") return today.subtract({ days: 29 });
+  return null;
+}
+
 /** All time switches to weeks once the practice spans more dates than this. */
 const DAILY_LIMIT_DAYS = 31;
 
@@ -71,7 +78,7 @@ export function progress(
   mode: AccuracyMode,
   firstDay = 1,
 ): Progress {
-  const from = range === "7d" ? today.subtract({ days: 6 }) : range === "30d" ? today.subtract({ days: 29 }) : null;
+  const from = rangeStart(range, today);
   const sessions = records
     .filter(isSession)
     .filter((r) => r.exerciseId === exerciseId)

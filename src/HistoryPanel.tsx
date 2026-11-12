@@ -2,7 +2,9 @@ import { useState } from "react";
 import type { HistoryRecord, SessionRecord, TrainerRecord } from "./history/record";
 import { formatPracticeTime, practiceDate, practiceTimeOn, streak } from "./history/streak";
 import type { AccuracyMode } from "./playalong/results";
+import { PROGRESS_RANGES, practisedExercises, rangeStart, type ProgressRange } from "./history/progress";
 import { ProgressSection } from "./ProgressSection";
+import { TimingSection } from "./TimingSection";
 import { releasing } from "./releasing";
 
 export type HistoryStatus = "loading" | "ready" | "off";
@@ -52,6 +54,7 @@ function entries(records: readonly HistoryRecord[]): HistoryRecord[] {
 /** Practice history: the streak, today's time and every saved session, newest first. */
 export function HistoryPanel({ records, status, accuracyMode, selectedExerciseId, onClear, onClose }: Props) {
   const [confirming, setConfirming] = useState(false);
+  const [range, setRange] = useState<ProgressRange>("30d");
   const today = Temporal.Now.plainDateISO();
   const { current, practisedToday, longest } = streak(records, today);
   const todayTime = practiceTimeOn(records, today);
@@ -110,12 +113,33 @@ export function HistoryPanel({ records, status, accuracyMode, selectedExerciseId
                 : "Days in a row with at least one finished session make your streak."}
           </p>
 
-          <ProgressSection
-            records={records}
-            accuracyMode={accuracyMode}
-            selectedExerciseId={selectedExerciseId}
-            today={today}
-          />
+          {practisedExercises(records).length > 0 && (
+            <>
+              <h3>Progress</h3>
+              {/* One range for everything below it, so the charts and timing agree. */}
+              <fieldset className="library-filters progress-range">
+                <legend className="visually-hidden">Range</legend>
+                {PROGRESS_RANGES.map((r) => (
+                  <button
+                    key={r.id}
+                    className={`secondary ${range === r.id ? "selected" : ""}`}
+                    aria-pressed={range === r.id}
+                    onClick={() => setRange(r.id)}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </fieldset>
+              <ProgressSection
+                records={records}
+                accuracyMode={accuracyMode}
+                selectedExerciseId={selectedExerciseId}
+                today={today}
+                range={range}
+              />
+              <TimingSection records={records} from={rangeStart(range, today)} />
+            </>
+          )}
 
           {groups.length > 0 && <h3 className="history-sessions">Sessions</h3>}
           {groups.map((g) => (
