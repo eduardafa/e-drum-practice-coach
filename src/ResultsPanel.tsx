@@ -2,7 +2,9 @@ import { heatmap } from "./history/heatmap";
 import type { SessionRecord } from "./history/record";
 import { NITRO_MAX_PADS } from "./kit/nitroMax";
 import { PadHeatmap } from "./PadHeatmap";
+import { pathAdvice } from "./exercises/path";
 import type { Exercise } from "./exercises/types";
+import { DEFAULT_PASS_MARK } from "./playalong/trainer";
 import type { AccuracyMode, SessionResults } from "./playalong/results";
 import { releasing } from "./releasing";
 import { formatDelta } from "./render/kitRenderer";
@@ -16,6 +18,8 @@ interface Props {
   /** This session as saved to history, for the pad heatmap. */
   record: SessionRecord | null;
   onRetry: (tempoChange: number) => void;
+  /** Starts the next exercise on the First steps path. */
+  onNext: (next: Exercise) => void;
   onClose: () => void;
 }
 
@@ -38,8 +42,10 @@ function tendency(meanMs: number | null): string {
 }
 
 /** The end-of-session screen: accuracy, what happened to the notes, and how each pad went. */
-export function ResultsPanel({ exercise, results, mode, bpm, loops, record, onRetry, onClose }: Props) {
+export function ResultsPanel({ exercise, results, mode, bpm, loops, record, onRetry, onNext, onClose }: Props) {
   const other: AccuracyMode = mode === "partial" ? "strict" : "partial";
+  // The same pass mark the tempo trainer speeds up at.
+  const advice = pathAdvice(exercise, results.accuracy[mode], DEFAULT_PASS_MARK);
   return (
     <section className="calibration results" aria-labelledby="results-title">
       <h2 id="results-title">
@@ -102,8 +108,25 @@ export function ResultsPanel({ exercise, results, mode, bpm, loops, record, onRe
         </details>
       )}
 
+      {advice?.kind === "ready" && (
+        <p className="path-advice ready">
+          That clears {percent(DEFAULT_PASS_MARK)}: you're ready for <strong>{advice.next.name}</strong>.
+        </p>
+      )}
+      {advice?.kind === "notYet" && (
+        <p className="path-advice">
+          Reach {percent(advice.passMark)} to move on to <strong>{advice.next.name}</strong>. Slower is fine: try 5 BPM
+          slower if it feels rushed.
+        </p>
+      )}
+
       <div className="calibration-actions">
-        <button className="primary" onClick={releasing(() => onRetry(0))}>
+        {advice?.kind === "ready" && (
+          <button className="primary" onClick={releasing(() => onNext(advice.next))}>
+            Next: {advice.next.name}
+          </button>
+        )}
+        <button className={advice?.kind === "ready" ? "secondary" : "primary"} onClick={releasing(() => onRetry(0))}>
           Play again
         </button>
         <button className="secondary" onClick={releasing(() => onRetry(-5))}>

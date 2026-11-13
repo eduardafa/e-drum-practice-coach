@@ -526,12 +526,12 @@ export default function App() {
    * Starts a play-along session at `bpm` (the current tempo, or a retry's new tempo), after the
    * get-ready countdown unless `countdown` is false (later tempo-trainer rounds: the drummer is at the kit).
    */
-  const startSession = async (bpm: number, countdown = true) => {
-    if (!exercise || coach.calibrating) return;
+  const startSession = async (bpm: number, countdown = true, chosen: Exercise | null = exercise) => {
+    if (!chosen || coach.calibrating) return;
     closeLibrary();
     setGuideOpen(false);
     setSettingsOpen(false);
-    const settings = await coach.startSession(exercise, sessionLoops, bpm, countdown ? getReadySec : 0);
+    const settings = await coach.startSession(chosen, sessionLoops, bpm, countdown ? getReadySec : 0);
     setMetronome(settings);
     setRunning(true);
   };
@@ -768,6 +768,11 @@ export default function App() {
             loops={coach.session.loops}
             record={lastSession}
             onRetry={(change) => void startSession(stepBpm(coach.session?.bpm ?? metronome.bpm, change))}
+            onNext={(next) => {
+              // Select it (staff, tempo memory), then start it at once: the countdown gives time to get ready.
+              selectExercise(next.id);
+              void startSession(startingTempo(next, exerciseTempos), true, next);
+            }}
             onClose={() => coach.endSession()}
           />
         )}
