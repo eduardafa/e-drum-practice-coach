@@ -203,6 +203,7 @@ export default function App() {
       getToleranceMs: () => coach.scoring.toleranceMs,
       getHandedness: () => handednessRef.current,
       getCues: (now) => (showNextPadRef.current ? coach.cuesAt(now) : []),
+      getTopInset: () => (bigCountRef.current ? bigCountRef.current.offsetHeight + 16 : 0),
     });
     renderer.start();
     return () => renderer.dispose();
