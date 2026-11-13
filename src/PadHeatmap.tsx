@@ -7,6 +7,8 @@ import {
   type Heatmap,
   type PadHeat,
 } from "./history/heatmap";
+import { kitLayout } from "./handedness";
+import { useHandedness } from "./HandednessContext";
 import { NITRO_MAX_PADS, type PadInfo } from "./kit/nitroMax";
 
 interface Props {
@@ -53,8 +55,10 @@ function describe(pad: PadInfo, p: PadHeat | undefined): string {
 export function PadHeatmap({ heat, scope }: Props) {
   const [measure, setMeasure] = useState<HeatMeasure>("hits");
   const [active, setActive] = useState<PadInfo | null>(null);
+  // Drawn as seen from the throne: mirrored on a left-handed kit.
+  const pads = kitLayout(NITRO_MAX_PADS, useHandedness());
 
-  const used = NITRO_MAX_PADS.filter((pad) => (heat.pads.get(pad.id)?.hits ?? 0) > 0);
+  const used = pads.filter((pad) => (heat.pads.get(pad.id)?.hits ?? 0) > 0);
   const maxHits = Math.max(0, ...used.map((pad) => heat.pads.get(pad.id)?.hits ?? 0));
   const binList = bins(measure, maxHits);
 
@@ -93,7 +97,7 @@ export function PadHeatmap({ heat, scope }: Props) {
 
       <div className="heatmap-plot">
         <svg viewBox={`0 0 ${BOX_W} ${H}`} aria-hidden onPointerLeave={() => setActive(null)}>
-          {NITRO_MAX_PADS.map((pad) => {
+          {pads.map((pad) => {
             const p = heat.pads.get(pad.id);
             const bin = binOf(valueOf(p, measure), binList);
             const cx = pad.x * BOX_W;

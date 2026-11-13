@@ -52,6 +52,11 @@ describe("parseSettings", () => {
     expect(parseSettings({ getReadySec: 7 }).getReadySec).toBeUndefined();
   });
 
+  it("keeps a known kit setup", () => {
+    expect(parseSettings({ handedness: "left" }).handedness).toBe("left");
+    expect(parseSettings({ handedness: "both" }).handedness).toBeUndefined();
+  });
+
   it("only keeps guideSeen when it's true", () => {
     expect(parseSettings({ guideSeen: "yes" }).guideSeen).toBeUndefined();
   });

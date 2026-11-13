@@ -2,6 +2,7 @@ import { useRef, useState, type KeyboardEvent } from "react";
 import { formatVolume, MAX_VOLUME, MIN_VOLUME } from "./audio/volume";
 import { isSubdivision, type MetronomeSettings } from "./audio/schedule";
 import { ThemeSetting } from "./ThemeSetting";
+import { isHandedness, type Handedness } from "./handedness";
 import { isAccuracyMode, type AccuracyMode } from "./playalong/results";
 import { isSkillLevel, levelForTolerance, SKILL_LEVELS, SKILL_PROFILES, type SkillLevel } from "./profiles";
 import { releasing } from "./releasing";
@@ -19,6 +20,8 @@ interface Props {
   onSkillLevelChange: (level: SkillLevel) => void;
   accuracyMode: AccuracyMode;
   onAccuracyModeChange: (mode: AccuracyMode) => void;
+  handedness: Handedness;
+  onHandednessChange: (handedness: Handedness) => void;
   onCalibrate: () => void;
   onClose: () => void;
 }
@@ -47,6 +50,8 @@ export function SettingsPanel({
   onSkillLevelChange,
   accuracyMode,
   onAccuracyModeChange,
+  handedness,
+  onHandednessChange,
   onCalibrate,
   onClose,
 }: Props) {
@@ -237,6 +242,23 @@ export function SettingsPanel({
         <div id="settings-panel-appearance" role="tabpanel" aria-labelledby="settings-tab-appearance">
           <h3>Theme</h3>
           <ThemeSetting />
+          <h3>Kit setup</h3>
+          <label className="field">
+            <span>Played</span>
+            <select
+              value={handedness}
+              onChange={(e) => {
+                if (isHandedness(e.target.value)) onHandednessChange(e.target.value);
+              }}
+            >
+              <option value="right">Right-handed</option>
+              <option value="left">Left-handed (mirrored kit)</option>
+            </select>
+          </label>
+          <p className="hint">
+            Left-handed mirrors the kit drawing, the hands shown on exercises (R and L swap), and which hand or foot
+            gets credit in History's timing. Exercises themselves and your saved sessions don't change.
+          </p>
         </div>
       )}
     </section>

@@ -1,5 +1,6 @@
 import { findExercise } from "./exercises/library";
 import { isAccuracyMode, type AccuracyMode } from "./playalong/results";
+import { isHandedness, type Handedness } from "./handedness";
 import { isGetReadySec } from "./playalong/getReady";
 import { SESSION_LOOPS } from "./playalong/session";
 import { isVolume } from "./audio/volume";
@@ -27,6 +28,8 @@ export interface SavedSettings {
   volume?: number;
   /** Seconds of get-ready countdown before a play-along session; 0 for none. */
   getReadySec?: number;
+  /** Right- or left-handed (mirrored) kit. */
+  handedness?: Handedness;
 }
 
 type UnknownRecord = Record<string, unknown>;
@@ -90,6 +93,7 @@ export function parseSettings(raw: unknown): SavedSettings {
     exerciseTempos: parseExerciseTempos(raw.exerciseTempos),
     volume: isVolume(raw.volume) ? raw.volume : undefined,
     getReadySec: isGetReadySec(raw.getReadySec) ? raw.getReadySec : undefined,
+    handedness: isHandedness(raw.handedness) ? raw.handedness : undefined,
   };
 }
 
