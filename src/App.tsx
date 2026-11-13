@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { coach, historyStore, saved, SIGN_IN_RESULT } from "./appState";
+import { DEFAULT_METRONOME } from "./live/coach";
 import { MAX_BPM, MIN_BPM, parseBpm, stepBpm, type MetronomeSettings } from "./audio/schedule";
 import { CalibrationPanel } from "./CalibrationPanel";
 import { KeyboardHint } from "./KeyboardHint";
@@ -11,6 +13,7 @@ import { practicePlan, type PlanBlock } from "./history/plan";
 import { PracticePlanBanner, PracticePlanPanel, type RunningPlan } from "./PracticePlan";
 import { MetronomeGuide } from "./MetronomeGuide";
 import { NotationStrip, type LearnView, type SessionView } from "./NotationStrip";
+import type { MidiStatus } from "./midi/connection";
 import { LearnSummary } from "./LearnSummary";
 import type { AccuracyMode } from "./playalong/results";
 import { DEFAULT_GET_READY_SEC } from "./playalong/getReady";
@@ -31,12 +34,8 @@ import { useSync } from "./history/useSync";
 import { localLedger } from "./history/sync";
 import { deleteAccount, deleteSyncedHistory } from "./account/account";
 import { AccountMenu } from "./AccountMenu";
-import { signInResult as readSignInResult } from "./account/account";
 import { sessionRecord, trainerRecord, type HistoryRecord, type SessionRecord } from "./history/record";
-import { HistoryStore } from "./history/store";
 import { formatPracticeTime, practiceTimeOn, streak } from "./history/streak";
-import { Coach, DEFAULT_METRONOME } from "./live/coach";
-import type { MidiStatus } from "./midi/connection";
 import {
   DEFAULT_SKILL_LEVEL,
   levelForTolerance,
@@ -48,8 +47,8 @@ import {
 import { releasing } from "./releasing";
 import { formatDelta, KitRenderer } from "./render/kitRenderer";
 import { SettingsPanel } from "./SettingsPanel";
-import { DEFAULT_SCORING, type ScoringOptions } from "./timing/grid";
-import { loadSettings, saveSettings } from "./settings";
+import type { ScoringOptions } from "./timing/grid";
+import { saveSettings } from "./settings";
 import { DEFAULT_PASS_MARK } from "./playalong/trainer";
 
 /** Keyboard fallback so the app can be tried without a kit. */
@@ -65,23 +64,12 @@ const KEY_TO_NOTE: Record<string, number> = {
   KeyR: 51, // ride
 };
 
-const saved = loadSettings();
 /** The pause between tempo-trainer rounds, to read the score before the next count-in. */
 const BETWEEN_ROUNDS_MS = 3000;
-const coach = new Coach(saved.metronome ?? DEFAULT_METRONOME);
-const historyStore = new HistoryStore();
 
 /** The two pages: practice at /, history at /history. */
 type View = "practice" | "history";
 const viewOf = (path: string): View => (path.replace(/\/+$/, "") === "/history" ? "history" : "practice");
-
-/** Read once: the sign-in redirect lands on /?signin=<result>. */
-const SIGN_IN_RESULT = readSignInResult(window.location.search);
-// A first-time drummer gets the on-time window of their (default) skill level.
-coach.scoring = saved.scoring ?? {
-  ...DEFAULT_SCORING,
-  toleranceMs: SKILL_PROFILES[saved.skillLevel ?? DEFAULT_SKILL_LEVEL].toleranceMs,
-};
 
 function useMidiStatus(): MidiStatus {
   return useSyncExternalStore(
