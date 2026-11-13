@@ -1042,6 +1042,19 @@ fieldset.group.play {
   margin-top: 10px;
 }
 
+/* First steps: whether to move on to the next step. */
+.results .path-advice {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--tint);
+  text-align: center;
+}
+
+.results .path-advice.ready {
+  background: var(--accent-soft);
+}
+
 /* Tempo trainer: setup fields and the tempo-per-round chart. */
 .trainer .field > span:first-child {
   flex-basis: 110px;
