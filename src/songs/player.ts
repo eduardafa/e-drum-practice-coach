@@ -8,13 +8,13 @@
 export interface PlayState {
   /** Song position (s) when playback last started or paused. */
   offset: number;
-  /** Audio-clock time (s) when playback last started, or null while paused. */
+  /** Audio-clock time (s) when playback last started (or will start, after a countdown), or null while paused. */
   startedAt: number | null;
 }
 
-/** Where in the song playback is at audio time `now`, kept within 0..duration. */
+/** Where in the song playback is at audio time `now`, kept within 0..duration. Before a delayed start, where it will start. */
 export function positionAt(state: PlayState, now: number, duration: number): number {
-  const pos = state.startedAt === null ? state.offset : state.offset + (now - state.startedAt);
+  const pos = state.startedAt === null ? state.offset : state.offset + Math.max(0, now - state.startedAt);
   return Math.min(duration, Math.max(0, pos));
 }
 
@@ -70,8 +70,12 @@ export class SongPlayer {
     return this.ctx ? positionAt(this.state, this.ctx.currentTime, this.duration) : this.state.offset;
   }
 
-  /** Starts (or resumes) playback on `ctx`, from the current position, or from the start if it's at the end. */
-  play(ctx: AudioContext, volume: number): void {
+  /**
+   * Starts (or resumes) playback on `ctx`, from the current position, or from
+   * the start if it's at the end. `at` delays the start to that audio time
+   * (after a get-ready countdown); by default it starts now.
+   */
+  play(ctx: AudioContext, volume: number, at = ctx.currentTime): void {
     if (!this.buffer || this.playing) return;
     this.ctx = ctx;
     if (!this.gain || this.gain.context !== ctx) {
@@ -94,10 +98,11 @@ export class SongPlayer {
       },
       { once: true },
     );
-    source.start(0, from);
+    const when = Math.max(at, ctx.currentTime);
+    source.start(when, from);
     this.source = source;
     this.runs += 1;
-    this.state = { offset: from, startedAt: ctx.currentTime };
+    this.state = { offset: from, startedAt: when };
   }
 
   /** Pauses, keeping the position. */

@@ -24,7 +24,7 @@ export function GetReady({ coach }: { coach: Coach }) {
     <output className="get-ready" aria-live="assertive">
       <span className="get-ready-label">Get ready</span>
       <span className="get-ready-count">{count}</span>
-      <span className="get-ready-label">then one bar of count-in</span>
+      <span className="get-ready-label">{coach.playingAlong ? "then the song starts" : "then one bar of count-in"}</span>
     </output>
   );
 }

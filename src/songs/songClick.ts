@@ -46,7 +46,7 @@ export class SongClick {
   private plannedFor: { run: number; grid: BeatGrid } | null = null;
 
   /** Call often (every frame) while the song panel is open. Does nothing but cancel when `grid` is null. */
-  tick(ctx: AudioContext | null, out: AudioNode | null, player: SongPlayer, grid: BeatGrid | null): void {
+  tick(ctx: AudioContext | null, out: AudioNode | null, player: SongPlayer, grid: BeatGrid | null, volume = 1): void {
     if (!ctx || !out || !grid || !player.playing) {
       this.cancel();
       return;
@@ -61,7 +61,7 @@ export class SongClick {
       this.next = beat.index + 1;
       const at = player.audioTimeAt(beat.time);
       if (at === null || at < ctx.currentTime) continue;
-      this.scheduled.push(playClick(ctx, out, at, beat.downbeat ? "downbeat" : "beat", 1));
+      this.scheduled.push(playClick(ctx, out, at, beat.downbeat ? "downbeat" : "beat", volume));
     }
     // Forget the clicks that have played.
     if (this.scheduled.length > 16) this.scheduled = this.scheduled.slice(-8);
