@@ -4,7 +4,8 @@ import { CalibrationPanel } from "./CalibrationPanel";
 import { KeyboardHint } from "./KeyboardHint";
 import { LiveCount } from "./LiveCount";
 import { MetronomeGuide } from "./MetronomeGuide";
-import { NotationStrip, type SessionView } from "./NotationStrip";
+import { NotationStrip, type LearnView, type SessionView } from "./NotationStrip";
+import { LearnSummary } from "./LearnSummary";
 import type { AccuracyMode } from "./playalong/results";
 import { DEFAULT_GET_READY_SEC } from "./playalong/getReady";
 import { GetReady } from "./GetReady";
@@ -90,6 +91,7 @@ interface Stats {
   /** The metronome stops by itself when a play-along session ends. */
   running: boolean;
   session: (Omit<SessionView, "accuracy"> & { accuracy: Record<AccuracyMode, number | null> }) | null;
+  learn: LearnView | null;
 }
 
 function readStats(): Stats {
@@ -112,6 +114,9 @@ function readStats(): Stats {
           loops: session.loops,
           accuracy: session.results().accuracy,
         }
+      : null,
+    learn: coach.learn
+      ? { loop: coach.learn.currentLoop, loops: coach.learn.loops, wrongHits: coach.learn.wrongHits, done: coach.learn.done }
       : null,
   };
 }
@@ -437,6 +442,10 @@ export default function App() {
     setTrainer(null);
   };
   const showTrainer = Boolean(exercise && trainer && trainer.kind !== "round" && !libraryOpen && view === "practice" && !calibrating);
+  const showLearnSummary = Boolean(
+    exercise && stats.learn?.done && coach.learn && !libraryOpen && view === "practice" && !calibrating,
+  );
+
   const showResults = Boolean(
     exercise && !trainer && stats.session?.phase === "done" && coach.session && !libraryOpen && view === "practice" && !calibrating,
   );
@@ -452,6 +461,7 @@ export default function App() {
     if (calibrating) return () => endCalibration(null);
     if (showTrainer && (trainer?.kind === "setup" || trainer?.kind === "finished")) return closeTrainer;
     if (showResults) return () => coach.endSession();
+    if (showLearnSummary) return () => coach.endLearn();
     return null;
   };
 
@@ -560,6 +570,17 @@ export default function App() {
     const settings = await coach.startSession(chosen, sessionLoops, bpm, countdown ? getReadySec : 0);
     setMetronome(settings);
     setRunning(true);
+  };
+
+  /** Wait mode on the current exercise: no click, the kit view shows the pads to hit and waits for them. */
+  const startLearn = () => {
+    if (!exercise || coach.calibrating) return;
+    closeLibrary();
+    setGuideOpen(false);
+    setSettingsOpen(false);
+    stopPreview();
+    coach.startLearn(exercise, sessionLoops);
+    setRunning(false);
   };
 
   // The latest startSession, for the between-rounds timer (which mustn't restart on every render).
@@ -724,7 +745,9 @@ export default function App() {
             getReadySec={getReadySec}
             onGetReadyChange={setGetReadySec}
             onPlay={() => void startSession(metronome.bpm)}
-            onStop={trainer ? stopTrainer : stopSession}
+            onStop={trainer ? stopTrainer : stats.learn && !stats.learn.done ? () => coach.endLearn() : stopSession}
+            onLearn={startLearn}
+            learn={stats.learn}
             onTrain={() => {
               coach.endSession();
               setTrainer({ kind: "setup" });
@@ -788,6 +811,16 @@ export default function App() {
               onStart={startTrainer}
               onStop={stopTrainer}
               onClose={closeTrainer}
+            />
+          )}
+          {showLearnSummary && exercise && coach.learn && (
+            <LearnSummary
+              exercise={exercise}
+              loops={coach.learn.loops}
+              wrongHits={coach.learn.wrongHits}
+              onPlayAlong={() => void startSession(metronome.bpm)}
+              onAgain={startLearn}
+              onClose={() => coach.endLearn()}
             />
           )}
           {showResults && exercise && coach.session && (

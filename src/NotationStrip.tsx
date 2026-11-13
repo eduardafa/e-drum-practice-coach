@@ -15,6 +15,15 @@ const PAINT_LOOKAHEAD_MS = 16;
 /** The staff grows to fit the stage width, up to this many times its engraved size. */
 const MAX_SCALE = 1.6;
 
+/** What the strip shows about a wait-mode (Learn) run. */
+export interface LearnView {
+  /** Loop being played, from 0. */
+  loop: number;
+  loops: number;
+  wrongHits: number;
+  done: boolean;
+}
+
 /** What the strip shows about a running or finished session. */
 export interface SessionView {
   phase: SessionPhase;
@@ -43,6 +52,9 @@ interface Props {
   onPlay: () => void;
   onStop: () => void;
   onTrain: () => void;
+  /** Wait mode: learn the pattern without the click. */
+  onLearn: () => void;
+  learn: LearnView | null;
   /** Set while the tempo trainer runs: shown before the session status, and locks the controls. */
   trainerStatus: string | null;
 }
@@ -82,9 +94,12 @@ export function NotationStrip({
   onPlay,
   onStop,
   onTrain,
+  onLearn,
+  learn,
   trainerStatus,
 }: Props) {
-  const busy = trainerStatus !== null || (session !== null && session.phase !== "done");
+  const learning = learn !== null && !learn.done;
+  const busy = trainerStatus !== null || (session !== null && session.phase !== "done") || learning;
   const hostRef = useRef<HTMLDivElement>(null);
   const playheadRef = useRef<HTMLDivElement>(null);
   const marksRef = useRef<HTMLDivElement>(null);
@@ -160,7 +175,9 @@ export function NotationStrip({
         if (m.el.className !== cls) m.el.className = cls;
       }
       const { beatsPerBar, subdivision } = coach.metronome.currentSettings;
-      const tick = coach.metronome.running
+      // Wait mode has no clock: the playhead stands on the step being waited for.
+      const learnTick = coach.learn?.currentTick() ?? null;
+      const tick = learnTick !== null ? learnTick : coach.metronome.running
         ? playheadTick(coach.live.counts, performance.now() + PAINT_LOOKAHEAD_MS, {
             countsPerBar: beatsPerBar * subdivision,
             countsPerBeat: subdivision,
@@ -213,6 +230,13 @@ export function NotationStrip({
             <button className="primary play" onClick={releasing(onPlay)}>
               Play along
             </button>
+            <button
+              className="secondary"
+              onClick={releasing(onLearn)}
+              title="No click: each note waits until you hit the glowing pads"
+            >
+              Learn
+            </button>
             <button className="secondary" onClick={releasing(onTrain)}>
               Tempo trainer
             </button>
@@ -253,7 +277,9 @@ export function NotationStrip({
           </button>
         )}
         <p className="notation-description">
-          {session && session.phase !== "done"
+          {learning
+            ? `Learn: hit the glowing pads, no rush. Loop ${learn.loop + 1} of ${learn.loops}${learn.wrongHits ? ` · ${learn.wrongHits} wrong ${learn.wrongHits === 1 ? "hit" : "hits"}` : ""}`
+            : session && session.phase !== "done"
             ? `${trainerStatus ?? ""}${sessionStatus(session)}`
             : trainerStatus !== null
               ? trainerStatus

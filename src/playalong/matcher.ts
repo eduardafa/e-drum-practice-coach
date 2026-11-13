@@ -71,7 +71,7 @@ function isOpenZone(zone: string | null): boolean {
 }
 
 /** Whether a played hit can count for an expected note, ignoring timing. */
-export function voiceMatches(note: ExpectedNote, hit: PlayedHit): boolean {
+export function voiceMatches(note: Pick<ExpectedNote, "pad" | "open">, hit: PlayedHit): boolean {
   if (hit.pad !== note.pad) return false;
   if (note.pad === "hihat") return isOpenZone(hit.zone) === note.open;
   return true;

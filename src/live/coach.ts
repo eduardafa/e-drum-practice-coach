@@ -8,6 +8,7 @@ import { subdivisionFor } from "../exercises/practice";
 import type { Exercise } from "../exercises/types";
 import { cueLeadMs, cuesAt, type PadCue } from "../playalong/cues";
 import { secondsLeft } from "../playalong/getReady";
+import { LearnSession } from "../playalong/learn";
 import { PlayAlongSession } from "../playalong/session";
 import type { MetronomeSettings } from "../audio/schedule";
 import { lookupNote } from "../kit/nitroMax";
@@ -52,6 +53,8 @@ export class Coach {
   /** Bars started since the metronome started; -1 before the first downbeat. */
   private bar = -1;
   private playAlong: PlayAlongSession | null = null;
+  /** Wait mode: no clock, each step waits for its pads. Never runs together with the metronome. */
+  private learning: LearnSession | null = null;
   /** When the session's get-ready countdown ends (performance.now() ms); 0 when there's none. */
   private countdownEndMs = 0;
   /** How far ahead the kit view lights the next pad: one beat at the session's tempo. */
@@ -89,6 +92,7 @@ export class Coach {
 
   async startMetronome(): Promise<void> {
     if (this.calibrating) return;
+    this.endLearn();
     this.preview.stop();
     this.live.resetSession();
     this.bar = -1;
@@ -111,6 +115,7 @@ export class Coach {
    * settings used so the UI can show them. Call from a user gesture.
    */
   async startSession(exercise: Exercise, loops: number, bpm: number, countdownSec = 0): Promise<MetronomeSettings> {
+    this.endLearn();
     this.preview.stop();
     this.metronome.stop();
     const settings = {
@@ -131,8 +136,28 @@ export class Coach {
     return settings;
   }
 
-  /** Which pads the kit view should light at `now`: the session's next notes, from the count-in on. */
+  /** Starts wait mode on an exercise: no metronome, each step waits until its pads are hit. */
+  startLearn(exercise: Exercise, loops: number): void {
+    if (this.calibrating) return;
+    this.preview.stop();
+    this.endSession();
+    this.metronome.stop();
+    this.live.resetSession();
+    this.learning = new LearnSession(exercise, loops);
+  }
+
+  /** The wait-mode run, active or finished, or null. */
+  get learn(): LearnSession | null {
+    return this.learning;
+  }
+
+  endLearn(): void {
+    this.learning = null;
+  }
+
+  /** Which pads the kit view should light at `now`: wait mode's step, or the session's next notes from the count-in on. */
   cuesAt(now: number): PadCue[] {
+    if (this.learning) return this.learning.cues();
     const session = this.playAlong;
     if (!session || !this.metronome.running) return [];
     return cuesAt(session.upcomingNotes(), now - this.scoring.latencyOffsetMs, this.cueLeadMs);
@@ -176,6 +201,7 @@ export class Coach {
    */
   async startPreview(exercise: Exercise, bpm: number, onEnd: () => void): Promise<void> {
     if (this.calibrating) return;
+    this.endLearn();
     this.endSession();
     this.metronome.stop();
     const ctx = await this.metronome.audioContext();
@@ -185,6 +211,7 @@ export class Coach {
 
   /** Starts a calibration run for a skill level. Call from a user gesture. */
   async startCalibration(level: SkillLevel): Promise<void> {
+    this.endLearn();
     this.preview.stop();
     this.metronome.stop();
     this.restoreSettings();
@@ -244,7 +271,9 @@ export class Coach {
     const mapping = lookupNote(event.note);
     // The module's own open/closed choice tells which end of the pedal's range means "pressed".
     if (mapping?.pad === "hihat") this.live.hihatPedal.learn(mapping.zone.includes("open"));
-    this.playAlong?.hit({ pad: mapping?.pad ?? null, zone: mapping?.zone ?? null, time, velocity: event.velocity });
+    const played = { pad: mapping?.pad ?? null, zone: mapping?.zone ?? null, time, velocity: event.velocity };
+    this.playAlong?.hit(played);
+    this.learning?.hit(played);
     if (this.calibration) {
       this.calibration.addHit(time);
       if (this.calibration.finished) this.stopCalibrationClicks();
