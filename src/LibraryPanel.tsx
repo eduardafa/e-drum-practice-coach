@@ -6,14 +6,17 @@ import { formatTimeSignature, tabOf, type TabCell } from "./exercises/tab";
 import type { Exercise } from "./exercises/types";
 import { displayedExercise } from "./handedness";
 import { useHandedness } from "./HandednessContext";
+import { SONG_EXTENSIONS } from "./songs/song";
 
-type Filter = "all" | Exercise["category"];
+/** An exercise category, everything, or the songs opener. */
+type Filter = "all" | Exercise["category"] | "songs";
 
 const FILTERS: readonly { id: Filter; label: string }[] = [
   { id: "all", label: "All" },
   { id: "first-steps", label: "First steps" },
   { id: "groove", label: "Grooves" },
   { id: "rudiment", label: "Rudiments" },
+  { id: "songs", label: "Songs" },
 ];
 
 interface Props {
@@ -26,6 +29,12 @@ interface Props {
   onPreview: (exercise: Exercise, bpm: number) => void;
   onStopPreview: () => void;
   onSelect: (id: string | null) => void;
+  /** Opens an audio file the drummer picked, to play along to. */
+  onOpenSong: (file: File) => void;
+  /** While a picked song is being decoded. */
+  songLoading: boolean;
+  /** Why the last picked file couldn't be opened, or null. */
+  songError: string | null;
   onClose: () => void;
 }
 
@@ -42,6 +51,9 @@ export function LibraryPanel({
   onPreview,
   onStopPreview,
   onSelect,
+  onOpenSong,
+  songLoading,
+  songError,
   onClose,
 }: Props) {
   const [filter, setFilter] = useState<Filter>("all");
@@ -85,27 +97,33 @@ export function LibraryPanel({
           Just the metronome
         </button>
       </fieldset>
-      <ul className="library-list">
-        {shown.map((exercise) => (
-          <ExerciseCard
-            key={exercise.id}
-            exercise={exercise}
-            bpm={startingTempo(exercise, tempos)}
-            remembered={tempos[exercise.id] !== undefined}
-            selected={exercise.id === selectedId}
-            previewing={exercise.id === previewingId}
-            player={player}
-            onPreview={onPreview}
-            onStopPreview={onStopPreview}
-            onSelect={onSelect}
-          />
-        ))}
-      </ul>
-      <p className="hint">
-        In the patterns, green is an accent (play it louder), faint is a ghost note (very quiet) and an outline is an
-        open hi-hat. Listen plays one loop with a click on every beat. Choosing an exercise sets the metronome to fit
-        it, at your last tempo for it or its suggested tempo.
-      </p>
+      {filter === "songs" ? (
+        <SongOpener onOpen={onOpenSong} loading={songLoading} error={songError} />
+      ) : (
+        <>
+          <ul className="library-list">
+            {shown.map((exercise) => (
+              <ExerciseCard
+                key={exercise.id}
+                exercise={exercise}
+                bpm={startingTempo(exercise, tempos)}
+                remembered={tempos[exercise.id] !== undefined}
+                selected={exercise.id === selectedId}
+                previewing={exercise.id === previewingId}
+                player={player}
+                onPreview={onPreview}
+                onStopPreview={onStopPreview}
+                onSelect={onSelect}
+              />
+            ))}
+          </ul>
+          <p className="hint">
+            In the patterns, green is an accent (play it louder), faint is a ghost note (very quiet) and an outline is an
+            open hi-hat. Listen plays one loop with a click on every beat. Choosing an exercise sets the metronome to fit
+            it, at your last tempo for it or its suggested tempo.
+          </p>
+        </>
+      )}
     </section>
   );
 }
@@ -235,6 +253,35 @@ function TabPreview({ exercise, player }: { exercise: Exercise; player: PreviewP
         </div>
       )}
       <div ref={cursorRef} className="tab-cursor" hidden />
+    </div>
+  );
+}
+
+/** The Songs tab: open an audio file from this computer. It's played here and never uploaded. */
+function SongOpener({ onOpen, loading, error }: { onOpen: (file: File) => void; loading: boolean; error: string | null }) {
+  return (
+    <div className="song-opener">
+      <p>
+        Open a song you own from your computer and play along to it. MP3, M4A, WAV, OGG and FLAC files work.
+      </p>
+      <label className={`song-open-button ${loading ? "busy" : ""}`}>
+        {loading ? "Opening…" : "Open a song…"}
+        <input
+          type="file"
+          accept={SONG_EXTENSIONS.map((e) => `.${e}`).join(",") + ",audio/*"}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (file) onOpen(file);
+          }}
+        />
+      </label>
+      {error && <p className="hint warn-note">{error}</p>}
+      <p className="hint">
+        Your song stays on your computer: it's opened and played in this browser and never uploaded. Streaming
+        services (Spotify, Apple Music, YouTube) can't be opened, since their audio is locked; songs you bought as
+        downloads usually can.
+      </p>
     </div>
   );
 }
