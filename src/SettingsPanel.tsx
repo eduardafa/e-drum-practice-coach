@@ -1,4 +1,5 @@
 import { useRef, useState, type KeyboardEvent } from "react";
+import { formatVolume, MAX_VOLUME, MIN_VOLUME } from "./audio/volume";
 import { isSubdivision, type MetronomeSettings } from "./audio/schedule";
 import { ThemeSetting } from "./ThemeSetting";
 import { isAccuracyMode, type AccuracyMode } from "./playalong/results";
@@ -143,13 +144,18 @@ export function SettingsPanel({
             <span>Volume</span>
             <input
               type="range"
-              min={0}
-              max={1}
+              min={MIN_VOLUME}
+              max={MAX_VOLUME}
               step={0.05}
               value={volume}
               onChange={(e) => onVolumeChange(Number(e.target.value))}
             />
+            <span className="unit">{formatVolume(volume)}</span>
           </label>
+          <p className="hint">
+            Above 100% the click is boosted. If it's still hard to hear, turn up your computer's volume or use
+            headphones.
+          </p>
         </div>
       )}
 
