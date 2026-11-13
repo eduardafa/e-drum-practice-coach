@@ -149,8 +149,8 @@ body,
   left: 12px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 12px;
+  gap: 14px;
+  padding: 8px 16px;
   pointer-events: none;
   border-radius: 999px;
   background: color-mix(in srgb, var(--panel) 85%, transparent);
