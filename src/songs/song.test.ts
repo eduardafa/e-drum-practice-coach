@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkSongFile, formatDuration, MAX_SONG_BYTES, songFingerprint, songTitle, waveformPeaks } from "./song";
+import { checkSongFile, formatDuration, MAX_SONG_BYTES, songFingerprint, songTitle, tabSearchUrl, waveformPeaks } from "./song";
 
 describe("checkSongFile", () => {
   it("accepts common audio files, whatever the case of the extension", () => {
@@ -59,5 +59,25 @@ describe("songFingerprint", () => {
   it("differs for different audio or a different length", () => {
     expect(songFingerprint(tone(220, 12), sr)).not.toBe(songFingerprint(tone(330, 12), sr));
     expect(songFingerprint(tone(220, 12), sr)).not.toBe(songFingerprint(tone(220, 13), sr));
+  });
+});
+
+/** The search words a tab link sends. */
+const query = (title: string) => new URL(tabSearchUrl(title)).searchParams.get("pattern");
+
+describe("tabSearchUrl", () => {
+  it("searches Songsterr for the song's name", () => {
+    expect(tabSearchUrl("Back in Black")).toBe("https://www.songsterr.com/?pattern=Back%20in%20Black");
+  });
+
+  it("cleans up a file name: underscores and a leading track number", () => {
+    expect(query("04_Ghosts_I")).toBe("Ghosts I");
+    expect(query("1. Seven Nation Army")).toBe("Seven Nation Army");
+    expect(query("12 - Song 2")).toBe("Song 2");
+  });
+
+  it("keeps a name that is only a number, and escapes the rest", () => {
+    expect(query("1979")).toBe("1979");
+    expect(query("AC/DC & Friends?")).toBe("AC/DC & Friends?");
   });
 });

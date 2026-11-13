@@ -4,7 +4,7 @@ import { SONG_VOLUME, type Coach } from "./live/coach";
 import { GET_READY_OPTIONS } from "./playalong/getReady";
 import { releasing } from "./releasing";
 import type { BeatGrid } from "./songs/beats";
-import { formatDuration } from "./songs/song";
+import { formatDuration, tabSearchUrl } from "./songs/song";
 
 export interface OpenSong {
   title: string;
@@ -175,6 +175,15 @@ export function SongPanel({
         <span ref={timeRef} className="song-time">
           0:00 / {formatDuration(song.duration)}
         </span>
+        <a
+          className="song-tab-link"
+          href={tabSearchUrl(song.title)}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Search Songsterr for this song's drum tab, in a new tab. Only the song's name is sent."
+        >
+          Find the drum tab
+        </a>
       </div>
       <div className="song-wave">
         <svg viewBox={`0 -1 ${song.peaks.length} 2`} preserveAspectRatio="none" aria-hidden>
