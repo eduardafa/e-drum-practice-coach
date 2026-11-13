@@ -7,6 +7,8 @@ import type { NoteResult } from "./playalong/matcher";
 import { GET_READY_OPTIONS } from "./playalong/getReady";
 import { SESSION_LOOPS, type SessionPhase } from "./playalong/session";
 import { releasing } from "./releasing";
+import { displayedExercise } from "./handedness";
+import { useHandedness } from "./HandednessContext";
 
 /** Pick the position one frame ahead, as the live count does: a frame is painted ~16 ms after it's chosen. */
 const PAINT_LOOKAHEAD_MS = 16;
@@ -89,11 +91,14 @@ export function NotationStrip({
   const [layout, setLayout] = useState<StaffLayout | null>(null);
   const [status, setStatus] = useState<Status>("idle");
   const scoreStyle = useMemo(() => ({ maxWidth: layout ? layout.width * MAX_SCALE : undefined }), [layout]);
+  // Sticking and description as played on the drummer's kit. Same notes in the same order, so marks still line up.
+  const handedness = useHandedness();
+  const shown = useMemo(() => exercise && displayedExercise(exercise, handedness), [exercise, handedness]);
 
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
-    if (!exercise) {
+    if (!shown) {
       host.replaceChildren();
       return;
     }
@@ -104,7 +109,7 @@ export function NotationStrip({
         const engraver = await import("./notation/engrave");
         await engraver.loadNotationFonts();
         if (canceled) return;
-        setLayout(engraver.engraveExercise(exercise, host));
+        setLayout(engraver.engraveExercise(shown, host));
         setStatus("ready");
       } catch (error) {
         console.error(error);
@@ -117,7 +122,7 @@ export function NotationStrip({
       setLayout(null);
       setStatus("idle");
     };
-  }, [exercise]);
+  }, [shown]);
 
   useEffect(() => {
     const playhead = playheadRef.current;
@@ -252,8 +257,8 @@ export function NotationStrip({
             ? `${trainerStatus ?? ""}${sessionStatus(session)}`
             : trainerStatus !== null
               ? trainerStatus
-            : exercise
-              ? `${exercise.description} Suggested ${exercise.tempo.suggested} BPM.`
+            : shown
+              ? `${shown.description} Suggested ${shown.tempo.suggested} BPM.`
               : "Choose a groove or rudiment to see it as drum notation, hear it, and play along."}
         </p>
       </div>

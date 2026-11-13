@@ -10,6 +10,7 @@ import {
 } from "./history/limbs";
 import type { HistoryRecord } from "./history/record";
 import { NITRO_MAX_PADS } from "./kit/nitroMax";
+import { useHandedness } from "./HandednessContext";
 
 interface Props {
   records: readonly HistoryRecord[];
@@ -28,7 +29,8 @@ interface Row {
 
 /** Timing per hand, foot and pad over the chosen range, with the biggest tendency in words. */
 export function TimingSection({ records, from }: Props) {
-  const stats = timingStats(records, from);
+  const handedness = useHandedness();
+  const stats = timingStats(records, from, handedness);
   const { headline, tip } = describeTendency(tendency(stats.limbs));
 
   const limbRows: Row[] = LIMBS.flatMap(({ id, label }) => {
@@ -53,8 +55,10 @@ export function TimingSection({ records, from }: Props) {
       </div>
       <TimingRows rows={limbRows} />
       <p className="hint">
-        Grooves assume a right-handed setup: hi-hat, ride and crash with the right hand, snare with the left, kick
-        with the right foot and hi-hat pedal with the left. Rudiments use their written sticking.
+        {handedness === "right"
+          ? "Grooves assume a right-handed setup: hi-hat, ride and crash with the right hand, snare with the left, kick with the right foot and hi-hat pedal with the left. Rudiments use their written sticking."
+          : "Set up for a left-handed (mirrored) kit: hi-hat, ride and crash with the left hand, snare with the right, kick with the left foot and hi-hat pedal with the right. Rudiments' written sticking is mirrored too (R is your left hand)."}{" "}
+        Change it in Settings → Appearance.
       </p>
       <h4 className="progress-subhead">Timing by pad</h4>
       <TimingRows rows={padRows} />
