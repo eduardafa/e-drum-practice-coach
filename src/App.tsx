@@ -1,4 +1,8 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { coach, historyStore, saved, SIGN_IN_RESULT } from "./appState";
+import { MidiPanel } from "./MidiPanel";
+import { useMidiStatus, useStats } from "./useStats";
+import { DEFAULT_METRONOME } from "./live/coach";
 import { MAX_BPM, MIN_BPM, parseBpm, stepBpm, type MetronomeSettings } from "./audio/schedule";
 import { CalibrationPanel } from "./CalibrationPanel";
 import { KeyboardHint } from "./KeyboardHint";
@@ -10,7 +14,7 @@ import { MapKitPanel } from "./MapKitPanel";
 import { practicePlan, type PlanBlock } from "./history/plan";
 import { PracticePlanBanner, PracticePlanPanel, type RunningPlan } from "./PracticePlan";
 import { MetronomeGuide } from "./MetronomeGuide";
-import { NotationStrip, type LearnView, type SessionView } from "./NotationStrip";
+import { NotationStrip, type SessionView } from "./NotationStrip";
 import { LearnSummary } from "./LearnSummary";
 import type { AccuracyMode } from "./playalong/results";
 import { DEFAULT_GET_READY_SEC } from "./playalong/getReady";
@@ -31,12 +35,8 @@ import { useSync } from "./history/useSync";
 import { localLedger } from "./history/sync";
 import { deleteAccount, deleteSyncedHistory } from "./account/account";
 import { AccountMenu } from "./AccountMenu";
-import { signInResult as readSignInResult } from "./account/account";
 import { sessionRecord, trainerRecord, type HistoryRecord, type SessionRecord } from "./history/record";
-import { HistoryStore } from "./history/store";
 import { formatPracticeTime, practiceTimeOn, streak } from "./history/streak";
-import { Coach, DEFAULT_METRONOME } from "./live/coach";
-import type { MidiStatus } from "./midi/connection";
 import {
   DEFAULT_SKILL_LEVEL,
   levelForTolerance,
@@ -48,8 +48,8 @@ import {
 import { releasing } from "./releasing";
 import { formatDelta, KitRenderer } from "./render/kitRenderer";
 import { SettingsPanel } from "./SettingsPanel";
-import { DEFAULT_SCORING, type ScoringOptions } from "./timing/grid";
-import { loadSettings, saveSettings } from "./settings";
+import type { ScoringOptions } from "./timing/grid";
+import { saveSettings } from "./settings";
 import { DEFAULT_PASS_MARK } from "./playalong/trainer";
 
 /** Keyboard fallback so the app can be tried without a kit. */
@@ -65,85 +65,12 @@ const KEY_TO_NOTE: Record<string, number> = {
   KeyR: 51, // ride
 };
 
-const saved = loadSettings();
 /** The pause between tempo-trainer rounds, to read the score before the next count-in. */
 const BETWEEN_ROUNDS_MS = 3000;
-const coach = new Coach(saved.metronome ?? DEFAULT_METRONOME);
-const historyStore = new HistoryStore();
 
 /** The two pages: practice at /, history at /history. */
 type View = "practice" | "history";
 const viewOf = (path: string): View => (path.replace(/\/+$/, "") === "/history" ? "history" : "practice");
-
-/** Read once: the sign-in redirect lands on /?signin=<result>. */
-const SIGN_IN_RESULT = readSignInResult(window.location.search);
-// A first-time drummer gets the on-time window of their (default) skill level.
-coach.scoring = saved.scoring ?? {
-  ...DEFAULT_SCORING,
-  toleranceMs: SKILL_PROFILES[saved.skillLevel ?? DEFAULT_SKILL_LEVEL].toleranceMs,
-};
-
-function useMidiStatus(): MidiStatus {
-  return useSyncExternalStore(
-    (cb) => coach.midi.onStatus(cb),
-    () => coach.midi.getStatus(),
-  );
-}
-
-interface Stats {
-  scored: number;
-  onTimePct: number | null;
-  meanMs: number | null;
-  spreadMs: number | null;
-  /** The metronome stops by itself when a play-along session ends. */
-  running: boolean;
-  session: (Omit<SessionView, "accuracy"> & { accuracy: Record<AccuracyMode, number | null> }) | null;
-  learn: LearnView | null;
-  /** A note that matched no pad in the last few seconds, to explain why a hit didn't count. */
-  unmappedNote: number | null;
-}
-
-/** How long the "note N isn't a known pad" hint stays after such a hit. */
-const UNMAPPED_HINT_MS = 6000;
-
-function readStats(): Stats {
-  const l = coach.live;
-  const now = performance.now();
-  // Also resolves missed notes when no exercise is drawn to do it every frame.
-  coach.tickSession(now);
-  const session = coach.session;
-  return {
-    scored: l.scoredHits,
-    onTimePct: l.scoredHits ? (100 * l.onTimeHits) / l.scoredHits : null,
-    meanMs: l.scoredHits ? l.sumDeltaMs / l.scoredHits : null,
-    spreadMs: l.spreadMs,
-    running: coach.metronome.running,
-    session: session
-      ? {
-          phase: session.phase,
-          countdown: coach.countdownAt(now),
-          loop: session.currentLoop(now),
-          loops: session.loops,
-          accuracy: session.results().accuracy,
-        }
-      : null,
-    unmappedNote:
-      coach.live.lastUnmapped && now - coach.live.lastUnmapped.time < UNMAPPED_HINT_MS ? coach.live.lastUnmapped.note : null,
-    learn: coach.learn
-      ? { loop: coach.learn.currentLoop, loops: coach.learn.loops, wrongHits: coach.learn.wrongHits, done: coach.learn.done }
-      : null,
-  };
-}
-
-/** Polls the live state a few times a second; per-hit React renders aren't needed. */
-function useStats(): Stats {
-  const [stats, setStats] = useState(readStats);
-  useEffect(() => {
-    const id = setInterval(() => setStats(readStats()), 150);
-    return () => clearInterval(id);
-  }, []);
-  return stats;
-}
 
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -1160,43 +1087,3 @@ export default function App() {
   );
 }
 
-function MidiPanel({ status }: { status: MidiStatus }) {
-  switch (status.state) {
-    case "unsupported":
-      return (
-        <div className="midi warn">
-          This browser doesn't support Web MIDI. Use Chrome, Edge or Firefox.
-        </div>
-      );
-    case "idle":
-      return (
-        <button className="primary" onClick={() => void coach.midi.connect()}>
-          Connect kit
-        </button>
-      );
-    case "requesting":
-      return <div className="midi">Waiting for MIDI permission…</div>;
-    case "denied":
-      return <div className="midi warn">MIDI access denied: {status.message}</div>;
-    case "ready":
-      if (status.devices.length === 0) {
-        return <div className="midi warn">No MIDI devices found. Plug in the kit over USB.</div>;
-      }
-      return (
-        <label className="midi">
-          <span className={`dot ${status.selectedId ? "on" : ""}`} aria-hidden />
-          <select
-            value={status.selectedId ?? ""}
-            onChange={(e) => coach.midi.select(e.target.value || null)}
-          >
-            <option value="">No input</option>
-            {status.devices.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      );
-  }
-}
