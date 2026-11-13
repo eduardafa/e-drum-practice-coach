@@ -21,21 +21,23 @@ export interface SnappedNote {
   tick: number;
   pad: ExerciseNote["pad"];
   open: boolean;
+  /** The tab notes (indexes into tab.notes) written as this one: two strokes snapped to one spot share it. */
+  ids: number[];
 }
 
 const snapTo = (offset: number, step: number) => Math.round(offset / step) * step;
 
 /** The tab's notes on the notation grid, in order; the same pad twice at one spot counts once. */
 export function snapTab(tab: DrumTab): SnappedNote[] {
-  const byBeat = new Map<number, DrumTab["notes"][number][]>();
-  for (const n of tab.notes) {
+  const byBeat = new Map<number, (DrumTab["notes"][number] & { id: number })[]>();
+  tab.notes.forEach((n, id) => {
     const beat = Math.floor(n.beat + 1e-9);
     const list = byBeat.get(beat) ?? [];
-    list.push(n);
+    list.push({ ...n, id });
     byBeat.set(beat, list);
-  }
+  });
   const out: SnappedNote[] = [];
-  const seen = new Set<string>();
+  const seen = new Map<string, SnappedNote>();
   for (const [beat, notes] of byBeat) {
     const offsets = notes.map((n) => (n.beat - beat) * TICKS_PER_QUARTER);
     const error = (step: number) => offsets.reduce((sum, o) => sum + Math.abs(o - snapTo(o, step)), 0);
@@ -44,18 +46,30 @@ export function snapTab(tab: DrumTab): SnappedNote[] {
     notes.forEach((n, i) => {
       const tick = beat * TICKS_PER_QUARTER + snapTo(offsets[i], step);
       const key = `${tick}:${n.pad}`;
-      if (seen.has(key)) return;
-      seen.add(key);
-      out.push({ tick, pad: n.pad, open: n.open });
+      const same = seen.get(key);
+      if (same) {
+        same.ids.push(n.id);
+        return;
+      }
+      const note = { tick, pad: n.pad, open: n.open, ids: [n.id] };
+      seen.set(key, note);
+      out.push(note);
     });
   }
   return out.toSorted((a, b) => a.tick - b.tick || a.pad.localeCompare(b.pad));
 }
 
+const LINE_TICKS = BARS_PER_LINE * BEATS_PER_BAR * TICKS_PER_QUARTER;
+
+/** The snapped notes on line `line`, in order: the exercise tabLine builds has the same notes in the same order. */
+export function lineNotes(notes: readonly SnappedNote[], line: number): SnappedNote[] {
+  const from = line * LINE_TICKS;
+  return notes.filter((n) => n.tick >= from && n.tick < from + LINE_TICKS);
+}
+
 /** Line `line` of the tab as an exercise the notation engraver can draw: BARS_PER_LINE bars of 4/4. */
 export function tabLine(notes: readonly SnappedNote[], line: number): Exercise {
-  const lineTicks = BARS_PER_LINE * BEATS_PER_BAR * TICKS_PER_QUARTER;
-  const from = line * lineTicks;
+  const from = line * LINE_TICKS;
   return {
     id: `tab-line-${line}`,
     name: `Bars ${line * BARS_PER_LINE + 1}–${(line + 1) * BARS_PER_LINE}`,
@@ -64,13 +78,11 @@ export function tabLine(notes: readonly SnappedNote[], line: number): Exercise {
     timeSignature: { beats: BEATS_PER_BAR, unit: 4 },
     bars: BARS_PER_LINE,
     tempo: { min: 20, suggested: 100, max: 300 },
-    notes: notes
-      .filter((n) => n.tick >= from && n.tick < from + lineTicks)
-      .map((n): ExerciseNote => {
-        const note: ExerciseNote = { tick: n.tick - from, pad: n.pad, dynamic: "normal" };
-        if (n.open) note.open = true;
-        return note;
-      }),
+    notes: lineNotes(notes, line).map((n): ExerciseNote => {
+      const note: ExerciseNote = { tick: n.tick - from, pad: n.pad, dynamic: "normal" };
+      if (n.open) note.open = true;
+      return note;
+    }),
   };
 }
 
