@@ -2963,9 +2963,10 @@ button.primary.danger {
 .tab-notation {
   display: grid;
   gap: 2px;
-  /* Capped so two lines leave the kit view room: each line is about 100 px tall at this width. */
+  /* Big enough to read from the drum throne, centered; capped so the kit view keeps its room. */
   width: 100%;
-  max-width: 600px;
+  max-width: 820px;
+  justify-self: center;
 }
 
 .tab-notation-label {
@@ -2989,9 +2990,6 @@ button.primary.danger {
   stroke: currentColor;
 }
 
-.tab-notation-line.next {
-  opacity: 0.45;
-}
 
 /* A tab on its own has no waveform: the timeline is just a thin line to click and drag. */
 .song-panel.tab-only .song-wave {
