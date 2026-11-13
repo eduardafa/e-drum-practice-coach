@@ -26,8 +26,8 @@ interface Props {
   onShowNextPadChange: (show: boolean) => void;
   guideTrack: boolean;
   onGuideTrackChange: (on: boolean) => void;
-  showBigCount: boolean;
-  onShowBigCountChange: (show: boolean) => void;
+  showMetronome: boolean;
+  onShowMetronomeChange: (show: boolean) => void;
   /** The connected kit's MIDI name, or null when none is connected. */
   kitName: string | null;
   /** How many notes the connected kit's recorded map has (0: the standard map). */
@@ -68,8 +68,8 @@ export function SettingsPanel({
   onShowNextPadChange,
   guideTrack,
   onGuideTrackChange,
-  showBigCount,
-  onShowBigCountChange,
+  showMetronome,
+  onShowMetronomeChange,
   kitName,
   kitMapNotes,
   onMapKit,
@@ -168,8 +168,8 @@ export function SettingsPanel({
             <span>Click on subdivisions</span>
           </label>
           <label className="field checkbox">
-            <input type="checkbox" checked={showBigCount} onChange={(e) => onShowBigCountChange(e.target.checked)} />
-            <span>Big count over the kit</span>
+            <input type="checkbox" checked={showMetronome} onChange={(e) => onShowMetronomeChange(e.target.checked)} />
+            <span>Small metronome over the kit</span>
           </label>
           <label className="field">
             <span>Volume</span>

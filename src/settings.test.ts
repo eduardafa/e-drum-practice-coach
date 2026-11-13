@@ -57,9 +57,9 @@ describe("parseSettings", () => {
     expect(parseSettings({ guideTrack: "yes" }).guideTrack).toBeUndefined();
   });
 
-  it("keeps the big-count setting only as a boolean", () => {
-    expect(parseSettings({ showBigCount: false }).showBigCount).toBe(false);
-    expect(parseSettings({ showBigCount: 1 }).showBigCount).toBeUndefined();
+  it("keeps the small-metronome setting only as a boolean", () => {
+    expect(parseSettings({ showMetronome: false }).showMetronome).toBe(false);
+    expect(parseSettings({ showMetronome: 1 }).showMetronome).toBeUndefined();
   });
 
   it("keeps the next-pad setting only as a boolean", () => {

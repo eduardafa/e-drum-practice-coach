@@ -10,7 +10,6 @@ import { MAX_BPM, MIN_BPM, parseBpm, stepBpm, type MetronomeSettings } from "./a
 import { CalibrationPanel } from "./CalibrationPanel";
 import { KeyboardHint } from "./KeyboardHint";
 import { LiveCount } from "./LiveCount";
-import { BigCount } from "./BigCount";
 import { MapKitPanel } from "./MapKitPanel";
 import { SongPanel } from "./SongPanel";
 import { useSong } from "./useSong";
@@ -49,6 +48,7 @@ import {
 import { releasing } from "./releasing";
 import { formatDelta, KitRenderer } from "./render/kitRenderer";
 import { SettingsPanel } from "./SettingsPanel";
+import { SmallMetronome } from "./SmallMetronome";
 import type { ScoringOptions } from "./timing/grid";
 import { saveSettings } from "./settings";
 
@@ -90,7 +90,6 @@ export default function App() {
   const [sessionLoops, setSessionLoops] = useState(saved.sessionLoops ?? DEFAULT_SESSION_LOOPS);
   const [getReadySec, setGetReadySec] = useState(saved.getReadySec ?? DEFAULT_GET_READY_SEC);
   /** For the kit renderer, which reads it every frame outside React. */
-  /** The big count while it's shown, so the kit view can leave room for it. */
   const [accuracyMode, setAccuracyMode] = useState<AccuracyMode>(saved.accuracyMode ?? "partial");
   /** The last tempo used for each exercise, so choosing one again picks up where the drummer left off. */
   const [exerciseTempos, setExerciseTempos] = useState<Record<string, number>>(saved.exerciseTempos ?? {});
@@ -726,7 +725,7 @@ export default function App() {
           )}
           <div className="kit-area">
             <canvas ref={canvasRef} className="kit-canvas" aria-label="Live view of the drum kit" />
-            {prefs.showBigCount && <BigCount coach={coach} ref={prefs.bigCountRef} />}
+            {prefs.showMetronome && <SmallMetronome coach={coach} ref={prefs.metronomeRef} />}
           </div>
           <GetReady coach={coach} />
           {guideOpen && !calibrating && (
@@ -757,8 +756,8 @@ export default function App() {
               onShowNextPadChange={prefs.setShowNextPad}
               guideTrack={prefs.guideTrack}
               onGuideTrackChange={prefs.setGuideTrack}
-              showBigCount={prefs.showBigCount}
-              onShowBigCountChange={prefs.setShowBigCount}
+              showMetronome={prefs.showMetronome}
+              onShowMetronomeChange={prefs.setShowMetronome}
               kitName={kit.kitName}
               kitMapNotes={kit.kitMapNotes}
               onMapKit={kit.start}
