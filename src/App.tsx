@@ -3,17 +3,16 @@ import { coach, historyStore, saved, SIGN_IN_RESULT } from "./appState";
 import { MidiPanel } from "./MidiPanel";
 import { useMidiStatus, useStats } from "./useStats";
 import { usePlayPreferences } from "./usePlayPreferences";
+import { useKitMapping } from "./useKitMapping";
+import { usePracticePlan } from "./usePracticePlan";
 import { DEFAULT_METRONOME } from "./live/coach";
 import { MAX_BPM, MIN_BPM, parseBpm, stepBpm, type MetronomeSettings } from "./audio/schedule";
 import { CalibrationPanel } from "./CalibrationPanel";
 import { KeyboardHint } from "./KeyboardHint";
 import { LiveCount } from "./LiveCount";
 import { BigCount } from "./BigCount";
-import { effectiveMap, KitMapping, type KitMap } from "./kit/kitMap";
-import { loadKitMaps, saveKitMaps } from "./kit/kitMapStore";
 import { MapKitPanel } from "./MapKitPanel";
-import { practicePlan, type PlanBlock } from "./history/plan";
-import { PracticePlanBanner, PracticePlanPanel, type RunningPlan } from "./PracticePlan";
+import { PracticePlanBanner, PracticePlanPanel } from "./PracticePlan";
 import { MetronomeGuide } from "./MetronomeGuide";
 import { NotationStrip, type SessionView } from "./NotationStrip";
 import { LearnSummary } from "./LearnSummary";
@@ -50,7 +49,6 @@ import { formatDelta, KitRenderer } from "./render/kitRenderer";
 import { SettingsPanel } from "./SettingsPanel";
 import type { ScoringOptions } from "./timing/grid";
 import { saveSettings } from "./settings";
-import { DEFAULT_PASS_MARK } from "./playalong/trainer";
 
 /** Keyboard fallback so the app can be tried without a kit. */
 const KEY_TO_NOTE: Record<string, number> = {
@@ -90,15 +88,6 @@ export default function App() {
   const [sessionLoops, setSessionLoops] = useState(saved.sessionLoops ?? DEFAULT_SESSION_LOOPS);
   const [getReadySec, setGetReadySec] = useState(saved.getReadySec ?? DEFAULT_GET_READY_SEC);
   /** For the kit renderer, which reads it every frame outside React. */
-  /** Today's practice: the plan shown before starting, and the plan being run. */
-  const [planOpen, setPlanOpen] = useState(false);
-  const [plan, setPlan] = useState<RunningPlan | null>(null);
-  /** Recorded kit maps by MIDI device name, and whether "Map your kit" is running. */
-  const [kitMaps, setKitMaps] = useState<Record<string, KitMap>>(loadKitMaps);
-  const [mappingKit, setMappingKit] = useState(false);
-  const kitName =
-    midi.state === "ready" && midi.selectedId ? (midi.devices.find((d) => d.id === midi.selectedId)?.name ?? null) : null;
-  const kitMap = kitName === null ? undefined : kitMaps[kitName];
   /** The big count while it's shown, so the kit view can leave room for it. */
   const [accuracyMode, setAccuracyMode] = useState<AccuracyMode>(saved.accuracyMode ?? "partial");
   /** The last tempo used for each exercise, so choosing one again picks up where the drummer left off. */
@@ -315,38 +304,19 @@ export default function App() {
   if (running && !stats.running && stats.session?.phase === "done") setRunning(false);
 
 
-  // The connected kit's recorded map, over the standard one.
-  useEffect(() => {
-    coach.noteMap = effectiveMap(kitMap);
-  }, [kitMap]);
-
-  const startMapping = () => {
+  const kit = useKitMapping(midi, () => {
     setSettingsOpen(false);
     closeLibrary();
     setRunning(false);
-    coach.startMapping();
-    setMappingKit(true);
-  };
-
-  const endMapping = () => {
-    coach.endMapping();
-    setMappingKit(false);
-  };
-
-  const saveMapping = (mapping: KitMapping) => {
-    if (kitName === null) return;
-    const next = { ...kitMaps, [kitName]: mapping.result() };
-    setKitMaps(next);
-    saveKitMaps(next);
-    endMapping();
-  };
-
-  const resetKitMap = () => {
-    if (kitName === null) return;
-    const { [kitName]: _removed, ...rest } = kitMaps;
-    setKitMaps(rest);
-    saveKitMaps(rest);
-  };
+  });
+  // Today's practice. Its actions run on clicks, after the functions they call are defined below.
+  const plan = usePracticePlan(history, accuracyMode, {
+    select: (id) => selectExercise(id),
+    run: (block) => {
+      if (block.mode === "learn") startLearn();
+      else void startSession(metronome.bpm);
+    },
+  });
 
   const stopPreview = () => {
     coach.preview.stop();
@@ -432,8 +402,8 @@ export default function App() {
     if (showTrainer && (trainer?.kind === "setup" || trainer?.kind === "finished")) return closeTrainer;
     if (showResults) return () => coach.endSession();
     if (showLearnSummary) return () => coach.endLearn();
-    if (planOpen) return () => setPlanOpen(false);
-    if (mappingKit) return endMapping;
+    if (plan.open) return plan.close;
+    if (kit.mapping) return kit.end;
     return null;
   };
 
@@ -544,24 +514,6 @@ export default function App() {
     setRunning(true);
   };
 
-  /** Moves today's plan to block `index`: selects its exercise, ready to start. */
-  const goToBlock = (blocks: PlanBlock[], index: number) => {
-    const block = blocks[index];
-    if (!block) return;
-    selectExercise(block.exercise.id);
-    setPlan({ blocks, index, blockStart: performance.now() });
-  };
-
-  const startPlan = () => {
-    setPlanOpen(false);
-    goToBlock(practicePlan(history, accuracyMode, DEFAULT_PASS_MARK), 0);
-  };
-
-  /** Starts the current block's session: Learn or Play along on the block's exercise. */
-  const startBlock = (block: PlanBlock) => {
-    if (block.mode === "learn") startLearn();
-    else void startSession(metronome.bpm);
-  };
 
   /** Wait mode on the current exercise: no click, the kit view shows the pads to hit and waits for them. */
   const startLearn = () => {
@@ -784,10 +736,10 @@ export default function App() {
               onGuideTrackChange={prefs.setGuideTrack}
               showBigCount={prefs.showBigCount}
               onShowBigCountChange={prefs.setShowBigCount}
-              kitName={kitName}
-              kitMapNotes={kitMap ? Object.keys(kitMap).length : 0}
-              onMapKit={startMapping}
-              onResetKitMap={resetKitMap}
+              kitName={kit.kitName}
+              kitMapNotes={kit.kitMapNotes}
+              onMapKit={kit.start}
+              onResetKitMap={kit.reset}
               onCalibrate={() => void startCalibration()}
               onClose={() => setSettingsOpen(false)}
             />
@@ -815,22 +767,22 @@ export default function App() {
               onClose={closeTrainer}
             />
           )}
-          {mappingKit && coach.mapping && kitName !== null && (
+          {kit.mapping && coach.mapping && kit.kitName !== null && (
             <MapKitPanel
               mapping={coach.mapping}
               feedback={coach.mappingFeedback}
-              deviceName={kitName}
+              deviceName={kit.kitName}
               onSkip={() => coach.mapping?.skip()}
-              onSave={() => coach.mapping && saveMapping(coach.mapping)}
+              onSave={() => coach.mapping && kit.save(coach.mapping)}
               onRestart={() => coach.startMapping()}
-              onCancel={endMapping}
+              onCancel={kit.end}
             />
           )}
-          {planOpen && !plan && (
+          {plan.open && !plan.plan && (
             <PracticePlanPanel
-              blocks={practicePlan(history, accuracyMode, DEFAULT_PASS_MARK)}
-              onStart={startPlan}
-              onClose={() => setPlanOpen(false)}
+              blocks={plan.blocks()}
+              onStart={plan.start}
+              onClose={plan.close}
             />
           )}
           {showLearnSummary && exercise && coach.learn && (
@@ -1000,20 +952,20 @@ export default function App() {
                 </div>
               </output>
             )}
-            {plan ? (
+            {plan.plan ? (
               <PracticePlanBanner
-                plan={plan}
+                plan={plan.plan}
                 now={performance.now()}
-                onStartBlock={startBlock}
-                onNext={() => goToBlock(plan.blocks, plan.index + 1)}
-                onEnd={() => setPlan(null)}
+                onStartBlock={plan.run}
+                onNext={plan.next}
+                onEnd={plan.end}
               />
             ) : (
               historyStatus === "ready" && (
                 <button
-                  className={`secondary plan-button ${planOpen ? "selected" : ""}`}
-                  aria-expanded={planOpen}
-                  onClick={releasing(() => setPlanOpen((open) => !open))}
+                  className={`secondary plan-button ${plan.open ? "selected" : ""}`}
+                  aria-expanded={plan.open}
+                  onClick={releasing(plan.toggle)}
                 >
                   Today's practice
                 </button>
