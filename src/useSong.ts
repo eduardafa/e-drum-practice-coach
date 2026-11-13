@@ -8,8 +8,24 @@ import { coach } from "./appState";
 import type { OpenSong } from "./SongPanel";
 import { analyzeSong } from "./songs/analyzeSong";
 import type { BeatGrid } from "./songs/beats";
+import { drumTabFrom } from "./songs/drumTab";
+import { MidiError, readMidiDrums } from "./songs/midiFile";
+import { SONG_VOLUME } from "./live/coach";
+import { tabTimeline } from "./songs/tabSong";
 import { checkSongFile, MAX_SONG_SECONDS, songFingerprint, songTitle, waveformPeaks } from "./songs/song";
 import { loadSongs, remember, saveSongs, type RememberedSong } from "./songs/songStore";
+
+/** A MIDI file bigger than this isn't a drum part. */
+const MAX_TAB_FILE_BYTES = 4 * 1024 * 1024;
+/** A tab on its own has no waveform: a flat line this many slices wide, with its beats drawn on it. */
+const TAB_PEAKS = 800;
+/** The lowest rate an AudioBuffer allows: a silent track only needs a length. */
+const SILENCE_RATE = 3000;
+
+/** A silent track `seconds` long, for a tab practiced without its song. */
+function silence(seconds: number): AudioBuffer {
+  return new AudioBuffer({ length: Math.max(1, Math.ceil(seconds * SILENCE_RATE)), sampleRate: SILENCE_RATE, numberOfChannels: 1 });
+}
 
 /** `beforeOpen` lets App stop a session and close its panels once a song has opened. */
 export function useSong(beforeOpen: () => void) {
@@ -134,8 +150,60 @@ export function useSong(beforeOpen: () => void) {
     });
   };
 
+  /**
+   * Opens a MIDI drum file on its own, to practice without the song: its own
+   * beats, at `speed` of its tempo, played on a silent track of the right
+   * length so everything a song has works on it. Never stored.
+   */
+  const openTab = async (file: File) => {
+    setError(null);
+    if (file.size > MAX_TAB_FILE_BYTES) {
+      setError(`"${file.name}" is too big to be a drum tab.`);
+      return;
+    }
+    try {
+      const part = readMidiDrums(new Uint8Array(await file.arrayBuffer()));
+      const tab = drumTabFrom(part);
+      if (tab.notes.length === 0) {
+        setError(`"${file.name}" has drums, but none on the kit's pads.`);
+        return;
+      }
+      cancelAnalysis.current?.();
+      cancelAnalysis.current = null;
+      setAnalyzing(null);
+      beforeOpen();
+      coach.endSongPlayAlong();
+      const name = songTitle(file.name);
+      const { grid, duration } = tabTimeline(part, tab, 1);
+      coach.song.load(silence(duration));
+      setSong({
+        title: name,
+        duration,
+        peaks: new Float32Array(TAB_PEAKS),
+        fingerprint: `tab:${name}:${file.size}:${file.lastModified}`,
+        grid,
+        found: grid,
+        tab: { name, part, tab, speed: 1 },
+      });
+    } catch (e) {
+      setError(e instanceof MidiError ? `"${file.name}": ${e.message}` : `"${file.name}" couldn't be read.`);
+    }
+  };
+
+  /** Plays the open tab (on its own) at `speed` of its tempo, keeping the place in it. */
+  const setTabSpeed = (speed: number) => {
+    const current = song?.tab;
+    if (!song || !current || current.speed === speed) return;
+    coach.endSongPlayAlong();
+    const place = coach.song.position() * (current.speed / speed);
+    const { grid, duration } = tabTimeline(current.part, current.tab, speed);
+    coach.song.load(silence(duration));
+    coach.song.seek(place, SONG_VOLUME);
+    setSong({ ...song, duration, grid, found: grid, tab: { ...current, speed } });
+  };
+
   /** Removes a song (and its saved beats) from this browser. */
   const forget = (fingerprint: string) => store(remembered.filter((s) => s.fingerprint !== fingerprint));
 
-  return { song, loading, error, analyzing, remembered, open, close, forget, setGrid };
+  return { song, loading, error, analyzing, remembered, open, openTab, setTabSpeed, close, forget, setGrid };
 }

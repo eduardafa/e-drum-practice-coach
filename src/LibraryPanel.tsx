@@ -32,6 +32,8 @@ interface Props {
   onSelect: (id: string | null) => void;
   /** Opens an audio file the drummer picked, to play along to. */
   onOpenSong: (file: File) => void;
+  /** Opens a MIDI drum file to practice on its own, without a song. */
+  onOpenTab: (file: File) => void;
   /** While a picked song is being decoded. */
   songLoading: boolean;
   /** Why the last picked file couldn't be opened, or null. */
@@ -56,6 +58,7 @@ export function LibraryPanel({
   onStopPreview,
   onSelect,
   onOpenSong,
+  onOpenTab,
   songLoading,
   songError,
   recentSongs,
@@ -104,7 +107,7 @@ export function LibraryPanel({
         </button>
       </fieldset>
       {filter === "songs" ? (
-        <SongOpener onOpen={onOpenSong} loading={songLoading} error={songError} recent={recentSongs} onForget={onForgetSong} />
+        <SongOpener onOpen={onOpenSong} onOpenTab={onOpenTab} loading={songLoading} error={songError} recent={recentSongs} onForget={onForgetSong} />
       ) : (
         <>
           <ul className="library-list">
@@ -266,12 +269,14 @@ function TabPreview({ exercise, player }: { exercise: Exercise; player: PreviewP
 /** The Songs tab: open an audio file from this computer. It's played here and never uploaded. */
 function SongOpener({
   onOpen,
+  onOpenTab,
   loading,
   error,
   recent,
   onForget,
 }: {
   onOpen: (file: File) => void;
+  onOpenTab: (file: File) => void;
   loading: boolean;
   error: string | null;
   recent: readonly RememberedSong[];
@@ -295,6 +300,21 @@ function SongOpener({
         />
       </label>
       {error && <p className="hint warn-note">{error}</p>}
+      <div className="tab-opener">
+        <label className="song-open-button secondary-look">
+          Open a drum tab
+          <input
+            type="file"
+            accept=".mid,.midi,audio/midi,audio/x-midi"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (file) onOpenTab(file);
+            }}
+          />
+        </label>
+        <span className="hint">No song file? Practice a drum part from a MIDI file (.mid) on its own, at its own tempo or slower.</span>
+      </div>
       {recent.length > 0 && (
         <div className="recent-songs">
           <h3>Opened before</h3>

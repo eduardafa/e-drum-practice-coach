@@ -347,6 +347,11 @@ export class Coach {
     this.tabSound.cancel();
   }
 
+  /** Turns the click on the song's beats on or off. */
+  setSongClick(on: boolean): void {
+    this.songClickOn = on;
+  }
+
   /** Sets (or clears) the open song's placed drum tab. */
   setSongTab(tab: readonly PlacedNote[] | null): void {
     this.songTab = tab;

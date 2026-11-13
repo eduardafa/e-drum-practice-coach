@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BeatGridTools } from "./BeatGridTools";
+import type { DrumTab } from "./songs/drumTab";
+import type { MidiDrumPart } from "./songs/midiFile";
 import { DrumTabPanel } from "./DrumTabPanel";
 import { SONG_VOLUME, type Coach } from "./live/coach";
 import { GET_READY_OPTIONS } from "./playalong/getReady";
@@ -18,6 +20,8 @@ export interface OpenSong {
   grid: BeatGrid | null;
   /** The beats as the app found them, to go back to after corrections; null while they're being found. */
   found: BeatGrid | null;
+  /** Set when this is a drum tab practiced on its own, with no song: its beats are the file's. */
+  tab?: { name: string; part: MidiDrumPart; tab: DrumTab; speed: number };
 }
 
 /** Beat lines for the waveform, in its 0..peaks coordinates: every beat, with each beat 1 separately. */
@@ -63,6 +67,7 @@ export function SongPanel({
   onGridChange,
   getReadySec,
   onGetReadyChange,
+  onTabSpeed,
   onClose,
 }: {
   coach: Coach;
@@ -74,8 +79,15 @@ export function SongPanel({
   /** Seconds of get-ready countdown before playing along; 0 for none. */
   getReadySec: number;
   onGetReadyChange: (seconds: number) => void;
+  /** For a tab on its own: play it at this fraction of its tempo. */
+  onTabSpeed: (speed: number) => void;
   onClose: () => void;
 }) {
+  const tabOnly = song.tab !== undefined;
+  const fixedTab = useMemo(
+    () => song.tab && { name: song.tab.name, tab: song.tab.tab, speed: song.tab.speed, onSpeed: onTabSpeed },
+    [song.tab, onTabSpeed],
+  );
   /** Playing, and whether it's somewhere in the middle (for "Resume"): React only re-renders when these change. */
   const [playing, setPlaying] = useState(false);
   const [midway, setMidway] = useState(false);
@@ -127,7 +139,7 @@ export function SongPanel({
   return (
     <section className="notation open song-panel" aria-label="Song">
       <div className="notation-header">
-        <span className="notation-label">Song</span>
+        <span className="notation-label">{tabOnly ? "Drum tab" : "Song"}</span>
         <span className="song-title">{song.title}</span>
         {along ? (
           <button className="secondary" onClick={releasing(() => coach.endSongPlayAlong())}>
@@ -167,7 +179,7 @@ export function SongPanel({
               ))}
             </select>
             <button className="secondary" onClick={releasing(onClose)}>
-              Close song
+              {tabOnly ? "Close tab" : "Close song"}
             </button>
           </>
         )}
@@ -177,6 +189,7 @@ export function SongPanel({
         <span ref={timeRef} className="song-time">
           0:00 / {formatDuration(song.duration)}
         </span>
+        {!tabOnly && (
         <a
           className="song-tab-link"
           href={tabSearchUrl(song.title)}
@@ -186,6 +199,7 @@ export function SongPanel({
         >
           Find the drum tab
         </a>
+        )}
       </div>
       <div className="song-wave">
         <svg viewBox={`0 -1 ${song.peaks.length} 2`} preserveAspectRatio="none" aria-hidden>
@@ -218,8 +232,13 @@ export function SongPanel({
         />
       </div>
       {/* A new song starts with no tab: the file belongs to the song it was opened with. */}
-      <DrumTabPanel key={song.fingerprint} coach={coach} grid={song.grid} />
-      {song.grid && !along && (
+      <DrumTabPanel
+        key={song.fingerprint}
+        coach={coach}
+        grid={song.grid}
+        fixed={fixedTab}
+      />
+      {song.grid && !along && !tabOnly && (
         <BeatGridTools
           coach={coach}
           grid={song.grid}
@@ -232,7 +251,9 @@ export function SongPanel({
         {along
           ? "Playing along: every hit is scored against the song's beats (and the counts in between, if you chose them in the side panel). Your numbers are in the side panel and the timing strip."
           : song.grid
-            ? "The lines are the song's beats; the stronger ones are beat 1. Play along starts from the playhead: click the waveform to choose where."
+            ? tabOnly
+              ? "The tab plays at its own tempo; slow it down with Speed. Play along starts from the playhead: click the line above to choose where."
+              : "The lines are the song's beats; the stronger ones are beat 1. Play along starts from the playhead: click the waveform to choose where."
             : "Finding the song's beats: the lines appear on the waveform when it's done. You can listen to the song meanwhile."}
       </p>
     </section>

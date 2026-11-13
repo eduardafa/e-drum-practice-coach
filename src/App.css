@@ -2907,3 +2907,21 @@ button.primary.danger {
   padding: 0;
   min-inline-size: 0;
 }
+
+/* "Open a drum tab" in the Songs tab: next to Open a song, outlined rather than filled. */
+.tab-opener {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.tab-opener .hint {
+  margin: 0;
+}
+
+.song-open-button.secondary-look {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
