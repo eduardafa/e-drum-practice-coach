@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { coach, historyStore, saved, SIGN_IN_RESULT } from "./appState";
+import { MidiPanel } from "./MidiPanel";
 import { useMidiStatus, useStats } from "./useStats";
 import { DEFAULT_METRONOME } from "./live/coach";
 import { MAX_BPM, MIN_BPM, parseBpm, stepBpm, type MetronomeSettings } from "./audio/schedule";
@@ -14,7 +15,6 @@ import { practicePlan, type PlanBlock } from "./history/plan";
 import { PracticePlanBanner, PracticePlanPanel, type RunningPlan } from "./PracticePlan";
 import { MetronomeGuide } from "./MetronomeGuide";
 import { NotationStrip, type SessionView } from "./NotationStrip";
-import type { MidiStatus } from "./midi/connection";
 import { LearnSummary } from "./LearnSummary";
 import type { AccuracyMode } from "./playalong/results";
 import { DEFAULT_GET_READY_SEC } from "./playalong/getReady";
@@ -1087,43 +1087,3 @@ export default function App() {
   );
 }
 
-function MidiPanel({ status }: { status: MidiStatus }) {
-  switch (status.state) {
-    case "unsupported":
-      return (
-        <div className="midi warn">
-          This browser doesn't support Web MIDI. Use Chrome, Edge or Firefox.
-        </div>
-      );
-    case "idle":
-      return (
-        <button className="primary" onClick={() => void coach.midi.connect()}>
-          Connect kit
-        </button>
-      );
-    case "requesting":
-      return <div className="midi">Waiting for MIDI permission…</div>;
-    case "denied":
-      return <div className="midi warn">MIDI access denied: {status.message}</div>;
-    case "ready":
-      if (status.devices.length === 0) {
-        return <div className="midi warn">No MIDI devices found. Plug in the kit over USB.</div>;
-      }
-      return (
-        <label className="midi">
-          <span className={`dot ${status.selectedId ? "on" : ""}`} aria-hidden />
-          <select
-            value={status.selectedId ?? ""}
-            onChange={(e) => coach.midi.select(e.target.value || null)}
-          >
-            <option value="">No input</option>
-            {status.devices.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      );
-  }
-}
