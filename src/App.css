@@ -892,6 +892,15 @@ fieldset.group.play {
   height: auto;
 }
 
+/*
+ * VexFlow draws every stem (grace notes' too) in <g class="vf-stem" stroke="black">,
+ * ignoring the context's currentColor. A CSS property beats an SVG presentation
+ * attribute, so this puts stems back on the text color like the rest of the score.
+ */
+.notation-score .vf-stem {
+  stroke: currentColor;
+}
+
 /* Top and height follow the staff's scale (set by NotationStrip). */
 .playhead {
   position: absolute;
