@@ -317,7 +317,7 @@ function SongOpener({
       <p className="hint">
         Your song stays on your computer: it's opened and played in this browser and never uploaded. Streaming
         services (Spotify, Apple Music, YouTube) can't be opened, since their audio is locked; songs you bought as
-        downloads usually can.
+        downloads usually can. <a href="/privacy">Privacy</a>
       </p>
     </div>
   );

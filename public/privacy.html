@@ -99,12 +99,13 @@
     <main>
       <p><a href="/">← Back to the app</a></p>
       <h1>Privacy</h1>
-      <p class="muted">Last updated November 12, 2026</p>
+      <p class="muted">Last updated November 13, 2026</p>
 
       <div class="summary">
         <p><strong>In short:</strong></p>
         <ul>
           <li>You can practice without an account. Then nothing about you leaves your browser.</li>
+          <li>Songs you open to play along to stay on your computer: they're played and analyzed in your browser and never uploaded, even when you're signed in.</li>
           <li>If you sign in, the app keeps which service you used (GitHub or Google), that service's account number for you, and your name and profile picture from it, to show who's signed in. Never your email.</li>
           <li>No analytics, no ads, no tracking cookies. Nothing is sold, and nothing is shared except a practice summary sent to Anthropic or OpenAI if you ask for AI coaching tips.</li>
         </ul>
@@ -113,11 +114,21 @@
       <h2>Kept in your browser</h2>
       <p>Without an account, all of this stays on your device and is never sent anywhere:</p>
       <ul>
-        <li><strong>Settings:</strong> tempo, metronome, skill level, latency calibration, the exercise on the stand and similar choices.</li>
+        <li><strong>Settings:</strong> tempo, metronome, skill level, latency calibration, the exercise on the stand and similar choices, and your kit's pad map if you used <em>Map your kit</em> (saved under the kit's name).</li>
         <li><strong>Practice history:</strong> each finished session and tempo-trainer run: the exercise, tempo, when and for how long you played, your time zone, and how each note went (its timing and how hard you hit).</li>
         <li><strong>Your kit's signals:</strong> the notes your drum kit sends over MIDI are scored in the browser as you play. They are never recorded or sent, even when you're signed in.</li>
       </ul>
       <p>You can delete your history with <em>Clear history</em> in the History panel, or delete everything by clearing this site's data in your browser.</p>
+
+      <h2>Songs you play along to</h2>
+      <p>When you open a song from your computer, your browser reads the file, plays it and finds its beats itself. <strong>The audio is never uploaded, stored or sent anywhere</strong>, whether or not you're signed in. Opening the song again later means picking the file again.</p>
+      <p>So that a song's beats don't have to be found again, this browser remembers the last 12 songs you opened:</p>
+      <ul>
+        <li>its name (taken from the file name) and length, and when you last opened it</li>
+        <li>its beats: where each beat falls, and which ones are beat 1, as the app found them and as you corrected them</li>
+        <li>a fingerprint to recognize the file next time: a short code worked out from the song's length and its first 10 seconds. The song can't be rebuilt from it.</li>
+      </ul>
+      <p>None of this is synced with your account. To remove a song, press <em>Forget</em> next to it under <em>Opened before</em> in the Songs tab, or clear this site's data in your browser.</p>
 
       <h2>If you sign in</h2>
       <p>Signing in lets your practice history follow you to your other devices. You sign in on GitHub's or Google's own page; the app never sees your password. In return, the app receives and stores:</p>
