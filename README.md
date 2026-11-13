@@ -49,7 +49,7 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
   and profile picture link, and your practice records, never your email. The account menu can delete the
   account and everything synced to it, and clearing history can also delete the synced copy. What's stored and
   how to delete it is on the privacy page (`public/privacy.html`, served at `/privacy`).
-- Coach's notes (allow-listed accounts): on the History page, Claude (Opus 5.5) writes a few beginner-friendly tips
+- Coach's notes (allow-listed accounts): on the History page, Claude (Haiku 5.5, the cheapest) writes a few beginner-friendly tips
   from a summary of the last 30 days' numbers, never raw hits or account details. Limited to 5 a day per account
   and a $5 monthly budget, and the same stats on the same day reuse the stored tips.
 - Progress charts: for each exercise, accuracy and fastest tempo per day (or per week over longer spans) for the

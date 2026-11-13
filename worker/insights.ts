@@ -13,13 +13,14 @@ import Anthropic from "@anthropic-ai/sdk";
 import { sha256Hex } from "./auth/crypto";
 import { json, problem } from "./http";
 
-export const MODEL = "claude-opus-5-5";
+/** The cheapest Claude model by default (owner decision, 2026-11-13); EDU-57 adds a choice. */
+export const MODEL = "claude-haiku-5-5";
 export const DAILY_LIMIT = 5;
 /** $5 a month (owner decision, 2026-11-12). */
 export const MONTHLY_BUDGET_MICROS = 5_000_000;
-/** Claude Opus 5.5 list prices, in millionths of a dollar per token ($4 and $20 per million). */
-const INPUT_MICROS_PER_TOKEN = 4;
-const OUTPUT_MICROS_PER_TOKEN = 20;
+/** Claude Haiku 5.5 list prices for prompts under 100K tokens ($0.10 and $0.50 per million), in millionths of a dollar per token. */
+const INPUT_MICROS_PER_TOKEN = 0.1;
+const OUTPUT_MICROS_PER_TOKEN = 0.5;
 const SUMMARY_MAX_BYTES = 20_000;
 
 export interface Insight {
@@ -99,19 +100,18 @@ export type WriteInsight = (env: Env, summary: string) => Promise<{ insight: Ins
 
 export const writeWithClaude: WriteInsight = async (env, summary) => {
   const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
-  const response = await client.beta.messages.create({
+  // Haiku 5.5 has no server-side refusal fallback; a refusal is reported as a failure below.
+  const response = await client.messages.create({
     model: MODEL,
     max_tokens: 16000,
-    // Opus 5.5 defaults to medium effort; tips from a few numbers don't need more.
+    // Haiku 5.5 defaults to medium effort (set explicitly); tips from a few numbers don't need more.
     output_config: { effort: "medium", format: { type: "json_schema", schema: INSIGHT_SCHEMA } },
-    // If a safety classifier declines, the API retries on a suitable model instead of failing.
-    betas: ["server-side-fallback-2026-07-01"],
-    fallbacks: "default",
     system: SYSTEM,
     messages: [{ role: "user", content: `Here are my practice stats (JSON):\n${summary}` }],
   });
   const { input_tokens, output_tokens } = response.usage;
-  const costMicros = input_tokens * INPUT_MICROS_PER_TOKEN + output_tokens * OUTPUT_MICROS_PER_TOKEN;
+  // Rounded up to whole millionths of a dollar.
+  const costMicros = Math.ceil(input_tokens * INPUT_MICROS_PER_TOKEN + output_tokens * OUTPUT_MICROS_PER_TOKEN);
   if (response.stop_reason === "refusal" || response.stop_reason === "max_tokens") {
     throw new InsightError(`No usable answer (${response.stop_reason})`, costMicros);
   }
