@@ -6,7 +6,8 @@ import { formatTimeSignature, tabOf, type TabCell } from "./exercises/tab";
 import type { Exercise } from "./exercises/types";
 import { displayedExercise } from "./handedness";
 import { useHandedness } from "./HandednessContext";
-import { SONG_EXTENSIONS } from "./songs/song";
+import { formatDuration, SONG_EXTENSIONS } from "./songs/song";
+import type { RememberedSong } from "./songs/songStore";
 
 /** An exercise category, everything, or the songs opener. */
 type Filter = "all" | Exercise["category"] | "songs";
@@ -35,6 +36,9 @@ interface Props {
   songLoading: boolean;
   /** Why the last picked file couldn't be opened, or null. */
   songError: string | null;
+  /** Songs opened before in this browser, newest first. */
+  recentSongs: readonly RememberedSong[];
+  onForgetSong: (fingerprint: string) => void;
   onClose: () => void;
 }
 
@@ -54,6 +58,8 @@ export function LibraryPanel({
   onOpenSong,
   songLoading,
   songError,
+  recentSongs,
+  onForgetSong,
   onClose,
 }: Props) {
   const [filter, setFilter] = useState<Filter>("all");
@@ -98,7 +104,7 @@ export function LibraryPanel({
         </button>
       </fieldset>
       {filter === "songs" ? (
-        <SongOpener onOpen={onOpenSong} loading={songLoading} error={songError} />
+        <SongOpener onOpen={onOpenSong} loading={songLoading} error={songError} recent={recentSongs} onForget={onForgetSong} />
       ) : (
         <>
           <ul className="library-list">
@@ -258,7 +264,19 @@ function TabPreview({ exercise, player }: { exercise: Exercise; player: PreviewP
 }
 
 /** The Songs tab: open an audio file from this computer. It's played here and never uploaded. */
-function SongOpener({ onOpen, loading, error }: { onOpen: (file: File) => void; loading: boolean; error: string | null }) {
+function SongOpener({
+  onOpen,
+  loading,
+  error,
+  recent,
+  onForget,
+}: {
+  onOpen: (file: File) => void;
+  loading: boolean;
+  error: string | null;
+  recent: readonly RememberedSong[];
+  onForget: (fingerprint: string) => void;
+}) {
   return (
     <div className="song-opener">
       <p>
@@ -277,6 +295,25 @@ function SongOpener({ onOpen, loading, error }: { onOpen: (file: File) => void; 
         />
       </label>
       {error && <p className="hint warn-note">{error}</p>}
+      {recent.length > 0 && (
+        <div className="recent-songs">
+          <h3>Opened before</h3>
+          <ul>
+            {recent.map((s) => (
+              <li key={s.fingerprint}>
+                <span className="recent-song-title">{s.title}</span>
+                <span className="recent-song-meta">
+                  {formatDuration(s.duration)} · ≈ {Math.round(s.grid.bpm)} BPM
+                </span>
+                <button className="link-button" onClick={() => onForget(s.fingerprint)} aria-label={`Forget ${s.title}`}>
+                  Forget
+                </button>
+              </li>
+            ))}
+          </ul>
+          <p className="hint">Pick one of these files again to open it: its beats come back at once, with no waiting.</p>
+        </div>
+      )}
       <p className="hint">
         Your song stays on your computer: it's opened and played in this browser and never uploaded. Streaming
         services (Spotify, Apple Music, YouTube) can't be opened, since their audio is locked; songs you bought as

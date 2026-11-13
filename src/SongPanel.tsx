@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SONG_VOLUME, type Coach } from "./live/coach";
 import { releasing } from "./releasing";
+import type { BeatGrid } from "./songs/beats";
 import { formatDuration } from "./songs/song";
 
 export interface OpenSong {
@@ -10,6 +11,28 @@ export interface OpenSong {
   peaks: Float32Array;
   /** Recognizes this song again later, without storing its audio. */
   fingerprint: string;
+  /** Its beats, once found (or saved from before); null while they're being found. */
+  grid: BeatGrid | null;
+}
+
+/** Beat lines for the waveform, in its 0..peaks coordinates: every beat, with each beat 1 separately. */
+function beatLines(grid: BeatGrid, duration: number, width: number): { beats: string; downbeats: string } {
+  let beats = "", downbeats = "";
+  grid.beats.forEach((t, i) => {
+    const x = ((t / duration) * width).toFixed(2);
+    if ((i - grid.firstDownbeat) % 4 === 0 && i >= grid.firstDownbeat) downbeats += `M${x} -1V1`;
+    else beats += `M${x} -1V1`;
+  });
+  return { beats, downbeats };
+}
+
+/** The progress bar's fill; a new object only when the whole-percent value changes. */
+const analysisStyles = new Map<number, { width: string }>();
+function analysisStyle(done: number): { width: string } {
+  const pct = Math.floor(done * 100);
+  let style = analysisStyles.get(pct);
+  if (!style) analysisStyles.set(pct, (style = { width: `${pct}%` }));
+  return style;
 }
 
 /** The waveform as one SVG path: a mirrored bar per peak, drawn in a 0..peaks × -1..1 box. */
@@ -27,7 +50,18 @@ function waveformPath(peaks: Float32Array): string {
  * with a playhead, play / pause, and click, drag or arrow keys to move around.
  * The position comes from the player's audio clock every frame.
  */
-export function SongPanel({ coach, song, onClose }: { coach: Coach; song: OpenSong; onClose: () => void }) {
+export function SongPanel({
+  coach,
+  song,
+  analyzing,
+  onClose,
+}: {
+  coach: Coach;
+  song: OpenSong;
+  /** Finding the beats: 0 to 1, or null when not running. */
+  analyzing: number | null;
+  onClose: () => void;
+}) {
   /** Playing, and whether it's somewhere in the middle (for "Resume"): React only re-renders when these change. */
   const [playing, setPlaying] = useState(false);
   const [midway, setMidway] = useState(false);
@@ -37,6 +71,10 @@ export function SongPanel({ coach, song, onClose }: { coach: Coach; song: OpenSo
   const headRef = useRef<HTMLDivElement>(null);
   const timeRef = useRef<HTMLSpanElement>(null);
   const path = useMemo(() => waveformPath(song.peaks), [song.peaks]);
+  const lines = useMemo(
+    () => (song.grid ? beatLines(song.grid, song.duration, song.peaks.length) : null),
+    [song.grid, song.duration, song.peaks.length],
+  );
 
   // Every frame, outside React (like the notation's playhead): move the playhead, the played part and the time.
   useEffect(() => {
@@ -75,6 +113,9 @@ export function SongPanel({ coach, song, onClose }: { coach: Coach; song: OpenSo
         <button className="secondary" onClick={releasing(onClose)}>
           Close song
         </button>
+        <span className="song-tempo">
+          {song.grid ? `≈ ${Math.round(song.grid.bpm)} BPM` : analyzing !== null ? `Finding the beats… ${Math.floor(analyzing * 100)}%` : ""}
+        </span>
         <span ref={timeRef} className="song-time">
           0:00 / {formatDuration(song.duration)}
         </span>
@@ -82,7 +123,14 @@ export function SongPanel({ coach, song, onClose }: { coach: Coach; song: OpenSo
       <div className="song-wave">
         <svg viewBox={`0 -1 ${song.peaks.length} 2`} preserveAspectRatio="none" aria-hidden>
           <path d={path} className="song-wave-all" />
+          {lines && <path d={lines.beats} className="song-beat" />}
+          {lines && <path d={lines.downbeats} className="song-downbeat" />}
         </svg>
+        {analyzing !== null && (
+          <div className="song-analyzing" aria-hidden>
+            <div style={analysisStyle(analyzing)} />
+          </div>
+        )}
         <div ref={playedRef} className="song-wave-played" aria-hidden>
           <svg ref={playedSvgRef} viewBox={`0 -1 ${song.peaks.length} 2`} preserveAspectRatio="none">
             <path d={path} />
@@ -103,8 +151,9 @@ export function SongPanel({ coach, song, onClose }: { coach: Coach; song: OpenSo
         />
       </div>
       <p className="hint">
-        Playing along to the song with scoring comes next. For now, play the song and drum along freely: your hits
-        still light up the kit.
+        {song.grid
+          ? "The lines are the beats the app found; the stronger ones are beat 1. Scoring against them comes next: for now, drum along freely."
+          : "Finding the song's beats. You can already play it."}
       </p>
     </section>
   );

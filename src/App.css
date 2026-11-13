@@ -2702,3 +2702,67 @@ button.primary.danger {
   height: 1px;
   opacity: 0;
 }
+
+/* Beats on the song's waveform (beat 1 stronger), the tempo, and finding-the-beats progress. */
+.song-wave .song-beat {
+  stroke: var(--text);
+  stroke-opacity: 0.18;
+}
+
+.song-wave .song-downbeat {
+  stroke: var(--downbeat);
+  stroke-opacity: 0.7;
+  stroke-width: 1.2;
+}
+
+.song-tempo {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.song-analyzing {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 4px;
+  background: var(--tint);
+}
+
+.song-analyzing > div {
+  height: 100%;
+  background: var(--accent);
+}
+
+.recent-songs h3 {
+  margin: 8px 0 4px;
+}
+
+.recent-songs ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.recent-songs li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.recent-song-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-song-meta {
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
