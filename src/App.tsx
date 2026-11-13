@@ -692,6 +692,7 @@ export default function App() {
               song={songs.song}
               analyzing={songs.analyzing}
               onGridChange={songs.setGrid}
+              onTabSpeed={songs.setTabSpeed}
               getReadySec={getReadySec}
               onGetReadyChange={setGetReadySec}
               onClose={songs.close}
@@ -776,6 +777,7 @@ export default function App() {
               onStopPreview={stopPreview}
               onSelect={selectExercise}
               onOpenSong={(file) => void songs.open(file)}
+              onOpenTab={(file) => void songs.openTab(file)}
               songLoading={songs.loading}
               songError={songs.error}
               recentSongs={songs.remembered}

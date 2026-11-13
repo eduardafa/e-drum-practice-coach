@@ -5,6 +5,7 @@ import { releasing } from "./releasing";
 import type { BeatGrid } from "./songs/beats";
 import { drumTabFrom, guessShift, placeTab, type DrumTab, type PlacedNote } from "./songs/drumTab";
 import { MidiError, readMidiDrums } from "./songs/midiFile";
+import { TAB_SPEEDS } from "./songs/tabSong";
 import { onThemeChange, withColorProbe } from "./theme";
 
 /** A MIDI file bigger than this isn't a drum part. */
@@ -26,11 +27,25 @@ interface OpenTab {
  * like, drawn as a scrolling tab, and lighting the next pads on the kit while
  * the song plays. The file is read here and never uploaded or kept.
  */
-export function DrumTabPanel({ coach, grid }: { coach: Coach; grid: BeatGrid | null }) {
-  const [open, setOpen] = useState<OpenTab | null>(null);
+export function DrumTabPanel({
+  coach,
+  grid,
+  fixed,
+}: {
+  coach: Coach;
+  grid: BeatGrid | null;
+  /**
+   * A tab practiced on its own: `grid` is its own beats, so there's nothing to
+   * line up or swap; its sounds are on by default, with a click and a speed.
+   */
+  fixed?: OpenTab & { speed: number; onSpeed: (speed: number) => void };
+}) {
+  const [picked, setOpen] = useState<OpenTab | null>(null);
+  const open = fixed ?? picked;
   const [shift, setShift] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [hear, setHear] = useState(false);
+  const [hear, setHear] = useState(fixed !== undefined);
+  const [click, setClick] = useState(false);
   const placed = useMemo(() => (open && grid ? placeTab(open.tab, grid, shift) : null), [open, grid, shift]);
 
   // The coach lights the next pads from the placed tab, and plays it when asked.
@@ -42,6 +57,13 @@ export function DrumTabPanel({ coach, grid }: { coach: Coach; grid: BeatGrid | n
     coach.setHearTab(hear);
     return () => coach.setHearTab(false);
   }, [coach, hear]);
+  // On its own, the tab has its own click toggle (a song's is in the beat tools).
+  const onItsOwn = fixed !== undefined;
+  useEffect(() => {
+    if (!onItsOwn) return;
+    coach.setSongClick(click);
+    return () => coach.setSongClick(false);
+  }, [coach, onItsOwn, click]);
 
   const openFile = async (file: File) => {
     setError(null);
@@ -100,21 +122,39 @@ export function DrumTabPanel({ coach, grid }: { coach: Coach; grid: BeatGrid | n
             {open.tab.skipped} {open.tab.skipped === 1 ? "note isn't" : "notes aren't"} on the kit, left out
           </span>
         )}
+        {fixed ? (
+          <select
+            aria-label="Speed"
+            title="Slow the tab down to learn it"
+            value={fixed.speed}
+            onChange={(e) => {
+              e.currentTarget.blur();
+              fixed.onSpeed(Number(e.target.value));
+            }}
+          >
+            {TAB_SPEEDS.map((speed) => (
+              <option key={speed} value={speed}>
+                {speed === 1 ? "Full speed" : `${Math.round(speed * 100)}% speed`}
+              </option>
+            ))}
+          </select>
+        ) : (
         <fieldset className="drum-tab-moves">
-          <legend className="visually-hidden">Line the tab up with the song</legend>
-          <button className="secondary" onClick={releasing(() => setShift((s) => s - 4))} title="Move the tab a bar earlier">
-            Bar earlier
-          </button>
-          <button className="secondary" onClick={releasing(() => setShift((s) => s - 1))} title="Move the tab a beat earlier">
-            Beat earlier
-          </button>
-          <button className="secondary" onClick={releasing(() => setShift((s) => s + 1))} title="Move the tab a beat later">
-            Beat later
-          </button>
-          <button className="secondary" onClick={releasing(() => setShift((s) => s + 4))} title="Move the tab a bar later">
-            Bar later
-          </button>
-        </fieldset>
+            <legend className="visually-hidden">Line the tab up with the song</legend>
+            <button className="secondary" onClick={releasing(() => setShift((s) => s - 4))} title="Move the tab a bar earlier">
+              Bar earlier
+            </button>
+            <button className="secondary" onClick={releasing(() => setShift((s) => s - 1))} title="Move the tab a beat earlier">
+              Beat earlier
+            </button>
+            <button className="secondary" onClick={releasing(() => setShift((s) => s + 1))} title="Move the tab a beat later">
+              Beat later
+            </button>
+            <button className="secondary" onClick={releasing(() => setShift((s) => s + 4))} title="Move the tab a bar later">
+              Bar later
+            </button>
+          </fieldset>
+        )}
         <button
           className={`secondary ${hear ? "selected" : ""}`}
           aria-pressed={hear}
@@ -123,10 +163,23 @@ export function DrumTabPanel({ coach, grid }: { coach: Coach; grid: BeatGrid | n
         >
           Hear the tab
         </button>
-        {picker("Another tab", "link-button drum-tab-open")}
-        <button className="link-button" onClick={releasing(() => setOpen(null))}>
-          Remove tab
-        </button>
+        {fixed ? (
+          <button
+            className={`secondary ${click ? "selected" : ""}`}
+            aria-pressed={click}
+            title="A click on every beat, higher on beat 1"
+            onClick={releasing(() => setClick((on) => !on))}
+          >
+            Click
+          </button>
+        ) : (
+          <>
+            {picker("Another tab", "link-button drum-tab-open")}
+            <button className="link-button" onClick={releasing(() => setOpen(null))}>
+              Remove tab
+            </button>
+          </>
+        )}
       </div>
       {error && <p className="hint warn-note">{error}</p>}
       {placed && grid ? (
