@@ -16,6 +16,13 @@ describe("positionAt", () => {
   });
 });
 
+describe("positionAt before a delayed start", () => {
+  it("stays where playback will start until it does", () => {
+    expect(positionAt({ offset: 30, startedAt: 100 }, 97, 200)).toBe(30);
+    expect(positionAt({ offset: 30, startedAt: 100 }, 101.5, 200)).toBe(31.5);
+  });
+});
+
 describe("audioTimeAt", () => {
   it("maps a song position to the audio clock while playing", () => {
     expect(audioTimeAt({ offset: 10, startedAt: 100 }, 12.5)).toBe(102.5);

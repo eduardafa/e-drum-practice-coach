@@ -18,9 +18,9 @@ export interface LiveCountState {
 const PAINT_LOOKAHEAD_MS = 16;
 
 function readLiveCount(coach: Coach): LiveCountState {
-  const { beatsPerBar, subdivision } = coach.metronome.currentSettings;
+  const { beatsPerBar, subdivision } = coach.countSettings;
   const now = performance.now() + PAINT_LOOKAHEAD_MS;
-  const index = coach.metronome.running ? (currentCount(coach.live.counts, now)?.index ?? null) : null;
+  const index = coach.counting ? (currentCount(coach.live.counts, now)?.index ?? null) : null;
   return { index, beatsPerBar, subdivision };
 }
 

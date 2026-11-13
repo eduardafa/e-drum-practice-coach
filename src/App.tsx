@@ -692,6 +692,8 @@ export default function App() {
               song={songs.song}
               analyzing={songs.analyzing}
               onGridChange={songs.setGrid}
+              getReadySec={getReadySec}
+              onGetReadyChange={setGetReadySec}
               onClose={songs.close}
             />
           ) : (

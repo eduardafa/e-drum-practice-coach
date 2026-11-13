@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BeatGridTools } from "./BeatGridTools";
 import { SONG_VOLUME, type Coach } from "./live/coach";
+import { GET_READY_OPTIONS } from "./playalong/getReady";
 import { releasing } from "./releasing";
 import type { BeatGrid } from "./songs/beats";
 import { formatDuration } from "./songs/song";
@@ -51,13 +52,16 @@ function waveformPath(peaks: Float32Array): string {
 /**
  * An opened song, in the notation's place: its name and length, the waveform
  * with a playhead, play / pause, and click, drag or arrow keys to move around.
- * The position comes from the player's audio clock every frame.
+ * The position comes from the player's audio clock every frame. Play along
+ * scores every hit against the song's beats, from where the playhead is.
  */
 export function SongPanel({
   coach,
   song,
   analyzing,
   onGridChange,
+  getReadySec,
+  onGetReadyChange,
   onClose,
 }: {
   coach: Coach;
@@ -66,11 +70,16 @@ export function SongPanel({
   analyzing: number | null;
   /** The drummer corrected the beats. */
   onGridChange: (grid: BeatGrid) => void;
+  /** Seconds of get-ready countdown before playing along; 0 for none. */
+  getReadySec: number;
+  onGetReadyChange: (seconds: number) => void;
   onClose: () => void;
 }) {
   /** Playing, and whether it's somewhere in the middle (for "Resume"): React only re-renders when these change. */
   const [playing, setPlaying] = useState(false);
   const [midway, setMidway] = useState(false);
+  /** Drumming along, scored (countdown included). */
+  const [along, setAlong] = useState(false);
   const seekRef = useRef<HTMLInputElement>(null);
   const playedRef = useRef<HTMLDivElement>(null);
   const playedSvgRef = useRef<SVGSVGElement>(null);
@@ -100,6 +109,7 @@ export function SongPanel({
       if (seek && document.activeElement !== seek) seek.value = pos.toFixed(1);
       seek?.setAttribute("aria-valuetext", `${formatDuration(pos)} of ${formatDuration(song.duration)}`);
       setPlaying(coach.song.playing);
+      setAlong(coach.playingAlong);
       setMidway(pos > 0 && pos < song.duration);
       coach.tickSongClick(song.grid);
       raf = requestAnimationFrame(loop);
@@ -117,12 +127,48 @@ export function SongPanel({
       <div className="notation-header">
         <span className="notation-label">Song</span>
         <span className="song-title">{song.title}</span>
-        <button className="primary play" onClick={releasing(() => (playing ? coach.song.pause() : void coach.playSong()))}>
-          {playing ? "Pause" : midway ? "Resume" : "Play"}
-        </button>
-        <button className="secondary" onClick={releasing(onClose)}>
-          Close song
-        </button>
+        {along ? (
+          <button className="secondary" onClick={releasing(() => coach.endSongPlayAlong())}>
+            Stop
+          </button>
+        ) : (
+          <>
+            <button
+              className="primary play"
+              disabled={!song.grid}
+              title={song.grid ? "Drum along: every hit is scored against the song's beats" : "Waiting for the song's beats"}
+              onClick={releasing(() => song.grid && void coach.startSongPlayAlong(song.grid, getReadySec))}
+            >
+              Play along
+            </button>
+            <button className="secondary" onClick={releasing(() => (playing ? coach.song.pause() : void coach.playSong()))}>
+              {playing ? "Pause" : midway ? "Resume" : "Listen"}
+            </button>
+            {midway && !playing && (
+              <button className="link-button" onClick={releasing(() => coach.song.seek(0, SONG_VOLUME))}>
+                Back to the start
+              </button>
+            )}
+            <select
+              aria-label="Countdown before playing along"
+              title="Time to get to the kit before the song starts"
+              value={getReadySec}
+              onChange={(e) => {
+                e.currentTarget.blur();
+                onGetReadyChange(Number(e.target.value));
+              }}
+            >
+              {GET_READY_OPTIONS.map((n) => (
+                <option key={n} value={n}>
+                  {n === 0 ? "No countdown" : `${n} s to get ready`}
+                </option>
+              ))}
+            </select>
+            <button className="secondary" onClick={releasing(onClose)}>
+              Close song
+            </button>
+          </>
+        )}
         <span className="song-tempo">
           {song.grid ? `≈ ${Math.round(song.grid.bpm)} BPM` : analyzing !== null ? `Finding the beats… ${Math.floor(analyzing * 100)}%` : ""}
         </span>
@@ -160,7 +206,7 @@ export function SongPanel({
           onInput={(e) => coach.song.seek(Number(e.currentTarget.value), SONG_VOLUME)}
         />
       </div>
-      {song.grid && (
+      {song.grid && !along && (
         <BeatGridTools
           coach={coach}
           grid={song.grid}
@@ -170,9 +216,11 @@ export function SongPanel({
         />
       )}
       <p className="hint">
-        {song.grid
-          ? "The lines are the song's beats; the stronger ones are beat 1. Scoring against them comes next: for now, drum along freely."
-          : "Finding the song's beats: the lines appear on the waveform when it's done. You can listen to the song meanwhile."}
+        {along
+          ? "Playing along: every hit is scored against the song's beats (and the counts in between, if you chose them in the side panel). Your numbers are in the side panel and the timing strip."
+          : song.grid
+            ? "The lines are the song's beats; the stronger ones are beat 1. Play along starts from the playhead: click the waveform to choose where."
+            : "Finding the song's beats: the lines appear on the waveform when it's done. You can listen to the song meanwhile."}
       </p>
     </section>
   );
