@@ -39,6 +39,8 @@ export class LiveState {
   /** Upcoming and recent counts ("1", "&", ...), for the live count. */
   readonly counts: Count[] = [];
   lastHit: LiveHit | null = null;
+  /** The latest note that isn't mapped to any pad, so the app can say why a hit didn't count. */
+  lastUnmapped: { note: number; time: number } | null = null;
 
   /** Running totals of the current metronome session. */
   scoredHits = 0;

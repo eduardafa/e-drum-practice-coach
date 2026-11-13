@@ -4,6 +4,9 @@ import { CalibrationPanel } from "./CalibrationPanel";
 import { KeyboardHint } from "./KeyboardHint";
 import { LiveCount } from "./LiveCount";
 import { BigCount } from "./BigCount";
+import { effectiveMap, KitMapping, type KitMap } from "./kit/kitMap";
+import { loadKitMaps, saveKitMaps } from "./kit/kitMapStore";
+import { MapKitPanel } from "./MapKitPanel";
 import { practicePlan, type PlanBlock } from "./history/plan";
 import { PracticePlanBanner, PracticePlanPanel, type RunningPlan } from "./PracticePlan";
 import { MetronomeGuide } from "./MetronomeGuide";
@@ -96,7 +99,12 @@ interface Stats {
   running: boolean;
   session: (Omit<SessionView, "accuracy"> & { accuracy: Record<AccuracyMode, number | null> }) | null;
   learn: LearnView | null;
+  /** A note that matched no pad in the last few seconds, to explain why a hit didn't count. */
+  unmappedNote: number | null;
 }
+
+/** How long the "note N isn't a known pad" hint stays after such a hit. */
+const UNMAPPED_HINT_MS = 6000;
 
 function readStats(): Stats {
   const l = coach.live;
@@ -119,6 +127,8 @@ function readStats(): Stats {
           accuracy: session.results().accuracy,
         }
       : null,
+    unmappedNote:
+      coach.live.lastUnmapped && now - coach.live.lastUnmapped.time < UNMAPPED_HINT_MS ? coach.live.lastUnmapped.note : null,
     learn: coach.learn
       ? { loop: coach.learn.currentLoop, loops: coach.learn.loops, wrongHits: coach.learn.wrongHits, done: coach.learn.done }
       : null,
@@ -162,6 +172,12 @@ export default function App() {
   /** Today's practice: the plan shown before starting, and the plan being run. */
   const [planOpen, setPlanOpen] = useState(false);
   const [plan, setPlan] = useState<RunningPlan | null>(null);
+  /** Recorded kit maps by MIDI device name, and whether "Map your kit" is running. */
+  const [kitMaps, setKitMaps] = useState<Record<string, KitMap>>(loadKitMaps);
+  const [mappingKit, setMappingKit] = useState(false);
+  const kitName =
+    midi.state === "ready" && midi.selectedId ? (midi.devices.find((d) => d.id === midi.selectedId)?.name ?? null) : null;
+  const kitMap = kitName === null ? undefined : kitMaps[kitName];
   /** The big count while it's shown, so the kit view can leave room for it. */
   const bigCountRef = useRef<HTMLOListElement>(null);
   const showNextPadRef = useRef(showNextPad);
@@ -395,6 +411,39 @@ export default function App() {
     coach.metronome.volume = volume;
   }, [volume]);
 
+  // The connected kit's recorded map, over the standard one.
+  useEffect(() => {
+    coach.noteMap = effectiveMap(kitMap);
+  }, [kitMap]);
+
+  const startMapping = () => {
+    setSettingsOpen(false);
+    closeLibrary();
+    setRunning(false);
+    coach.startMapping();
+    setMappingKit(true);
+  };
+
+  const endMapping = () => {
+    coach.endMapping();
+    setMappingKit(false);
+  };
+
+  const saveMapping = (mapping: KitMapping) => {
+    if (kitName === null) return;
+    const next = { ...kitMaps, [kitName]: mapping.result() };
+    setKitMaps(next);
+    saveKitMaps(next);
+    endMapping();
+  };
+
+  const resetKitMap = () => {
+    if (kitName === null) return;
+    const { [kitName]: _removed, ...rest } = kitMaps;
+    setKitMaps(rest);
+    saveKitMaps(rest);
+  };
+
   const stopPreview = () => {
     coach.preview.stop();
     setPreviewingId(null);
@@ -480,6 +529,7 @@ export default function App() {
     if (showResults) return () => coach.endSession();
     if (showLearnSummary) return () => coach.endLearn();
     if (planOpen) return () => setPlanOpen(false);
+    if (mappingKit) return endMapping;
     return null;
   };
 
@@ -830,6 +880,10 @@ export default function App() {
               onGuideTrackChange={setGuideTrack}
               showBigCount={showBigCount}
               onShowBigCountChange={setShowBigCount}
+              kitName={kitName}
+              kitMapNotes={kitMap ? Object.keys(kitMap).length : 0}
+              onMapKit={startMapping}
+              onResetKitMap={resetKitMap}
               onCalibrate={() => void startCalibration()}
               onClose={() => setSettingsOpen(false)}
             />
@@ -855,6 +909,17 @@ export default function App() {
               onStart={startTrainer}
               onStop={stopTrainer}
               onClose={closeTrainer}
+            />
+          )}
+          {mappingKit && coach.mapping && kitName !== null && (
+            <MapKitPanel
+              mapping={coach.mapping}
+              feedback={coach.mappingFeedback}
+              deviceName={kitName}
+              onSkip={() => coach.mapping?.skip()}
+              onSave={() => coach.mapping && saveMapping(coach.mapping)}
+              onRestart={() => coach.startMapping()}
+              onCancel={endMapping}
             />
           )}
           {planOpen && !plan && (
@@ -1049,6 +1114,12 @@ export default function App() {
                   Today's practice
                 </button>
               )
+            )}
+            {stats.unmappedNote !== null && (
+              <p className="hint warn-note">
+                Your kit sent note {stats.unmappedNote}, which isn't a known pad, so it didn't count. Map your kit in
+                Settings → Appearance.
+              </p>
             )}
             {historyStatus !== "loading" && (
               <div className="practice-line">

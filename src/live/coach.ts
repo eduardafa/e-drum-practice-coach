@@ -13,7 +13,8 @@ import { secondsLeft } from "../playalong/getReady";
 import { LearnSession } from "../playalong/learn";
 import { PlayAlongSession } from "../playalong/session";
 import type { MetronomeSettings } from "../audio/schedule";
-import { lookupNote } from "../kit/nitroMax";
+import { KitMapping, type CaptureResult, type KitMap } from "../kit/kitMap";
+import { lookupNote, NITRO_MAX_NOTE_MAP } from "../kit/nitroMax";
 import { MidiConnection, type TimedMidiEvent } from "../midi/connection";
 import { DEFAULT_SCORING, scoreHit, TimingGrid, type ScoringOptions } from "../timing/grid";
 import type { SkillLevel } from "../profiles";
@@ -50,6 +51,12 @@ export class Coach {
   scoring: ScoringOptions = { ...DEFAULT_SCORING };
   /** Play the exercise's drum sounds along with the click during a session (Settings). */
   guideEnabled = false;
+  /** Which note is which pad: the connected kit's recorded map over the standard one (App sets it). */
+  noteMap: KitMap = NITRO_MAX_NOTE_MAP;
+  /** "Map your kit": while set, notes are recorded for the pad asked for instead of played. */
+  private mappingRun: KitMapping | null = null;
+  /** What happened to the last note during mapping, for the panel to say. */
+  mappingFeedback: CaptureResult | null = null;
   private readonly guide = new GuideTrack();
   /** One loop of the session's exercise as sounds, planned when the session starts. */
   private guidePlan: PreviewPlan | null = null;
@@ -100,6 +107,7 @@ export class Coach {
 
   async startMetronome(): Promise<void> {
     if (this.calibrating) return;
+    this.endMapping();
     this.endLearn();
     this.guide.stop();
     this.preview.stop();
@@ -125,6 +133,7 @@ export class Coach {
    * settings used so the UI can show them. Call from a user gesture.
    */
   async startSession(exercise: Exercise, loops: number, bpm: number, countdownSec = 0): Promise<MetronomeSettings> {
+    this.endMapping();
     this.endLearn();
     this.preview.stop();
     this.metronome.stop();
@@ -151,6 +160,7 @@ export class Coach {
   /** Starts wait mode on an exercise: no metronome, each step waits until its pads are hit. */
   startLearn(exercise: Exercise, loops: number): void {
     if (this.calibrating) return;
+    this.endMapping();
     this.preview.stop();
     this.endSession();
     this.metronome.stop();
@@ -182,8 +192,30 @@ export class Coach {
     this.guide.scheduleLoop(ctx, this.guidePlan, at, this.metronome.volume);
   }
 
-  /** Which pads the kit view should light at `now`: wait mode's step, or the session's next notes from the count-in on. */
+  /** Starts mapping the kit: nothing else runs, and each note is recorded for the pad asked for. */
+  startMapping(): void {
+    if (this.calibrating) return;
+    this.preview.stop();
+    this.endSession();
+    this.endLearn();
+    this.metronome.stop();
+    this.mappingRun = new KitMapping();
+    this.mappingFeedback = null;
+  }
+
+  get mapping(): KitMapping | null {
+    return this.mappingRun;
+  }
+
+  endMapping(): void {
+    this.mappingRun = null;
+    this.mappingFeedback = null;
+  }
+
+  /** Which pads the kit view should light at `now`: the pad to map, wait mode's step, or the session's next notes. */
   cuesAt(now: number): PadCue[] {
+    const target = this.mappingRun?.current;
+    if (target) return [{ pad: target.pad, strength: 1 }];
     if (this.learning) return this.learning.cues();
     const session = this.playAlong;
     if (!session || !this.metronome.running) return [];
@@ -229,6 +261,7 @@ export class Coach {
    */
   async startPreview(exercise: Exercise, bpm: number, onEnd: () => void): Promise<void> {
     if (this.calibrating) return;
+    this.endMapping();
     this.endLearn();
     this.endSession();
     this.metronome.stop();
@@ -239,6 +272,7 @@ export class Coach {
 
   /** Starts a calibration run for a skill level. Call from a user gesture. */
   async startCalibration(level: SkillLevel): Promise<void> {
+    this.endMapping();
     this.endLearn();
     this.preview.stop();
     this.metronome.stop();
@@ -296,7 +330,13 @@ export class Coach {
       return;
     }
     if (event.kind !== "noteOn") return;
-    const mapping = lookupNote(event.note);
+    // Mapping the kit: record the note for the pad asked for, and play nothing.
+    if (this.mappingRun) {
+      this.mappingFeedback = this.mappingRun.capture(event.note);
+      return;
+    }
+    const mapping = lookupNote(event.note, this.noteMap);
+    if (!mapping) this.live.lastUnmapped = { note: event.note, time };
     // The module's own open/closed choice tells which end of the pedal's range means "pressed".
     if (mapping?.pad === "hihat") this.live.hihatPedal.learn(mapping.zone.includes("open"));
     const played = { pad: mapping?.pad ?? null, zone: mapping?.zone ?? null, time, velocity: event.velocity };

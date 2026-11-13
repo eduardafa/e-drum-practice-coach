@@ -2562,3 +2562,23 @@ button.primary.danger {
 .plan-banner.time-up {
   border-color: var(--warn);
 }
+
+/* Map your kit: the instruction is the big thing to read. */
+.map-kit-prompt {
+  margin: 10px 0 4px;
+  font-size: 20px;
+  font-weight: 650;
+}
+
+.map-kit-feedback {
+  display: block;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+}
+
+.map-kit-feedback.warn {
+  background: var(--tint);
+  border-left: 4px solid var(--warn);
+}
