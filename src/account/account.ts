@@ -23,12 +23,14 @@ export type Account =
       provider: Provider;
       name: string | null;
       avatarUrl: string | null;
+      /** On the AI insights allow-list. */
+      insights: boolean;
       providers: Provider[];
     };
 
 /** What /api/me answers (see worker/index.ts). */
 interface MeResponse {
-  user: { id: string; provider: Provider; name: string | null; avatarUrl: string | null } | null;
+  user: { id: string; provider: Provider; name: string | null; avatarUrl: string | null; insights: boolean } | null;
   providers: Provider[];
 }
 
@@ -45,7 +47,7 @@ function parseMe(body: unknown): MeResponse | null {
     const name = typeof user.name === "string" && user.name !== "" ? user.name : null;
     // Only HTTPS pictures, as the server and the CSP allow.
     const avatarUrl = typeof user.avatarUrl === "string" && user.avatarUrl.startsWith("https://") ? user.avatarUrl : null;
-    return { user: { id: user.id, provider: user.provider, name, avatarUrl }, providers };
+    return { user: { id: user.id, provider: user.provider, name, avatarUrl, insights: user.insights === true }, providers };
   }
   return null;
 }

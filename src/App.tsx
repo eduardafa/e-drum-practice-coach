@@ -929,6 +929,7 @@ export default function App() {
             onClear={clearHistory}
             onBack={backToPractice}
             signedIn={account.status === "signed-in"}
+            insights={account.status === "signed-in" && account.insights}
           />
         </main>
       )}

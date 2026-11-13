@@ -8,6 +8,7 @@ import { TimingSection } from "./TimingSection";
 import { PadHeatmap } from "./PadHeatmap";
 import { heatmap } from "./history/heatmap";
 import { releasing } from "./releasing";
+import { InsightsCard } from "./InsightsCard";
 
 export type HistoryStatus = "loading" | "ready" | "off";
 
@@ -22,6 +23,8 @@ interface Props {
   onBack: () => void;
   /** Signed in: history syncs with the account. */
   signedIn: boolean;
+  /** The account may use AI insights. */
+  insights: boolean;
 }
 
 const SCOPE: Record<ProgressRange, string> = { "7d": "the last 7 days", "30d": "the last 30 days", all: "all sessions" };
@@ -62,7 +65,7 @@ function entries(records: readonly HistoryRecord[]): HistoryRecord[] {
  * The History page (/history): the streak and progress in a wide main
  * column, the saved sessions beside it (one column on phones).
  */
-export function HistoryPage({ records, status, accuracyMode, selectedExerciseId, onClear, onBack, signedIn }: Props) {
+export function HistoryPage({ records, status, accuracyMode, selectedExerciseId, onClear, onBack, signedIn, insights }: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   // Arriving on the page, start reading at its title.
   useEffect(() => headingRef.current?.focus(), []);
@@ -130,6 +133,8 @@ export function HistoryPage({ records, status, accuracyMode, selectedExerciseId,
                   ? "Finish a play-along session and it appears here. Days in a row with at least one session make your streak."
                   : "Days in a row with at least one finished session make your streak."}
             </p>
+
+            {insights && sessions > 0 && <InsightsCard records={records} accuracyMode={accuracyMode} />}
 
             {practicedExercises(records).length > 0 && (
               <>
