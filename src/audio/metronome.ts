@@ -50,6 +50,11 @@ export class Metronome {
     return this.ctx;
   }
 
+  /** Where clicks go (volume, then the limiter), once the context exists: other clicks, like a song's, follow the same slider. */
+  get clickOutput(): AudioNode | null {
+    return this.bus;
+  }
+
   get running(): boolean {
     return this.cursor !== null;
   }

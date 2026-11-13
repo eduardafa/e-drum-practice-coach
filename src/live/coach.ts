@@ -5,7 +5,9 @@
 import { Metronome } from "../audio/metronome";
 import { GuideTrack } from "../audio/guideTrack";
 import { PreviewPlayer } from "../audio/previewPlayer";
+import type { BeatGrid } from "../songs/beats";
 import { SongPlayer } from "../songs/player";
+import { SongClick } from "../songs/songClick";
 import { previewPlan, type PreviewPlan } from "../exercises/preview";
 import { subdivisionFor } from "../exercises/practice";
 import type { Exercise } from "../exercises/types";
@@ -43,6 +45,9 @@ export interface SessionTiming {
   durationMs: number;
 }
 
+/** A hit on any pad (or a drum key), at performance.now() time in ms. */
+export type HitListener = (time: number) => void;
+
 export type SessionEndListener = (session: PlayAlongSession, timing: SessionTiming) => void;
 
 export class Coach {
@@ -54,6 +59,10 @@ export class Coach {
   readonly preview = new PreviewPlayer();
   /** A song opened from the drummer's computer; plays on the metronome's audio context. */
   readonly song = new SongPlayer();
+  /** Click on the song's beats while it plays, to check the grid. */
+  songClickOn = false;
+  private readonly songClick = new SongClick();
+  private hitListeners = new Set<HitListener>();
   scoring: ScoringOptions = { ...DEFAULT_SCORING };
   /** Play the exercise's drum sounds along with the click during a session (Settings). */
   guideEnabled = false;
@@ -213,6 +222,22 @@ export class Coach {
     this.song.play(ctx, SONG_VOLUME);
   }
 
+  /** Schedules the song's beat clicks a little ahead; call every frame while the song is shown. */
+  tickSongClick(grid: BeatGrid | null): void {
+    this.songClick.tick(this.metronome.context, this.metronome.clickOutput, this.song, this.songClickOn ? grid : null);
+  }
+
+  /** Silences any song clicks not yet played (the song panel closed). */
+  stopSongClick(): void {
+    this.songClick.cancel();
+  }
+
+  /** Calls `listener` on every hit while subscribed (not while mapping the kit); returns the unsubscribe. */
+  onHit(listener: HitListener): () => void {
+    this.hitListeners.add(listener);
+    return () => this.hitListeners.delete(listener);
+  }
+
   /** Starts mapping the kit: nothing else runs, and each note is recorded for the pad asked for. */
   startMapping(): void {
     if (this.calibrating) return;
@@ -363,6 +388,7 @@ export class Coach {
     if (!mapping) this.live.lastUnmapped = { note: event.note, time };
     // The module's own open/closed choice tells which end of the pedal's range means "pressed".
     if (mapping?.pad === "hihat") this.live.hihatPedal.learn(mapping.zone.includes("open"));
+    for (const listener of this.hitListeners) listener(time);
     const played = { pad: mapping?.pad ?? null, zone: mapping?.zone ?? null, time, velocity: event.velocity };
     this.playAlong?.hit(played);
     this.learning?.hit(played);
