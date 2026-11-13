@@ -166,3 +166,19 @@ describe("formatLean", () => {
     expect(formatLean(0.3)).toBe("on the click");
   });
 });
+
+describe("left-handed kit", () => {
+  it("mirrors every limb: written hands, groove hands and both feet", () => {
+    expect(limbOf({ pad: "snare", hand: "R" }, "left")).toBe("LH");
+    expect(limbOf({ pad: "snare", hand: "L" }, "left")).toBe("RH");
+    expect(limbOf({ pad: "hihat", hand: null }, "left")).toBe("LH");
+    expect(limbOf({ pad: "snare", hand: null }, "left")).toBe("RH");
+    expect(limbOf({ pad: "kick", hand: null }, "left")).toBe("LF");
+    expect(limbOf({ pad: "hihatPedal", hand: null }, "left")).toBe("RF");
+  });
+
+  it("still gives groove toms no hand", () => {
+    expect(limbOf({ pad: "tom1", hand: null }, "left")).toBeNull();
+  });
+});
+

@@ -11,16 +11,22 @@ import { LIMBS, describeTendency, tendency, timingStats, type TimingStat } from 
 import { practicedExercises, progress } from "./progress";
 import type { HistoryRecord } from "./record";
 import { practiceDate, streak } from "./streak";
+import type { Handedness } from "../handedness";
 
 const round = (x: number | null, digits = 0) => (x === null ? null : Number(x.toFixed(digits)));
 
 const timing = (s: TimingStat) => ({ leanMs: round(s.meanMs), spreadMs: round(s.spreadMs), hits: s.hits, missed: s.missed });
 
-export function insightSummary(records: readonly HistoryRecord[], today: Temporal.PlainDate, mode: AccuracyMode) {
+export function insightSummary(
+  records: readonly HistoryRecord[],
+  today: Temporal.PlainDate,
+  mode: AccuracyMode,
+  handedness: Handedness = "right",
+) {
   const from = today.subtract({ days: 30 });
   const recent = records.filter((r) => r.kind === "session" && Temporal.PlainDate.compare(practiceDate(r), from) >= 0);
   const { current, longest, practicedToday } = streak(records, today);
-  const stats = timingStats(records, from);
+  const stats = timingStats(records, from, handedness);
   const heat = heatmap(records, from);
 
   return {
