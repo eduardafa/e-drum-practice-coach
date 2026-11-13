@@ -895,36 +895,68 @@ fieldset.group.play {
   font-size: 13px;
 }
 
-/* Result rings on the noteheads: the latest result of each note. */
+/*
+ * Result marks on the noteheads: the latest result of each note. Sized in
+ * engraved px times the staff's scale, so they grow with the staff; 20 px
+ * engraved is just under the spacing of sixteenth notes, so neighbors don't
+ * overlap. Meant to be read from the drum throne, a couple of meters from the
+ * screen: a thick ring with a tinted, glowing center for hits, and a solid
+ * disc with a cross for misses, so a miss differs by shape as well as by color.
+ */
 .marks {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  --staff-scale: 1;
 }
 
 .mark {
+  --mark-size: max(22px, calc(20px * var(--staff-scale)));
+  --mark-color: transparent;
   position: absolute;
-  width: 20px;
-  height: 20px;
-  margin: -10px 0 0 -10px;
+  width: var(--mark-size);
+  height: var(--mark-size);
+  margin: calc(var(--mark-size) / -2) 0 0 calc(var(--mark-size) / -2);
   border-radius: 50%;
-  border: 2.5px solid transparent;
+  box-sizing: border-box;
+  border: max(4px, calc(3.5px * var(--staff-scale))) solid var(--mark-color);
+  background: color-mix(in srgb, var(--mark-color) 35%, transparent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--mark-color) 70%, transparent);
 }
 
 .mark.onTime {
-  border-color: var(--on-time);
+  --mark-color: var(--on-time);
 }
 
 .mark.early {
-  border-color: var(--early);
+  --mark-color: var(--early);
 }
 
 .mark.late {
-  border-color: var(--late);
+  --mark-color: var(--late);
 }
 
 .mark.missed {
-  border: 2px dashed var(--missed);
+  --mark-color: var(--missed);
+  background: var(--missed);
+}
+
+/* A cross over a miss: two bars in the danger color's ink. */
+.mark.missed::before,
+.mark.missed::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 70%;
+  height: max(3px, calc(2.5px * var(--staff-scale)));
+  border-radius: 2px;
+  background: var(--on-danger);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.mark.missed::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
 }
 
 /* End-of-session results, in the calibration panel's place. */

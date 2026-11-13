@@ -132,6 +132,8 @@ export function NotationStrip({
         scale = now;
         playhead.style.top = `${layout.playheadTop * scale}px`;
         playhead.style.height = `${layout.playheadHeight * scale}px`;
+        // The result marks grow with the staff (see .mark in App.css).
+        markLayer.style.setProperty("--staff-scale", String(scale));
         for (const m of marks) {
           m.el.style.left = `${m.x * scale}px`;
           m.el.style.top = `${m.y * scale}px`;
