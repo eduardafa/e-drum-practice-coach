@@ -7,6 +7,7 @@ import type { BeatGrid } from "./songs/beats";
 import { drumTabFrom, guessShift, placeTab, type DrumTab, type PlacedNote } from "./songs/drumTab";
 import { MidiError, readMidiDrums } from "./songs/midiFile";
 import { TAB_SPEEDS } from "./songs/tabSong";
+import type { TabNoteResult, TabScore } from "./songs/tabScoring";
 import { SmallMetronome } from "./SmallMetronome";
 import { TabNotation } from "./TabNotation";
 import { onThemeChange, withColorProbe } from "./theme";
@@ -80,7 +81,10 @@ export function DrumTabPanel({
     setView(next);
     saveView(next);
   };
-  const placed = useMemo(() => (open && grid ? placeTab(open.tab, grid, shift) : null), [open, grid, shift]);
+  // Keyed on the tab itself, not `open`: `fixed` is a new object on every render
+  // above, and a new placement would restart the note-by-note scoring.
+  const openTab = open?.tab ?? null;
+  const placed = useMemo(() => (openTab && grid ? placeTab(openTab, grid, shift) : null), [openTab, grid, shift]);
 
   // The coach lights the next pads from the placed tab, and plays it when asked.
   useEffect(() => {
@@ -240,11 +244,48 @@ export function DrumTabPanel({
           ) : (
             <TabStrip coach={coach} notes={placed} grid={grid} />
           )}
+          <TabScoreLine coach={coach} />
         </>
       ) : (
         <p className="hint">The tab appears once the song's beats are found.</p>
       )}
     </div>
+  );
+}
+
+/** How often the tab's score line refreshes while playing along, in ms. */
+const SCORE_REFRESH_MS = 200;
+
+/**
+ * The tab's notes so far while playing along (and after, until the next
+ * run): how many were played right, missed, or played on the wrong drum.
+ */
+function TabScoreLine({ coach }: { coach: Coach }) {
+  const [score, setScore] = useState<TabScore | null>(null);
+  useEffect(() => {
+    const read = () => {
+      const next = coach.songTabScore?.score() ?? null;
+      setScore((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
+    };
+    read();
+    const timer = setInterval(read, SCORE_REFRESH_MS);
+    return () => clearInterval(timer);
+  }, [coach]);
+  if (!score || score.played === 0) return null;
+  return (
+    <p className="tab-score" aria-live="polite">
+      <strong>
+        {score.hit} of {score.played} notes played
+      </strong>
+      <span className="tab-score-part on-time">{score.onTime} on time</span>
+      {score.early > 0 && <span className="tab-score-part early">{score.early} early</span>}
+      {score.late > 0 && <span className="tab-score-part late">{score.late} late</span>}
+      {score.wrongDrum > 0 && <span className="tab-score-part wrong-drum">{score.wrongDrum} on the wrong drum</span>}
+      {score.missed - score.wrongDrum > 0 && (
+        <span className="tab-score-part missed">{score.missed - score.wrongDrum} missed</span>
+      )}
+      {score.extra > 0 && <span className="tab-score-part">{score.extra} extra</span>}
+    </p>
   );
 }
 
@@ -257,6 +298,11 @@ interface Colors {
   accent: string;
   border: string;
   downbeat: string;
+  onTime: string;
+  early: string;
+  late: string;
+  missed: string;
+  wrongDrum: string;
 }
 
 const readColors = (): Colors =>
@@ -266,7 +312,19 @@ const readColors = (): Colors =>
     accent: token("--accent"),
     border: token("--border"),
     downbeat: token("--downbeat"),
+    onTime: token("--on-time"),
+    early: token("--early"),
+    late: token("--late"),
+    missed: token("--missed"),
+    wrongDrum: token("--wrong-drum"),
   }));
+
+/** A played note's color in the lanes, from its result while playing along; null when it has none yet. */
+function resultColor(r: TabNoteResult | undefined, colors: Colors): string | null {
+  if (!r || r.result.status === "pending") return null;
+  if (r.result.status === "missed") return r.wrongDrum ? colors.wrongDrum : colors.missed;
+  return r.result.verdict === "onTime" ? colors.onTime : r.result.verdict === "early" ? colors.early : colors.late;
+}
 
 /**
  * The tab as it plays: a row per pad used, the song's beats as lines (beat 1
@@ -328,21 +386,25 @@ function TabStrip({ coach, notes, grid }: { coach: Coach; notes: readonly Placed
         ctx.lineTo(xAt(t), height - 2);
         ctx.stroke();
       });
+      const score = coach.songTabScore;
       for (const note of notes) {
         if (note.time < from) continue;
         if (note.time > to) break;
         const row = rowOf.get(note.pad);
         if (row === undefined) continue;
         const x = xAt(note.time), y = 4 + row * ROW_PX + ROW_PX / 2;
-        ctx.globalAlpha = note.time < now ? 0.35 : 1;
+        // While playing along, a played note takes its result's color and stays bright.
+        const result = score ? resultColor(score.resultOf(note.id) ?? undefined, colors) : null;
+        const color = result ?? colors.accent;
+        ctx.globalAlpha = note.time < now && !result ? 0.35 : 1;
         ctx.beginPath();
         ctx.arc(x, y, NOTE_RADIUS, 0, Math.PI * 2);
         if (note.open) {
-          ctx.strokeStyle = colors.accent;
+          ctx.strokeStyle = color;
           ctx.lineWidth = 3;
           ctx.stroke();
         } else {
-          ctx.fillStyle = colors.accent;
+          ctx.fillStyle = color;
           ctx.fill();
         }
         ctx.globalAlpha = 1;

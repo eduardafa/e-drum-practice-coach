@@ -4,7 +4,8 @@ import type { Coach } from "./live/coach";
 import { MAX_STAFF_SCALE, xAtTick, type StaffLayout } from "./notation/layout";
 import type { BeatGrid } from "./songs/beats";
 import type { DrumTab } from "./songs/drumTab";
-import { BARS_PER_LINE, lineCount, snapTab, tabBeatAt, tabLine } from "./songs/tabNotation";
+import { BARS_PER_LINE, lineCount, lineNotes, snapTab, tabBeatAt, tabLine } from "./songs/tabNotation";
+import { tabMark, type TabNoteResult } from "./songs/tabScoring";
 
 const LINE_BEATS = BARS_PER_LINE * 4;
 /**
@@ -43,9 +44,9 @@ type Status = "loading" | "ready" | "error";
  * The tab as drum notation, like the exercises' staff: the line being played
  * (two bars) with a playhead, on its own (a faded next line below read as a
  * mirrored copy, not as what comes next). The line turns over as the song
- * moves on. Each line is engraved once when it
- * comes up (VexFlow is loaded on first use); the playhead moves every frame
- * outside React.
+ * moves on. Each line is engraved once when it comes up (VexFlow is loaded
+ * on first use); the playhead and the result marks (while playing along:
+ * hit, early, late, missed, or a wrong drum) update every frame outside React.
  */
 export function TabNotation({ coach, tab, grid, shift }: { coach: Coach; tab: DrumTab; grid: BeatGrid; shift: number }) {
   const notes = useMemo(() => snapTab(tab), [tab]);
@@ -54,7 +55,8 @@ export function TabNotation({ coach, tab, grid, shift }: { coach: Coach; tab: Dr
   const [status, setStatus] = useState<Status>("loading");
   const nowRef = useRef<HTMLDivElement>(null);
   const playheadRef = useRef<HTMLDivElement>(null);
-  const [layout, setLayout] = useState<(StaffLayout & { cropTop: number }) | null>(null);
+  const marksRef = useRef<HTMLDivElement>(null);
+  const [layout, setLayout] = useState<(StaffLayout & { cropTop: number; ids: number[][] }) | null>(null);
 
   // Engrave the line whenever it changes.
   useEffect(() => {
@@ -67,7 +69,9 @@ export function TabNotation({ coach, tab, grid, shift }: { coach: Coach; tab: Dr
         await engraver.loadNotationFonts();
         if (canceled) return;
         const engraved = engraver.engraveExercise(tabLine(notes, line), now, TAB_BAR_WIDTH);
-        setLayout({ ...engraved, cropTop: cropToNotes(now, engraved.width) });
+        // Which tab notes each written note stands for, to show their results on it.
+        const ids = lineNotes(notes, line).map((n) => n.ids);
+        setLayout({ ...engraved, cropTop: cropToNotes(now, engraved.width), ids });
         setStatus("ready");
       } catch (error) {
         console.error(error);
@@ -79,12 +83,35 @@ export function TabNotation({ coach, tab, grid, shift }: { coach: Coach; tab: Dr
     };
   }, [notes, line]);
 
-  // Every frame: which line the song is on, and the playhead within it.
+  // Every frame: which line the song is on, the playhead within it, and the notes' results.
   useEffect(() => {
-    const host = nowRef.current, playhead = playheadRef.current;
-    if (!host || !playhead) return;
+    const host = nowRef.current, playhead = playheadRef.current, markLayer = marksRef.current;
+    if (!host || !playhead || !markLayer) return;
+    // One ring per notehead, created once per line; each frame only changes classes and positions.
+    const marks = (layout?.marks ?? []).map((m) => {
+      const el = document.createElement("div");
+      el.className = "mark";
+      markLayer.append(el);
+      return { x: m.x, y: m.y, el, ids: layout?.ids[m.index] ?? [] };
+    });
     let raf = 0;
+    let scale = 0;
+    const empty = new Map<number, TabNoteResult>();
     const loop = () => {
+      if (layout && host.clientWidth / layout.width !== scale) {
+        scale = host.clientWidth / layout.width;
+        markLayer.style.setProperty("--staff-scale", String(scale));
+        for (const m of marks) {
+          m.el.style.left = `${m.x * scale}px`;
+          m.el.style.top = `${(m.y - layout.cropTop) * scale}px`;
+        }
+      }
+      const results = coach.songTabScore?.results() ?? empty;
+      for (const m of marks) {
+        const mark = tabMark(m.ids, results);
+        const cls = mark === "pending" ? "mark" : `mark ${mark}`;
+        if (m.el.className !== cls) m.el.className = cls;
+      }
       const beat = tabBeatAt(grid, shift, coach.song.position());
       const current = Math.min(lines - 1, Math.max(0, Math.floor(beat / LINE_BEATS)));
       setLine(current);
@@ -92,7 +119,6 @@ export function TabNotation({ coach, tab, grid, shift }: { coach: Coach; tab: Dr
       const visible = layout !== null && inLine >= 0 && inLine <= LINE_BEATS;
       playhead.hidden = !visible;
       if (visible) {
-        const scale = host.clientWidth / layout.width;
         playhead.style.top = `${(layout.playheadTop - layout.cropTop) * scale}px`;
         playhead.style.height = `${layout.playheadHeight * scale}px`;
         playhead.style.transform = `translateX(${(xAtTick(layout, inLine * TICKS_PER_QUARTER) * scale).toFixed(1)}px)`;
@@ -100,7 +126,10 @@ export function TabNotation({ coach, tab, grid, shift }: { coach: Coach; tab: Dr
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(raf);
+      markLayer.replaceChildren();
+    };
   }, [coach, grid, shift, lines, layout]);
 
   const style = useMemo(() => ({ maxWidth: layout ? layout.width * MAX_STAFF_SCALE : undefined }), [layout]);
@@ -113,6 +142,7 @@ export function TabNotation({ coach, tab, grid, shift }: { coach: Coach; tab: Dr
       </p>
       <div className="tab-notation-line now">
         <div ref={nowRef} />
+        <div ref={marksRef} className="marks" aria-hidden />
         <div ref={playheadRef} className="playhead" hidden />
       </div>
       {status === "loading" && <p className="hint">Loading notation</p>}

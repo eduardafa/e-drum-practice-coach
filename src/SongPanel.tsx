@@ -253,7 +253,9 @@ export function SongPanel({
       )}
       <p className="hint">
         {along
-          ? "Playing along: every hit is scored against the song's beats (and the counts in between, if you chose them in the side panel). Your numbers are in the side panel and the timing strip."
+          ? coach.hasSongTab
+            ? "Playing along: each note of the tab is checked, the right drum and in time, and marked on the tab (violet: the wrong drum). Your timing numbers are in the side panel and the timing strip."
+            : "Playing along: every hit is scored against the song's beats (and the counts in between, if you chose them in the side panel). Your numbers are in the side panel and the timing strip."
           : song.grid
             ? tabOnly
               ? "The tab plays at its own tempo; slow it down with Speed. Play along starts from the playhead: click the line above to choose where."
