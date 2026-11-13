@@ -7,6 +7,11 @@ import type { DrumTab } from "./songs/drumTab";
 import { BARS_PER_LINE, lineCount, snapTab, tabBeatAt, tabLine } from "./songs/tabNotation";
 
 const LINE_BEATS = BARS_PER_LINE * 4;
+/**
+ * Bar width the tab is engraved at, narrower than the exercises' (420): the
+ * line is scaled to the stage's width, so tighter bars draw every note bigger.
+ */
+const TAB_BAR_WIDTH = 300;
 /** Room kept above and below the notes when the empty space around a line is cut away (fits an open hi-hat's "o"). */
 const CROP_PAD = 12;
 
@@ -60,7 +65,7 @@ export function TabNotation({ coach, tab, grid, shift }: { coach: Coach; tab: Dr
         const engraver = await import("./notation/engrave");
         await engraver.loadNotationFonts();
         if (canceled) return;
-        const engraved = engraver.engraveExercise(tabLine(notes, line), now);
+        const engraved = engraver.engraveExercise(tabLine(notes, line), now, TAB_BAR_WIDTH);
         setLayout({ ...engraved, cropTop: cropToNotes(now, engraved.width) });
         setStatus("ready");
       } catch (error) {

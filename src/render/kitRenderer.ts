@@ -71,8 +71,11 @@ export interface RendererOptions {
   getHandedness: () => Handedness;
   /** Pads to light up as "play this next", with a strength from 0 to 1. Read every frame. */
   getCues: (now: number) => readonly PadCue[];
-  /** Space to leave at the top for an overlay (the small metronome), in CSS px; 0 when none. */
-  getTopInset: () => number;
+  /**
+   * An overlay in the top-left corner (the small metronome), in CSS px, with
+   * room around it; null when none. Read every frame.
+   */
+  getCornerOverlay: () => { width: number; height: number } | null;
 }
 
 export class KitRenderer {
@@ -133,13 +136,17 @@ export class KitRenderer {
     const stripHeight = Math.max(90, height * 0.22);
     const kitHeight = height - stripHeight;
     // An overlay along the top (the small metronome) gets its own space, so it never covers the cymbals.
-    const topInset = Math.min(this.options.getTopInset(), kitHeight * 0.4);
-
-    // Fit a 1.6:1 box for the kit, centered in the kit area below any overlay.
-    const boxH = Math.min((kitHeight - topInset) * 0.96, (width * 0.96) / 1.6);
-    const boxW = boxH * 1.6;
-    const boxX = (width - boxW) / 2;
-    const boxY = topInset + (kitHeight - topInset - boxH) / 2;
+    // Fit a 1.6:1 box for the kit, centered. The corner overlay only pushes the
+    // kit down when the kit would reach under it; in a short, wide view (a tab
+    // or song open above) the kit is narrower than the view and keeps its size.
+    const fit = (inset: number) => {
+      const h = Math.min((kitHeight - inset) * 0.96, (width * 0.96) / 1.6);
+      return { boxH: h, boxW: h * 1.6, boxX: (width - h * 1.6) / 2, boxY: inset + (kitHeight - inset - h) / 2 };
+    };
+    const overlay = this.options.getCornerOverlay();
+    let box = fit(0);
+    if (overlay && box.boxX < overlay.width && box.boxY < overlay.height) box = fit(Math.min(overlay.height, kitHeight * 0.4));
+    const { boxH, boxW, boxX, boxY } = box;
 
     const pads = kitLayout(NITRO_MAX_PADS, this.options.getHandedness());
     // Cues first: their rings sit just outside the pads, and the pads' labels then draw on top.

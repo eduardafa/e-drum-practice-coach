@@ -36,8 +36,10 @@ const MAX_TAB_BYTES = 4 * 1024 * 1024;
 /** Seconds of tab shown before and after the playhead line. */
 const BEHIND_SEC = 1;
 const AHEAD_SEC = 3;
-const ROW_PX = 18;
-const LABEL_PX = 64;
+/** Sized to read from the drum throne: a row per pad, labels on the left. */
+const ROW_PX = 30;
+const LABEL_PX = 84;
+const NOTE_RADIUS = 9;
 
 interface OpenTab {
   name: string;
@@ -296,7 +298,7 @@ function TabStrip({ coach, notes, grid }: { coach: Coach; notes: readonly Placed
       const xAt = (t: number) => LABEL_PX + (t - now + BEHIND_SEC) * pxPerSec;
       const from = now - BEHIND_SEC, to = now + AHEAD_SEC;
 
-      ctx.font = "12px system-ui, sans-serif";
+      ctx.font = "15px system-ui, sans-serif";
       ctx.textBaseline = "middle";
       rows.forEach((pad, i) => {
         const y = 4 + i * ROW_PX + ROW_PX / 2;
@@ -327,10 +329,10 @@ function TabStrip({ coach, notes, grid }: { coach: Coach; notes: readonly Placed
         const x = xAt(note.time), y = 4 + row * ROW_PX + ROW_PX / 2;
         ctx.globalAlpha = note.time < now ? 0.35 : 1;
         ctx.beginPath();
-        ctx.arc(x, y, 5.5, 0, Math.PI * 2);
+        ctx.arc(x, y, NOTE_RADIUS, 0, Math.PI * 2);
         if (note.open) {
           ctx.strokeStyle = colors.accent;
-          ctx.lineWidth = 2;
+          ctx.lineWidth = 3;
           ctx.stroke();
         } else {
           ctx.fillStyle = colors.accent;

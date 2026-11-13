@@ -28,10 +28,13 @@ export function usePlayPreferences() {
     handednessRef.current = handedness;
     showNextPadRef.current = showNextPad;
   }, [handedness, showNextPad]);
-  const [renderer] = useState<Pick<RendererOptions, "getHandedness" | "getCues" | "getTopInset">>(() => ({
+  const [renderer] = useState<Pick<RendererOptions, "getHandedness" | "getCues" | "getCornerOverlay">>(() => ({
     getHandedness: () => handednessRef.current,
     getCues: (now) => (showNextPadRef.current ? coach.cuesAt(now) : []),
-    getTopInset: () => (metronomeRef.current ? metronomeRef.current.offsetHeight + 16 : 0),
+    getCornerOverlay: () => {
+      const metronome = metronomeRef.current;
+      return metronome ? { width: metronome.offsetLeft + metronome.offsetWidth + 8, height: metronome.offsetTop + metronome.offsetHeight + 8 } : null;
+    },
   }));
 
   useEffect(() => {
