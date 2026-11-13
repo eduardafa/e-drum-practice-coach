@@ -233,3 +233,43 @@ describe("NoteMatcher: hi-hat mix-ups", () => {
   });
 });
 
+
+const at = (id: number, time: number, pad: ExpectedNote["pad"] = "snare"): ExpectedNote => ({
+  id,
+  loop: 0,
+  index: id,
+  time,
+  pad,
+  open: false,
+  flam: false,
+  dynamic: "normal",
+  windowMs: 50,
+});
+
+describe("NoteMatcher.add", () => {
+
+  it("matches notes added after it was made", () => {
+    const matcher = new NoteMatcher([], SCORING);
+    matcher.add(at(0, 1000));
+    expect(matcher.hit({ pad: "snare", zone: "head", time: 1005 }).kind).toBe("hit");
+    matcher.add(at(1, 2000));
+    matcher.tick(2100);
+    expect(matcher.summary()).toMatchObject({ expected: 2, hit: 1, missed: 1 });
+  });
+
+  it("refuses a note out of order", () => {
+    const matcher = new NoteMatcher([at(0, 1000)], SCORING);
+    expect(() => matcher.add(at(2, 2000))).toThrow("Notes are added in time order, with the next id");
+    expect(() => matcher.add(at(1, 500))).toThrow("Notes are added in time order, with the next id");
+  });
+});
+
+describe("NoteMatcher.nearAnyNote", () => {
+  it("tells a hit in some note's window, on any pad, from a stray one", () => {
+    const { notes, matcher } = rock();
+    const snare = firstSnare(notes);
+    expect(matcher.nearAnyNote({ pad: "tom1", zone: "head", time: snare.time + 10 })).toBe(true);
+    // Rock beat hi-hats are 250 ms apart with windows of 100 ms: halfway between two is near nothing.
+    expect(matcher.nearAnyNote({ pad: "tom1", zone: "head", time: snare.time + 125 })).toBe(false);
+  });
+});

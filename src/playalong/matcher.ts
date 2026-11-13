@@ -91,14 +91,47 @@ export class NoteMatcher {
    * The widest window. Windows differ per note, so window starts aren't in time
    * order; scans stop once a note is further away than any window could reach.
    */
-  private readonly maxWindowMs: number;
+  private maxWindowMs: number;
+  private readonly list: ExpectedNote[];
 
-  constructor(
-    readonly notes: readonly ExpectedNote[],
-    private readonly scoring: ScoringOptions,
-  ) {
+  constructor(notes: readonly ExpectedNote[], private readonly scoring: ScoringOptions) {
+    this.list = [...notes];
     this.results = notes.map(() => ({ status: "pending" }));
     this.maxWindowMs = notes.reduce((max, n) => Math.max(max, n.windowMs), 0);
+  }
+
+  /** The notes being matched, in time order. */
+  get notes(): readonly ExpectedNote[] {
+    return this.list;
+  }
+
+  /**
+   * Adds a note after the others (a song's notes are added as the song gets
+   * near them). Its id must be the next position and it must not come before
+   * the last note.
+   */
+  add(note: ExpectedNote): void {
+    const last = this.list.at(-1);
+    if (note.id !== this.list.length || (last && note.time < last.time)) {
+      throw new Error("Notes are added in time order, with the next id");
+    }
+    this.list.push(note);
+    this.results.push({ status: "pending" });
+    this.maxWindowMs = Math.max(this.maxWindowMs, note.windowMs);
+  }
+
+  /**
+   * Whether a hit lands in any note's window, on any pad and whatever that
+   * note's result: for telling a wrong drum from a stray hit after hit()
+   * called it an extra.
+   */
+  nearAnyNote(hit: PlayedHit): boolean {
+    const time = hit.time - this.scoring.latencyOffsetMs;
+    for (const note of this.list) {
+      if (note.time - this.maxWindowMs > time) break;
+      if (Math.abs(time - note.time) <= note.windowMs) return true;
+    }
+    return false;
   }
 
   resultOf(note: ExpectedNote): NoteResult {
@@ -113,8 +146,8 @@ export class NoteMatcher {
     let otherVoice: ExpectedNote | null = null;
     // Windows on a pad don't overlap, so at most one note on this pad contains the hit.
     // Scan from the cursor while notes could still reach back to this hit.
-    for (let i = this.cursor; i < this.notes.length; i++) {
-      const note = this.notes[i];
+    for (let i = this.cursor; i < this.list.length; i++) {
+      const note = this.list[i];
       if (note.time - this.maxWindowMs > time) break;
       if (Math.abs(time - note.time) <= note.windowMs) {
         if (voiceMatches(note, hit)) {
@@ -155,21 +188,21 @@ export class NoteMatcher {
   tick(now: number): MatchEvent[] {
     const corrected = now - this.scoring.latencyOffsetMs;
     const events: MatchEvent[] = [];
-    for (let i = this.cursor; i < this.notes.length; i++) {
-      const note = this.notes[i];
+    for (let i = this.cursor; i < this.list.length; i++) {
+      const note = this.list[i];
       if (note.time - this.maxWindowMs > corrected) break;
       if (this.results[note.id].status === "pending" && note.time + note.windowMs < corrected) {
         this.results[note.id] = { status: "missed" };
         events.push({ kind: "missed", note });
       }
     }
-    while (this.cursor < this.notes.length && this.results[this.cursor].status !== "pending") this.cursor++;
+    while (this.cursor < this.list.length && this.results[this.cursor].status !== "pending") this.cursor++;
     return events;
   }
 
   summary(): MatchSummary {
     const s: MatchSummary = {
-      expected: this.notes.length,
+      expected: this.list.length,
       hit: 0,
       onTime: 0,
       early: 0,
