@@ -199,8 +199,8 @@ export function DrumTabPanel({
           <Switch checked={click} onChange={setClick} label="Click" title="A click on every beat, higher on beat 1" />
         ) : (
           <>
-            {picker("Another tab", "link-button drum-tab-open")}
-            <button className="link-button" onClick={releasing(() => setOpen(null))}>
+            {picker("Another tab", "plain drum-tab-open")}
+            <button className="secondary" onClick={releasing(() => setOpen(null))}>
               Remove tab
             </button>
           </>

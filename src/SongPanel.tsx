@@ -162,7 +162,7 @@ export function SongPanel({
               {playing ? "Pause" : midway ? "Resume" : "Listen"}
             </button>
             {midway && !playing && (
-              <button className="link-button" onClick={releasing(() => coach.song.seek(0, SONG_VOLUME))}>
+              <button className="secondary" onClick={releasing(() => coach.song.seek(0, SONG_VOLUME))}>
                 Back to the start
               </button>
             )}
