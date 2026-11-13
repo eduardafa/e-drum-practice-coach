@@ -4,6 +4,7 @@
  * so React never re-renders because of a hit.
  */
 import { kitLayout, type Handedness } from "../handedness";
+import type { PadCue } from "../playalong/cues";
 import { NITRO_MAX_PADS, type PadId, type PadInfo } from "../kit/nitroMax";
 import type { LiveHit, LiveState } from "../live/liveState";
 import { onThemeChange, withColorProbe } from "../theme";
@@ -30,6 +31,7 @@ interface Colors {
   onTime: string;
   late: string;
   unscored: string;
+  cue: string;
 }
 
 const readColors = (): Colors =>
@@ -50,6 +52,7 @@ const readColors = (): Colors =>
     onTime: token("--on-time"),
     late: token("--late"),
     unscored: token("--text"),
+    cue: token("--accent"),
   }));
 
 /** How long a pad stays lit, and how long its ms label stays up. */
@@ -66,6 +69,8 @@ export interface RendererOptions {
   getToleranceMs: () => number;
   /** Left-handed kits are drawn mirrored. Read every frame, so a change shows at once. */
   getHandedness: () => Handedness;
+  /** Pads to light up as "play this next", with a strength from 0 to 1. Read every frame. */
+  getCues: (now: number) => readonly PadCue[];
 }
 
 export class KitRenderer {
@@ -132,10 +137,39 @@ export class KitRenderer {
     const boxX = (width - boxW) / 2;
     const boxY = (kitHeight - boxH) / 2;
 
-    for (const pad of kitLayout(NITRO_MAX_PADS, this.options.getHandedness())) {
+    const pads = kitLayout(NITRO_MAX_PADS, this.options.getHandedness());
+    // Cues first: their rings sit just outside the pads, and the pads' labels then draw on top.
+    for (const cue of this.options.getCues(now)) {
+      const pad = pads.find((p) => p.id === cue.pad);
+      if (pad) this.drawCue(pad, boxX + pad.x * boxW, boxY + pad.y * boxH, pad.r * boxH, cue.strength);
+    }
+    for (const pad of pads) {
       this.drawPad(pad, boxX + pad.x * boxW, boxY + pad.y * boxH, pad.r * boxH, now);
     }
     this.drawTimingStrip(0, kitHeight, width, stripHeight, now);
+  }
+
+  /**
+   * "Play this next": a ring around the pad that closes in and brightens as
+   * the note approaches. Outside the pad and under it, so it never hides a hit's flash or the label.
+   */
+  private drawCue(pad: PadInfo, cx: number, cy: number, r: number, strength: number): void {
+    const { ctx } = this;
+    const gap = r * (0.45 - 0.3 * strength);
+    ctx.save();
+    ctx.globalAlpha = strength;
+    ctx.strokeStyle = this.colors.cue;
+    ctx.lineWidth = Math.max(3, r * 0.14);
+    ctx.shadowColor = this.colors.cue;
+    ctx.shadowBlur = r * 0.5 * strength;
+    ctx.beginPath();
+    if (pad.shape === "pedal") {
+      ctx.roundRect(cx - r * 0.6 - gap, cy - r - gap, r * 1.2 + gap * 2, r * 2 + gap * 2, r * 0.25 + gap);
+    } else {
+      ctx.arc(cx, cy, r + gap, 0, Math.PI * 2);
+    }
+    ctx.stroke();
+    ctx.restore();
   }
 
   /** Fills the hi-hat pedal from the bottom by how far it's pressed (CC 4), if the kit sends it. */
@@ -215,7 +249,14 @@ export class KitRenderer {
     ctx.textBaseline = "middle";
     // The hi-hat pedal's label says how far it's down, once the kit sends its position.
     const pedalState = pad.id === "hihatPedal" ? this.state.hihatPedal.state() : null;
-    ctx.fillText(pedalState ? `${pad.label} · ${pedalState}` : pad.label, cx, cy + radius + Math.max(10, r * 0.22));
+    const label = pedalState ? `${pad.label} · ${pedalState}` : pad.label;
+    const labelY = cy + radius + Math.max(10, r * 0.22);
+    // A halo in the background color keeps the label readable over a "next pad" ring.
+    ctx.lineWidth = 4;
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = this.colors.background;
+    ctx.strokeText(label, cx, labelY);
+    ctx.fillText(label, cx, labelY);
 
     // Timing label floats up and fades out.
     if (hit?.score && age < LABEL_MS) {

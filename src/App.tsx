@@ -147,6 +147,9 @@ export default function App() {
   /** For the kit renderer, which reads it every frame outside React. */
   const handednessRef = useRef(handedness);
   handednessRef.current = handedness;
+  const [showNextPad, setShowNextPad] = useState(saved.showNextPad ?? true);
+  const showNextPadRef = useRef(showNextPad);
+  showNextPadRef.current = showNextPad;
   const [accuracyMode, setAccuracyMode] = useState<AccuracyMode>(saved.accuracyMode ?? "partial");
   /** The last tempo used for each exercise, so choosing one again picks up where the drummer left off. */
   const [exerciseTempos, setExerciseTempos] = useState<Record<string, number>>(saved.exerciseTempos ?? {});
@@ -189,6 +192,7 @@ export default function App() {
     const renderer = new KitRenderer(canvas, coach.live, {
       getToleranceMs: () => coach.scoring.toleranceMs,
       getHandedness: () => handednessRef.current,
+      getCues: (now) => (showNextPadRef.current ? coach.cuesAt(now) : []),
     });
     renderer.start();
     return () => renderer.dispose();
@@ -209,8 +213,22 @@ export default function App() {
       volume,
       getReadySec,
       handedness,
+      showNextPad,
     });
-  }, [metronome, scoring, skillLevel, guideSeen, exerciseId, accuracyMode, sessionLoops, exerciseTempos, volume, getReadySec, handedness]);
+  }, [
+    metronome,
+    scoring,
+    skillLevel,
+    guideSeen,
+    exerciseId,
+    accuracyMode,
+    sessionLoops,
+    exerciseTempos,
+    volume,
+    getReadySec,
+    handedness,
+    showNextPad,
+  ]);
 
   // Remember the tempo of the exercise on the staff, however it changed (− / +, typed, a retry, the trainer).
   if (exerciseId !== null && exerciseTempos[exerciseId] !== metronome.bpm) {
@@ -743,6 +761,8 @@ export default function App() {
               onAccuracyModeChange={setAccuracyMode}
               handedness={handedness}
               onHandednessChange={setHandedness}
+              showNextPad={showNextPad}
+              onShowNextPadChange={setShowNextPad}
               onCalibrate={() => void startCalibration()}
               onClose={() => setSettingsOpen(false)}
             />

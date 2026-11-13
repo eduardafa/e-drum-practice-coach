@@ -22,6 +22,8 @@ interface Props {
   onAccuracyModeChange: (mode: AccuracyMode) => void;
   handedness: Handedness;
   onHandednessChange: (handedness: Handedness) => void;
+  showNextPad: boolean;
+  onShowNextPadChange: (show: boolean) => void;
   onCalibrate: () => void;
   onClose: () => void;
 }
@@ -52,6 +54,8 @@ export function SettingsPanel({
   onAccuracyModeChange,
   handedness,
   onHandednessChange,
+  showNextPad,
+  onShowNextPadChange,
   onCalibrate,
   onClose,
 }: Props) {
@@ -234,6 +238,14 @@ export function SettingsPanel({
               ? "A hit inside your on-time window counts fully; a bit outside still counts for part, less the further off it is. Gentler while you're learning."
               : "Only hits inside your on-time window count. Clear and demanding."}{" "}
             Both are shown at the end of a session.
+          </p>
+          <label className="field checkbox">
+            <input type="checkbox" checked={showNextPad} onChange={(e) => onShowNextPadChange(e.target.checked)} />
+            <span>Light up the next pad</span>
+          </label>
+          <p className="hint">
+            During a session, a ring shows which pad to hit next, growing brighter as the note comes up. Turn it off
+            once you can read the pattern from the notation.
           </p>
         </div>
       )}

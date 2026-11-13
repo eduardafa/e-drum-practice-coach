@@ -30,6 +30,8 @@ export interface SavedSettings {
   getReadySec?: number;
   /** Right- or left-handed (mirrored) kit. */
   handedness?: Handedness;
+  /** Light up the next pad to hit on the kit view during a session (on unless turned off). */
+  showNextPad?: boolean;
 }
 
 type UnknownRecord = Record<string, unknown>;
@@ -94,6 +96,7 @@ export function parseSettings(raw: unknown): SavedSettings {
     volume: isVolume(raw.volume) ? raw.volume : undefined,
     getReadySec: isGetReadySec(raw.getReadySec) ? raw.getReadySec : undefined,
     handedness: isHandedness(raw.handedness) ? raw.handedness : undefined,
+    showNextPad: typeof raw.showNextPad === "boolean" ? raw.showNextPad : undefined,
   };
 }
 

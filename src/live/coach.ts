@@ -6,6 +6,7 @@ import { Metronome } from "../audio/metronome";
 import { PreviewPlayer } from "../audio/previewPlayer";
 import { subdivisionFor } from "../exercises/practice";
 import type { Exercise } from "../exercises/types";
+import { cueLeadMs, cuesAt, type PadCue } from "../playalong/cues";
 import { secondsLeft } from "../playalong/getReady";
 import { PlayAlongSession } from "../playalong/session";
 import type { MetronomeSettings } from "../audio/schedule";
@@ -53,6 +54,8 @@ export class Coach {
   private playAlong: PlayAlongSession | null = null;
   /** When the session's get-ready countdown ends (performance.now() ms); 0 when there's none. */
   private countdownEndMs = 0;
+  /** How far ahead the kit view lights the next pad: one beat at the session's tempo. */
+  private cueLeadMs = 600;
   private sessionStart: { at: Temporal.Instant; timeZone: string; perf: number } | null = null;
   private sessionEndListeners = new Set<SessionEndListener>();
 
@@ -65,7 +68,12 @@ export class Coach {
         if (step.beatInBar === 0 && step.subInBeat === 0) this.bar += 1;
         const count = countAt(step, beatsPerBar, subdivision);
         this.live.addCount({ time: step.performanceTime, ...count, bar: Math.max(0, this.bar) });
-        // Bar 0 is the count-in; the exercise starts on the next downbeat.
+        // Bar 0 is the count-in; the exercise starts on the next downbeat, one bar later.
+        if (this.bar === 0 && step.beatInBar === 0 && step.subInBeat === 0 && this.playAlong) {
+          const beatMs = step.intervalSec * subdivision * 1000;
+          this.cueLeadMs = cueLeadMs(beatMs);
+          this.playAlong.preview(step.performanceTime + beatMs * beatsPerBar);
+        }
         if (this.bar === 1 && step.beatInBar === 0 && step.subInBeat === 0) this.playAlong?.begin(step.performanceTime);
         if (!step.beat) return;
         this.live.addBeat({ time: step.performanceTime, downbeat: step.downbeat });
@@ -121,6 +129,13 @@ export class Coach {
     this.countdownEndMs = 0;
     this.countdownEndMs = await this.metronome.start(countdownSec);
     return settings;
+  }
+
+  /** Which pads the kit view should light at `now`: the session's next notes, from the count-in on. */
+  cuesAt(now: number): PadCue[] {
+    const session = this.playAlong;
+    if (!session || !this.metronome.running) return [];
+    return cuesAt(session.upcomingNotes(), now - this.scoring.latencyOffsetMs, this.cueLeadMs);
   }
 
   /** The get-ready countdown's number to show at `now` (5, 4, … 1), or null when there's no countdown running. */

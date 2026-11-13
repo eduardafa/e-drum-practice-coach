@@ -23,6 +23,8 @@ export class PlayAlongSession {
   phase: SessionPhase = "countIn";
   private matcher: NoteMatcher | null = null;
   private notes: readonly ExpectedNote[] = [];
+  /** The first loop as it will be played, known from the count-in, for showing what comes first. */
+  private previewNotes: readonly ExpectedNote[] = [];
   /** When the last note's window closes: the session ends after this, so late strokes still count. */
   private endMs = Infinity;
 
@@ -33,6 +35,26 @@ export class PlayAlongSession {
     readonly bpm: number,
     private readonly scoring: ScoringOptions,
   ) {}
+
+  /**
+   * The count-in has started and the first loop will start at `startMs`: plans
+   * that loop for display (the kit view's cues) without scoring anything yet.
+   */
+  preview(startMs: number): void {
+    if (this.phase !== "countIn") return;
+    this.previewNotes = buildTimeline(this.exercise, {
+      startMs,
+      bpm: this.bpm,
+      loops: 1,
+      maxWindowMs: DEFAULT_MAX_WINDOW_MS,
+    });
+  }
+
+  /** The notes to show as upcoming: the planned first loop during the count-in, the whole run once playing. */
+  upcomingNotes(): readonly ExpectedNote[] {
+    if (this.phase === "countIn") return this.previewNotes;
+    return this.phase === "playing" ? this.notes : [];
+  }
 
   /** The count-in is over: the first loop starts at `startMs` (performance.now() ms). */
   begin(startMs: number): void {
