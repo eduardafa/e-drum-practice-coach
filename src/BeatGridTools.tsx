@@ -179,7 +179,7 @@ export function BeatGridTools({
           Tap the beat
         </button>
         {corrected && (
-          <button className="link-button" onClick={releasing(() => onChange(found))}>
+          <button className="secondary" onClick={releasing(() => onChange(found))}>
             Back to the beats found
           </button>
         )}

@@ -922,9 +922,10 @@ fieldset.group.play {
   color: var(--muted);
 }
 
-.play .link-button {
-  margin-top: 0;
+.play .guide-button {
   align-self: flex-start;
+  padding: 4px 12px;
+  font-size: 13px;
 }
 
 .hint.keys {
@@ -2448,8 +2449,13 @@ button.primary.danger {
   font-size: 13px;
 }
 
-.link-button.danger-link {
+button.secondary.danger {
   color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 60%, transparent);
+}
+
+button.secondary.danger:hover:not(:disabled) {
+  border-color: var(--danger);
 }
 
 .account-delete p {
@@ -2841,6 +2847,11 @@ button.primary.danger {
   gap: 4px;
 }
 
+.recent-songs button.secondary {
+  padding: 3px 10px;
+  font-size: 13px;
+}
+
 .recent-songs li {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
@@ -2932,11 +2943,19 @@ button.primary.danger {
   background: var(--tint);
 }
 
-/* Links stay on the bar's line. */
-.drum-tab-bar .link-button {
-  display: inline;
-  margin: 0;
-  padding: 0;
+/* "Another tab" is a label around a file input too: the plain secondary-button look. */
+.drum-tab-bar label.plain {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border: 1px solid var(--control-border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.drum-tab-bar label.plain:hover {
+  border-color: var(--muted);
 }
 
 .drum-tab-moves {

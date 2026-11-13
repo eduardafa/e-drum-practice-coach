@@ -140,7 +140,7 @@ export function AccountSection({ account, signInResult, syncStatus, onSignOut, o
           <div className="account-more">
             {/* For a computer that isn't yours: your synced sessions don't stay behind. */}
             <button
-              className="link-button"
+              className="secondary"
               disabled={busy}
               onClick={releasing(() => void act(onSignOutAndRemove, `Couldn't sign out. ${offline}`))}
             >
@@ -168,7 +168,7 @@ export function AccountSection({ account, signInResult, syncStatus, onSignOut, o
                 </div>
               </div>
             ) : (
-              <button className="link-button danger-link" disabled={busy} onClick={releasing(() => setConfirmingDelete(true))}>
+              <button className="secondary danger" disabled={busy} onClick={releasing(() => setConfirmingDelete(true))}>
                 Delete my account
               </button>
             )}
