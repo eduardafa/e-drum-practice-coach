@@ -130,7 +130,7 @@ export default function App() {
   );
   const [scoring, setScoring] = useState<ScoringOptions>(coach.scoring);
   const [running, setRunning] = useState(false);
-  const [volume, setVolume] = useState(coach.metronome.volume);
+  const [volume, setVolume] = useState(saved.volume ?? coach.metronome.volume);
   const [calibrating, setCalibrating] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -195,8 +195,9 @@ export default function App() {
       accuracyMode,
       sessionLoops,
       exerciseTempos,
+      volume,
     });
-  }, [metronome, scoring, skillLevel, guideSeen, exerciseId, accuracyMode, sessionLoops, exerciseTempos]);
+  }, [metronome, scoring, skillLevel, guideSeen, exerciseId, accuracyMode, sessionLoops, exerciseTempos, volume]);
 
   // Remember the tempo of the exercise on the staff, however it changed (− / +, typed, a retry, the trainer).
   if (exerciseId !== null && exerciseTempos[exerciseId] !== metronome.bpm) {

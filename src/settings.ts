@@ -1,6 +1,7 @@
 import { findExercise } from "./exercises/library";
 import { isAccuracyMode, type AccuracyMode } from "./playalong/results";
 import { SESSION_LOOPS } from "./playalong/session";
+import { isVolume } from "./audio/volume";
 import { isSubdivision, MAX_BPM, MIN_BPM, type MetronomeSettings } from "./audio/schedule";
 import { isSkillLevel, type SkillLevel } from "./profiles";
 import type { ScoringOptions } from "./timing/grid";
@@ -21,6 +22,8 @@ export interface SavedSettings {
   sessionLoops?: number;
   /** The last tempo used for each exercise, by exercise id. */
   exerciseTempos?: Record<string, number>;
+  /** Metronome click volume, as a gain (see audio/volume). */
+  volume?: number;
 }
 
 type UnknownRecord = Record<string, unknown>;
@@ -82,6 +85,7 @@ export function parseSettings(raw: unknown): SavedSettings {
     accuracyMode: isAccuracyMode(raw.accuracyMode) ? raw.accuracyMode : undefined,
     sessionLoops: SESSION_LOOPS.find((n) => n === raw.sessionLoops),
     exerciseTempos: parseExerciseTempos(raw.exerciseTempos),
+    volume: isVolume(raw.volume) ? raw.volume : undefined,
   };
 }
 

@@ -40,6 +40,12 @@ describe("parseSettings", () => {
     expect(parseSettings({ exerciseTempos: [72] }).exerciseTempos).toBeUndefined();
   });
 
+  it("keeps a volume within the slider's range", () => {
+    expect(parseSettings({ volume: 1.5 }).volume).toBe(1.5);
+    expect(parseSettings({ volume: 3 }).volume).toBeUndefined();
+    expect(parseSettings({ volume: "loud" }).volume).toBeUndefined();
+  });
+
   it("only keeps guideSeen when it's true", () => {
     expect(parseSettings({ guideSeen: "yes" }).guideSeen).toBeUndefined();
   });
