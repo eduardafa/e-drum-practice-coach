@@ -52,6 +52,11 @@ describe("parseSettings", () => {
     expect(parseSettings({ getReadySec: 7 }).getReadySec).toBeUndefined();
   });
 
+  it("keeps the next-pad setting only as a boolean", () => {
+    expect(parseSettings({ showNextPad: false }).showNextPad).toBe(false);
+    expect(parseSettings({ showNextPad: "no" }).showNextPad).toBeUndefined();
+  });
+
   it("keeps a known kit setup", () => {
     expect(parseSettings({ handedness: "left" }).handedness).toBe("left");
     expect(parseSettings({ handedness: "both" }).handedness).toBeUndefined();
