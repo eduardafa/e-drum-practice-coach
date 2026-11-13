@@ -43,6 +43,24 @@ export function playClick(
   return osc;
 }
 
+/**
+ * The get-ready countdown's beep: a soft, longer sine, lower than the clicks,
+ * so it can't be mistaken for the count-in. Returns the node so a stopped
+ * countdown can silence beeps already scheduled.
+ */
+export function playCountdownBeep(ctx: BaseAudioContext, out: AudioNode, time: number, volume: number): OscillatorNode {
+  const osc = ctx.createOscillator();
+  osc.frequency.value = 660;
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.0001, time);
+  gain.gain.exponentialRampToValueAtTime(Math.max(volume * 0.6, 0.0002), time + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.18);
+  osc.connect(gain).connect(out);
+  osc.start(time);
+  osc.stop(time + 0.2);
+  return osc;
+}
+
 const DYNAMIC_GAIN: Record<Dynamic, number> = { ghost: 0.22, normal: 0.6, accent: 1 };
 
 /** One second of white noise per audio context, shared by every noisy voice. */

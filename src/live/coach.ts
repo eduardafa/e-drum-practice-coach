@@ -6,6 +6,7 @@ import { Metronome } from "../audio/metronome";
 import { PreviewPlayer } from "../audio/previewPlayer";
 import { subdivisionFor } from "../exercises/practice";
 import type { Exercise } from "../exercises/types";
+import { secondsLeft } from "../playalong/getReady";
 import { PlayAlongSession } from "../playalong/session";
 import type { MetronomeSettings } from "../audio/schedule";
 import { lookupNote } from "../kit/nitroMax";
@@ -47,6 +48,8 @@ export class Coach {
   /** Bars started since the metronome started; -1 before the first downbeat. */
   private bar = -1;
   private playAlong: PlayAlongSession | null = null;
+  /** When the session's get-ready countdown ends (performance.now() ms); 0 when there's none. */
+  private countdownEndMs = 0;
   private sessionStart: { at: Temporal.Instant; timeZone: string; perf: number } | null = null;
   private sessionEndListeners = new Set<SessionEndListener>();
 
@@ -91,12 +94,12 @@ export class Coach {
   }
 
   /**
-   * Starts a play-along session at `bpm`: a bar of count-in, then
-   * `loops` repetitions. Sets the metronome's beats and subdivision to fit the
-   * exercise, and returns the settings used so the UI can show them. Call from
-   * a user gesture.
+   * Starts a play-along session at `bpm`: an optional get-ready countdown of
+   * `countdownSec` seconds, a bar of count-in, then `loops` repetitions. Sets
+   * the metronome's beats and subdivision to fit the exercise, and returns the
+   * settings used so the UI can show them. Call from a user gesture.
    */
-  async startSession(exercise: Exercise, loops: number, bpm: number): Promise<MetronomeSettings> {
+  async startSession(exercise: Exercise, loops: number, bpm: number, countdownSec = 0): Promise<MetronomeSettings> {
     this.preview.stop();
     this.metronome.stop();
     const settings = {
@@ -111,8 +114,16 @@ export class Coach {
     this.sessionStart = { at: Temporal.Now.instant(), timeZone: Temporal.Now.timeZoneId(), perf: performance.now() };
     this.live.resetSession();
     this.bar = -1;
-    await this.metronome.start();
+    // Cleared first: the metronome is already running for a moment before start() resolves.
+    this.countdownEndMs = 0;
+    this.countdownEndMs = await this.metronome.start(countdownSec);
     return settings;
+  }
+
+  /** The get-ready countdown's number to show at `now` (5, 4, … 1), or null when there's no countdown running. */
+  countdownAt(now: number): number | null {
+    if (this.playAlong?.phase !== "countIn" || !this.metronome.running) return null;
+    return secondsLeft(this.countdownEndMs, now);
   }
 
   /** Called once when a session finishes by itself (not when it's stopped or abandoned). */
