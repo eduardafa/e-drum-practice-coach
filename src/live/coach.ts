@@ -8,11 +8,14 @@ import { PreviewPlayer } from "../audio/previewPlayer";
 import type { BeatGrid } from "../songs/beats";
 import { SongPlayer } from "../songs/player";
 import { SongClick } from "../songs/songClick";
+import { SongPlayAlong } from "../songs/songPlayAlong";
+import { SONG_BEATS_PER_BAR } from "../songs/songSteps";
 import { previewPlan, type PreviewPlan } from "../exercises/preview";
 import { subdivisionFor } from "../exercises/practice";
 import type { Exercise } from "../exercises/types";
 import { cueLeadMs, cuesAt, type PadCue } from "../playalong/cues";
-import { secondsLeft } from "../playalong/getReady";
+import { beepTimes, secondsLeft } from "../playalong/getReady";
+import { playCountdownBeep } from "../audio/voices";
 import { LearnSession } from "../playalong/learn";
 import { PlayAlongSession } from "../playalong/session";
 import type { MetronomeSettings } from "../audio/schedule";
@@ -27,6 +30,13 @@ import { LiveState } from "./liveState";
 
 /** The song's playback level: a little under full scale, leaving room for the click. */
 export const SONG_VOLUME = 0.9;
+
+/** The click on top of a song while playing along: quiet, a help rather than the beat to follow. */
+const SONG_ALONG_CLICK_VOLUME = 0.35;
+/** How often the song play-along plans its next steps, in ms. */
+const SONG_ALONG_TICK_MS = 25;
+/** A moment before the countdown (or the song) starts, so its first sound isn't clipped. */
+const SONG_START_DELAY_SEC = 0.1;
 
 /** The MIDI controller number of the hi-hat pedal position (foot controller). */
 const HIHAT_PEDAL_CC = 4;
@@ -62,6 +72,12 @@ export class Coach {
   /** Click on the song's beats while it plays, to check the grid. */
   songClickOn = false;
   private readonly songClick = new SongClick();
+  /** Drumming along to the song, scored against its beats; null otherwise. */
+  private songAlong: SongPlayAlong | null = null;
+  private songAlongTimer: ReturnType<typeof setInterval> | null = null;
+  /** When the song play-along's countdown ends (performance.now() ms); 0 when there's none. */
+  private songCountdownEndMs = 0;
+  private songCountdownBeeps: OscillatorNode[] = [];
   private hitListeners = new Set<HitListener>();
   scoring: ScoringOptions = { ...DEFAULT_SCORING };
   /** Play the exercise's drum sounds along with the click during a session (Settings). */
@@ -123,7 +139,7 @@ export class Coach {
   async startMetronome(): Promise<void> {
     if (this.calibrating) return;
     this.endMapping();
-    this.song.pause();
+    this.stopSong();
     this.endLearn();
     this.guide.stop();
     this.preview.stop();
@@ -150,7 +166,7 @@ export class Coach {
    */
   async startSession(exercise: Exercise, loops: number, bpm: number, countdownSec = 0): Promise<MetronomeSettings> {
     this.endMapping();
-    this.song.pause();
+    this.stopSong();
     this.endLearn();
     this.preview.stop();
     this.metronome.stop();
@@ -178,7 +194,7 @@ export class Coach {
   startLearn(exercise: Exercise, loops: number): void {
     if (this.calibrating) return;
     this.endMapping();
-    this.song.pause();
+    this.stopSong();
     this.preview.stop();
     this.endSession();
     this.metronome.stop();
@@ -213,6 +229,7 @@ export class Coach {
   /** Plays the opened song from its current position, on the shared audio context. Call from a user gesture. */
   async playSong(): Promise<void> {
     if (this.calibrating || !this.song.loaded) return;
+    this.endSongPlayAlong();
     this.endMapping();
     this.endLearn();
     this.endSession();
@@ -224,7 +241,80 @@ export class Coach {
 
   /** Schedules the song's beat clicks a little ahead; call every frame while the song is shown. */
   tickSongClick(grid: BeatGrid | null): void {
-    this.songClick.tick(this.metronome.context, this.metronome.clickOutput, this.song, this.songClickOn ? grid : null);
+    const volume = this.songAlong ? SONG_ALONG_CLICK_VOLUME : 1;
+    this.songClick.tick(this.metronome.context, this.metronome.clickOutput, this.song, this.songClickOn ? grid : null, volume);
+  }
+
+  /**
+   * Drum along to the song from its current position, every hit scored
+   * against `grid` (and the counts between beats, from the metronome's
+   * subdivision setting). An optional get-ready countdown of `countdownSec`
+   * seconds comes first. Call from a user gesture.
+   */
+  async startSongPlayAlong(grid: BeatGrid, countdownSec = 0): Promise<void> {
+    if (this.calibrating || !this.song.loaded) return;
+    this.endMapping();
+    this.endLearn();
+    this.endSession();
+    this.preview.stop();
+    this.metronome.stop();
+    this.stopSong();
+    const ctx = await this.metronome.audioContext();
+    this.live.resetSession();
+    this.grid.clear();
+    const countdownStart = ctx.currentTime + SONG_START_DELAY_SEC;
+    const out = this.metronome.clickOutput ?? ctx.destination;
+    this.songCountdownBeeps = beepTimes(countdownStart, countdownSec).map((t) => playCountdownBeep(ctx, out, t, 1));
+    const startAt = countdownStart + countdownSec;
+    this.songCountdownEndMs = countdownSec > 0 ? performance.now() + (startAt - ctx.currentTime) * 1000 : 0;
+    this.song.play(ctx, SONG_VOLUME, startAt);
+    this.songAlong = new SongPlayAlong(grid, this.metronome.currentSettings.subdivision);
+    this.song.onEnded = () => this.endSongPlayAlong();
+    const tick = () => this.songAlong?.tick(ctx, this.song, this.grid, this.live);
+    this.songAlongTimer = setInterval(tick, SONG_ALONG_TICK_MS);
+    tick();
+  }
+
+  /** Whether the drummer is playing along to the song (countdown included). */
+  get playingAlong(): boolean {
+    return this.songAlong !== null;
+  }
+
+  /** Stops scoring against the song; the song pauses where it is, and this run's numbers stay on screen. */
+  endSongPlayAlong(): void {
+    if (this.songAlongTimer !== null) clearInterval(this.songAlongTimer);
+    this.songAlongTimer = null;
+    for (const beep of this.songCountdownBeeps) {
+      try {
+        beep.stop();
+      } catch {
+        // Already played.
+      }
+    }
+    this.songCountdownBeeps = [];
+    this.songCountdownEndMs = 0;
+    if (!this.songAlong) return;
+    this.songAlong = null;
+    this.song.onEnded = null;
+    this.song.pause();
+    this.grid.clear();
+  }
+
+  /** Whether hits are being scored and counts are moving: the metronome, or a song play-along. */
+  get counting(): boolean {
+    return this.metronome.running || this.songAlong !== null;
+  }
+
+  /** Beats in a bar and counts per beat for the live count: the song's 4/4 while playing along, else the metronome's. */
+  get countSettings(): Pick<MetronomeSettings, "beatsPerBar" | "subdivision"> {
+    const { beatsPerBar, subdivision } = this.metronome.currentSettings;
+    return this.songAlong ? { beatsPerBar: SONG_BEATS_PER_BAR, subdivision: this.songAlong.subdivision } : { beatsPerBar, subdivision };
+  }
+
+  /** Any song playback or play-along stops (another mode is taking over). */
+  private stopSong(): void {
+    this.endSongPlayAlong();
+    this.song.pause();
   }
 
   /** Silences any song clicks not yet played (the song panel closed). */
@@ -245,7 +335,7 @@ export class Coach {
     this.endSession();
     this.endLearn();
     this.metronome.stop();
-    this.song.pause();
+    this.stopSong();
     this.mappingRun = new KitMapping();
     this.mappingFeedback = null;
   }
@@ -271,6 +361,7 @@ export class Coach {
 
   /** The get-ready countdown's number to show at `now` (5, 4, … 1), or null when there's no countdown running. */
   countdownAt(now: number): number | null {
+    if (this.songAlong) return secondsLeft(this.songCountdownEndMs, now);
     if (this.playAlong?.phase !== "countIn" || !this.metronome.running) return null;
     return secondsLeft(this.countdownEndMs, now);
   }
@@ -309,7 +400,7 @@ export class Coach {
   async startPreview(exercise: Exercise, bpm: number, onEnd: () => void): Promise<void> {
     if (this.calibrating) return;
     this.endMapping();
-    this.song.pause();
+    this.stopSong();
     this.endLearn();
     this.endSession();
     this.metronome.stop();
@@ -321,7 +412,7 @@ export class Coach {
   /** Starts a calibration run for a skill level. Call from a user gesture. */
   async startCalibration(level: SkillLevel): Promise<void> {
     this.endMapping();
-    this.song.pause();
+    this.stopSong();
     this.endLearn();
     this.preview.stop();
     this.metronome.stop();
@@ -354,6 +445,7 @@ export class Coach {
   }
 
   dispose(): void {
+    this.endSongPlayAlong();
     for (const u of this.unsubscribers) u();
     this.midi.dispose();
     this.preview.stop();
@@ -404,7 +496,7 @@ export class Coach {
       note: event.note,
       velocity: event.velocity,
       time,
-      score: this.metronome.running ? scoreHit(this.grid, time, scoring) : null,
+      score: this.counting ? scoreHit(this.grid, time, scoring) : null,
     });
   }
 }
