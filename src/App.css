@@ -2780,3 +2780,30 @@ button.primary.danger {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
+
+/* Checking and correcting a song's beats, under its waveform. */
+.grid-tools {
+  border: 0;
+  padding: 0;
+  min-inline-size: 0;
+  display: grid;
+  gap: 6px;
+  margin: 0 16px 8px;
+}
+
+.grid-tools-status {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* The same compact size as the buttons in the song's header. */
+.grid-tools button.primary,
+.grid-tools button.secondary {
+  padding: 4px 12px;
+  font-size: 13px;
+}
+
+.grid-tools .link-button {
+  font-size: 13px;
+}

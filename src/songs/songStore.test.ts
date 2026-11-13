@@ -31,6 +31,14 @@ describe("parseSongs", () => {
     expect(parsed.map((s) => s.fingerprint)).toEqual(["a"]);
     expect(parseSongs({ not: "a list" })).toEqual([]);
   });
+
+  it("keeps the beats as found next to a corrected grid, dropping a malformed copy", () => {
+    const corrected = { ...grid, firstDownbeat: 2 };
+    expect(parseSongs([{ ...song("a"), grid: corrected, found: grid }])[0]).toMatchObject({ grid: corrected, found: grid });
+    const [bad] = parseSongs([{ ...song("a"), found: { beats: "no" } }]);
+    expect(bad.grid).toEqual(grid);
+    expect(bad.found).toBeUndefined();
+  });
 });
 
 describe("remember", () => {

@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { coach } from "./appState";
 import type { OpenSong } from "./SongPanel";
 import { analyzeSong } from "./songs/analyzeSong";
+import type { BeatGrid } from "./songs/beats";
 import { checkSongFile, MAX_SONG_SECONDS, songFingerprint, songTitle, waveformPeaks } from "./songs/song";
 import { loadSongs, remember, saveSongs, type RememberedSong } from "./songs/songStore";
 
@@ -55,18 +56,26 @@ export function useSong(beforeOpen: () => void) {
       cancelAnalysis.current?.();
       beforeOpen();
       coach.song.load(buffer);
-      setSong({ title, duration: buffer.duration, peaks: waveformPeaks(mono, 800), fingerprint, grid: saved?.grid ?? null });
-      const entry = (grid: RememberedSong["grid"]): RememberedSong => ({
+      setSong({
+        title,
+        duration: buffer.duration,
+        peaks: waveformPeaks(mono, 800),
+        fingerprint,
+        grid: saved?.grid ?? null,
+        found: saved ? (saved.found ?? saved.grid) : null,
+      });
+      const entry = (grid: BeatGrid, found?: BeatGrid): RememberedSong => ({
         fingerprint,
         title,
         duration: buffer.duration,
         lastOpened: Temporal.Now.instant().toString(),
         grid,
+        ...(found && { found }),
       });
 
       if (saved) {
-        // Opened before: its beats come back at once.
-        store(remember(remembered, entry(saved.grid)));
+        // Opened before: its beats come back at once, corrections included.
+        store(remember(remembered, entry(saved.grid, saved.found)));
         return;
       }
       setAnalyzing(0);
@@ -74,7 +83,7 @@ export function useSong(beforeOpen: () => void) {
       cancelAnalysis.current = run.cancel;
       try {
         const grid = await run.result;
-        setSong((s) => (s && s.fingerprint === fingerprint ? { ...s, grid } : s));
+        setSong((s) => (s && s.fingerprint === fingerprint ? { ...s, grid, found: grid } : s));
         setRemembered((list) => {
           const next = remember(list, entry(grid));
           saveSongs(next);
@@ -103,8 +112,28 @@ export function useSong(beforeOpen: () => void) {
     setSong(null);
   };
 
+  /**
+   * Replaces the open song's beats with the drummer's correction, and saves
+   * it. Passing the beats as found goes back to them.
+   */
+  const setGrid = (grid: BeatGrid) => {
+    if (!song) return;
+    const { fingerprint, found } = song;
+    setSong((s) => (s && s.fingerprint === fingerprint ? { ...s, grid } : s));
+    setRemembered((list) => {
+      const saved = list.find((s) => s.fingerprint === fingerprint);
+      if (!saved) return list;
+      const { found: _, ...rest } = saved;
+      const next = list.map((s) =>
+        s === saved ? { ...rest, grid, ...(found && grid !== found && { found }) } : s,
+      );
+      saveSongs(next);
+      return next;
+    });
+  };
+
   /** Removes a song (and its saved beats) from this browser. */
   const forget = (fingerprint: string) => store(remembered.filter((s) => s.fingerprint !== fingerprint));
 
-  return { song, loading, error, analyzing, remembered, open, close, forget };
+  return { song, loading, error, analyzing, remembered, open, close, forget, setGrid };
 }

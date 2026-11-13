@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { positionAt } from "./player";
+import { audioTimeAt, positionAt } from "./player";
 
 describe("positionAt", () => {
   it("stays put while paused", () => {
@@ -13,5 +13,15 @@ describe("positionAt", () => {
   it("never goes past the end or before the start", () => {
     expect(positionAt({ offset: 178, startedAt: 100 }, 110, 180)).toBe(180);
     expect(positionAt({ offset: 0, startedAt: 100 }, 99, 180)).toBe(0);
+  });
+});
+
+describe("audioTimeAt", () => {
+  it("maps a song position to the audio clock while playing", () => {
+    expect(audioTimeAt({ offset: 10, startedAt: 100 }, 12.5)).toBe(102.5);
+  });
+
+  it("has no audio time while paused", () => {
+    expect(audioTimeAt({ offset: 10, startedAt: null }, 12.5)).toBeNull();
   });
 });

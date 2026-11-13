@@ -18,12 +18,18 @@ export function positionAt(state: PlayState, now: number, duration: number): num
   return Math.min(duration, Math.max(0, pos));
 }
 
+/** The audio-clock time at which song position `seconds` plays, or null while paused. */
+export function audioTimeAt(state: PlayState, seconds: number): number | null {
+  return state.startedAt === null ? null : state.startedAt + (seconds - state.offset);
+}
+
 export class SongPlayer {
   private buffer: AudioBuffer | null = null;
   private ctx: AudioContext | null = null;
   private source: AudioBufferSourceNode | null = null;
   private gain: GainNode | null = null;
   private state: PlayState = { offset: 0, startedAt: null };
+  private runs = 0;
   /** Called when the song reaches its end by itself. */
   onEnded: (() => void) | null = null;
 
@@ -44,6 +50,19 @@ export class SongPlayer {
     this.stop();
     this.buffer = buffer;
     this.state = { offset: 0, startedAt: null };
+  }
+
+  /**
+   * Counts each start of playback (a play, resume or seek while playing), so
+   * anything scheduled against the song knows when its timing went stale.
+   */
+  get run(): number {
+    return this.runs;
+  }
+
+  /** The audio-clock time at which song position `seconds` plays, or null while paused. */
+  audioTimeAt(seconds: number): number | null {
+    return audioTimeAt(this.state, seconds);
   }
 
   /** The current position in seconds. */
@@ -77,6 +96,7 @@ export class SongPlayer {
     );
     source.start(0, from);
     this.source = source;
+    this.runs += 1;
     this.state = { offset: from, startedAt: ctx.currentTime };
   }
 
