@@ -138,6 +138,24 @@ export class KitRenderer {
     this.drawTimingStrip(0, kitHeight, width, stripHeight, now);
   }
 
+  /** Fills the hi-hat pedal from the bottom by how far it's pressed (CC 4), if the kit sends it. */
+  private drawPedalPosition(cx: number, cy: number, radius: number): void {
+    const pressed = this.state.hihatPedal.pressed();
+    if (pressed === null) return;
+    const { ctx } = this;
+    const w = radius * 1.2;
+    const h = radius * 2;
+    const inset = 3;
+    const fill = (h - inset * 2) * pressed;
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(cx - w / 2, cy - radius, w, h, radius * 0.25);
+    ctx.clip();
+    ctx.fillStyle = this.colors.cymbalEdge;
+    ctx.fillRect(cx - w / 2 + inset, cy + radius - inset - fill, w - inset * 2, fill);
+    ctx.restore();
+  }
+
   private drawPad(pad: PadInfo, cx: number, cy: number, r: number, now: number): void {
     const { ctx } = this;
     const hit = this.state.lastHitByPad.get(pad.id);
@@ -158,6 +176,7 @@ export class KitRenderer {
       ctx.lineWidth = 2;
       ctx.strokeStyle = this.colors.drumRim;
       ctx.stroke();
+      if (pad.id === "hihatPedal") this.drawPedalPosition(cx, cy, radius);
     } else {
       ctx.beginPath();
       ctx.arc(cx, cy, radius, 0, Math.PI * 2);
@@ -194,7 +213,9 @@ export class KitRenderer {
     ctx.font = `500 ${Math.max(11, r * 0.22)}px system-ui, sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(pad.label, cx, cy + radius + Math.max(10, r * 0.22));
+    // The hi-hat pedal's label says how far it's down, once the kit sends its position.
+    const pedalState = pad.id === "hihatPedal" ? this.state.hihatPedal.state() : null;
+    ctx.fillText(pedalState ? `${pad.label} · ${pedalState}` : pad.label, cx, cy + radius + Math.max(10, r * 0.22));
 
     // Timing label floats up and fades out.
     if (hit?.score && age < LABEL_MS) {

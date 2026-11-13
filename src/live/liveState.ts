@@ -6,6 +6,7 @@
 import type { PadId } from "../kit/nitroMax";
 import type { HitScore } from "../timing/grid";
 import type { Count } from "./counts";
+import { HihatPedal } from "./hihatPedal";
 
 export interface LiveHit {
   pad: PadId | null;
@@ -27,6 +28,8 @@ const MAX_BEATS = 16;
 const MAX_COUNTS = 64;
 
 export class LiveState {
+  /** The hi-hat pedal position (CC 4), shown on the kit view. Kept across sessions: it's the kit's state. */
+  readonly hihatPedal = new HihatPedal();
   /** Most recent hit per pad, for the flash animation. */
   readonly lastHitByPad = new Map<PadId, LiveHit>();
   /** Recent hits, oldest first, for the timing strip. */
