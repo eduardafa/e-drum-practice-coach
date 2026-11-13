@@ -35,6 +35,9 @@
   --on-time: light-dark(#15803d, #3ddc84);
   --late: light-dark(#c2410c, #ff9f43);
   --missed: light-dark(#c62828, #ff6b6b);
+  /* A drum tab's note played on the wrong drum: apart from early, on time, late and missed. */
+  --wrong-drum: light-dark(#7c3aed, #b794f6);
+  --on-wrong-drum: light-dark(#ffffff, #1e1033);
 
   --shadow: light-dark(rgb(15 23 42 / 0.16), rgb(0 0 0 / 0.45));
   --tint: light-dark(rgb(15 23 42 / 0.04), rgb(255 255 255 / 0.04));
@@ -207,6 +210,41 @@ body,
 /* Beside a drum tab, on the right of the Notation / Lanes row, instead of over the kit. */
 .small-metronome.inline {
   position: static;
+}
+
+.tab-score {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.tab-score strong {
+  color: var(--text);
+}
+
+.tab-score-part.on-time {
+  color: var(--on-time);
+}
+
+.tab-score-part.early {
+  color: var(--early);
+}
+
+.tab-score-part.late {
+  color: var(--late);
+}
+
+.tab-score-part.missed {
+  color: var(--missed);
+}
+
+.tab-score-part.wrong-drum {
+  color: var(--wrong-drum);
+  font-weight: 600;
 }
 
 .drum-tab-view-row {
@@ -1087,6 +1125,29 @@ fieldset.group.play {
 }
 
 .mark.missed::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+/* A drum tab's note missed because another drum was hit in its place: the miss's cross, in violet. */
+.mark.wrongDrum {
+  --mark-color: var(--wrong-drum);
+  background: var(--wrong-drum);
+}
+
+.mark.wrongDrum::before,
+.mark.wrongDrum::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 70%;
+  height: max(3px, calc(2.5px * var(--staff-scale)));
+  border-radius: 2px;
+  background: var(--on-wrong-drum);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.mark.wrongDrum::after {
   transform: translate(-50%, -50%) rotate(-45deg);
 }
 
