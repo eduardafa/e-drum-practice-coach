@@ -3003,15 +3003,12 @@ button.primary.danger {
 }
 
 /* "Open a drum tab" in the Songs tab: next to Open a song, outlined rather than filled. */
-.tab-opener {
+/* Open a song and Open a drum tab, side by side (wrapping only when there's no room). */
+.song-open-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-}
-
-.tab-opener .hint {
-  margin: 0;
 }
 
 .song-open-button.secondary-look {
