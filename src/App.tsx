@@ -12,6 +12,8 @@ import { KeyboardHint } from "./KeyboardHint";
 import { LiveCount } from "./LiveCount";
 import { BigCount } from "./BigCount";
 import { MapKitPanel } from "./MapKitPanel";
+import { SongPanel, type OpenSong } from "./SongPanel";
+import { checkSongFile, MAX_SONG_SECONDS, songFingerprint, songTitle, waveformPeaks } from "./songs/song";
 import { PracticePlanBanner, PracticePlanPanel } from "./PracticePlan";
 import { MetronomeGuide } from "./MetronomeGuide";
 import { NotationStrip, type SessionView } from "./NotationStrip";
@@ -80,6 +82,10 @@ export default function App() {
   const [scoring, setScoring] = useState<ScoringOptions>(coach.scoring);
   const [running, setRunning] = useState(false);
   const prefs = usePlayPreferences();
+  /** A song opened from this computer (EDU-80): shown in the notation's place. */
+  const [song, setSong] = useState<OpenSong | null>(null);
+  const [songLoading, setSongLoading] = useState(false);
+  const [songError, setSongError] = useState<string | null>(null);
   const [calibrating, setCalibrating] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -640,7 +646,51 @@ export default function App() {
    * Choosing an exercise sets the metronome to fit it: the drummer's last tempo for it (or its
    * suggested tempo), its beats, and fine enough to score every note.
    */
+  /** Opens an audio file the drummer picked: decoded here, never uploaded. */
+  const openSong = async (file: File) => {
+    const problem = checkSongFile(file);
+    if (problem) {
+      setSongError(problem);
+      return;
+    }
+    setSongError(null);
+    setSongLoading(true);
+    try {
+      // Decoded at a fixed rate on an offline context: no audio permission needed, and analysis
+      // later sees the same rate whatever the device. The buffer plays on any context.
+      const buffer = await new OfflineAudioContext(1, 1, 44100).decodeAudioData(await file.arrayBuffer());
+      if (buffer.duration > MAX_SONG_SECONDS) {
+        setSongError(`"${file.name}" is longer than ${MAX_SONG_SECONDS / 60} minutes.`);
+        return;
+      }
+      const left = buffer.getChannelData(0);
+      const right = buffer.numberOfChannels > 1 ? buffer.getChannelData(1) : left;
+      const mono = new Float32Array(left.length);
+      for (let i = 0; i < mono.length; i++) mono[i] = (left[i] + right[i]) / 2;
+      coach.endSession();
+      coach.song.load(buffer);
+      setSong({
+        title: songTitle(file.name),
+        duration: buffer.duration,
+        peaks: waveformPeaks(mono, 800),
+        fingerprint: songFingerprint(mono, buffer.sampleRate),
+      });
+      setRunning(false);
+      closeLibrary();
+    } catch {
+      setSongError(`"${file.name}" couldn't be opened. It may be damaged, or in a format this browser can't play.`);
+    } finally {
+      setSongLoading(false);
+    }
+  };
+
+  const closeSong = () => {
+    coach.song.load(null);
+    setSong(null);
+  };
+
   const selectExercise = (id: string | null) => {
+    closeSong();
     closeLibrary();
     coach.endSession();
     setTrainer(null);
@@ -676,31 +726,35 @@ export default function App() {
         </header>
 
         <main className="stage" hidden={view === "history"}>
-          <NotationStrip
-            coach={coach}
-            exercise={exercise}
-            onSelect={selectExercise}
-            onBrowse={toggleLibrary}
-            libraryOpen={libraryOpen}
-            session={sessionView}
-            loops={sessionLoops}
-            onLoopsChange={setSessionLoops}
-            getReadySec={getReadySec}
-            onGetReadyChange={setGetReadySec}
-            onPlay={() => void startSession(metronome.bpm)}
-            onStop={trainer ? stopTrainer : stats.learn && !stats.learn.done ? () => coach.endLearn() : stopSession}
-            onLearn={startLearn}
-            learn={stats.learn}
-            onTrain={() => {
-              coach.endSession();
-              setTrainer({ kind: "setup" });
-            }}
-            trainerStatus={
-              trainer?.kind === "round" || trainer?.kind === "between"
-                ? `Tempo trainer, round ${trainerRounds.length + 1}${trainerConfig ? ` (target ${trainerConfig.targetBpm} BPM)` : ""} · `
-                : null
-            }
-          />
+          {song ? (
+            <SongPanel coach={coach} song={song} onClose={closeSong} />
+          ) : (
+            <NotationStrip
+              coach={coach}
+              exercise={exercise}
+              onSelect={selectExercise}
+              onBrowse={toggleLibrary}
+              libraryOpen={libraryOpen}
+              session={sessionView}
+              loops={sessionLoops}
+              onLoopsChange={setSessionLoops}
+              getReadySec={getReadySec}
+              onGetReadyChange={setGetReadySec}
+              onPlay={() => void startSession(metronome.bpm)}
+              onStop={trainer ? stopTrainer : stats.learn && !stats.learn.done ? () => coach.endLearn() : stopSession}
+              onLearn={startLearn}
+              learn={stats.learn}
+              onTrain={() => {
+                coach.endSession();
+                setTrainer({ kind: "setup" });
+              }}
+              trainerStatus={
+                trainer?.kind === "round" || trainer?.kind === "between"
+                  ? `Tempo trainer, round ${trainerRounds.length + 1}${trainerConfig ? ` (target ${trainerConfig.targetBpm} BPM)` : ""} · `
+                  : null
+              }
+            />
+          )}
           <div className="kit-area">
             <canvas ref={canvasRef} className="kit-canvas" aria-label="Live view of the drum kit" />
             {prefs.showBigCount && <BigCount coach={coach} ref={prefs.bigCountRef} />}
@@ -753,6 +807,9 @@ export default function App() {
               onPreview={previewExercise}
               onStopPreview={stopPreview}
               onSelect={selectExercise}
+              onOpenSong={(file) => void openSong(file)}
+              songLoading={songLoading}
+              songError={songError}
               onClose={closeLibrary}
             />
           )}
