@@ -46,6 +46,12 @@ describe("parseSettings", () => {
     expect(parseSettings({ volume: "loud" }).volume).toBeUndefined();
   });
 
+  it("keeps an offered get-ready countdown, including none", () => {
+    expect(parseSettings({ getReadySec: 10 }).getReadySec).toBe(10);
+    expect(parseSettings({ getReadySec: 0 }).getReadySec).toBe(0);
+    expect(parseSettings({ getReadySec: 7 }).getReadySec).toBeUndefined();
+  });
+
   it("only keeps guideSeen when it's true", () => {
     expect(parseSettings({ guideSeen: "yes" }).guideSeen).toBeUndefined();
   });
