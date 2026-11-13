@@ -32,6 +32,8 @@ export interface SavedSettings {
   handedness?: Handedness;
   /** Light up the next pad to hit on the kit view during a session (on unless turned off). */
   showNextPad?: boolean;
+  /** Play the exercise's drum sounds along with the click during a session. */
+  guideTrack?: boolean;
 }
 
 type UnknownRecord = Record<string, unknown>;
@@ -97,6 +99,7 @@ export function parseSettings(raw: unknown): SavedSettings {
     getReadySec: isGetReadySec(raw.getReadySec) ? raw.getReadySec : undefined,
     handedness: isHandedness(raw.handedness) ? raw.handedness : undefined,
     showNextPad: typeof raw.showNextPad === "boolean" ? raw.showNextPad : undefined,
+    guideTrack: raw.guideTrack === true ? true : undefined,
   };
 }
 

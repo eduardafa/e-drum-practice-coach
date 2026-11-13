@@ -153,6 +153,7 @@ export default function App() {
   const handednessRef = useRef(handedness);
   handednessRef.current = handedness;
   const [showNextPad, setShowNextPad] = useState(saved.showNextPad ?? true);
+  const [guideTrack, setGuideTrack] = useState(saved.guideTrack === true);
   const showNextPadRef = useRef(showNextPad);
   showNextPadRef.current = showNextPad;
   const [accuracyMode, setAccuracyMode] = useState<AccuracyMode>(saved.accuracyMode ?? "partial");
@@ -205,6 +206,7 @@ export default function App() {
 
   useEffect(() => {
     coach.metronome.setSettings(metronome);
+    coach.guideEnabled = guideTrack;
     coach.scoring = scoring;
     saveSettings({
       metronome,
@@ -219,6 +221,7 @@ export default function App() {
       getReadySec,
       handedness,
       showNextPad,
+      guideTrack: guideTrack || undefined,
     });
   }, [
     metronome,
@@ -233,6 +236,7 @@ export default function App() {
     getReadySec,
     handedness,
     showNextPad,
+    guideTrack,
   ]);
 
   // Remember the tempo of the exercise on the staff, however it changed (− / +, typed, a retry, the trainer).
@@ -786,6 +790,8 @@ export default function App() {
               onHandednessChange={setHandedness}
               showNextPad={showNextPad}
               onShowNextPadChange={setShowNextPad}
+              guideTrack={guideTrack}
+              onGuideTrackChange={setGuideTrack}
               onCalibrate={() => void startCalibration()}
               onClose={() => setSettingsOpen(false)}
             />

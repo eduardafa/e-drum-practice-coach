@@ -24,6 +24,8 @@ interface Props {
   onHandednessChange: (handedness: Handedness) => void;
   showNextPad: boolean;
   onShowNextPadChange: (show: boolean) => void;
+  guideTrack: boolean;
+  onGuideTrackChange: (on: boolean) => void;
   onCalibrate: () => void;
   onClose: () => void;
 }
@@ -56,6 +58,8 @@ export function SettingsPanel({
   onHandednessChange,
   showNextPad,
   onShowNextPadChange,
+  guideTrack,
+  onGuideTrackChange,
   onCalibrate,
   onClose,
 }: Props) {
@@ -246,6 +250,14 @@ export function SettingsPanel({
           <p className="hint">
             During a session, a ring shows which pad to hit next, growing brighter as the note comes up. Turn it off
             once you can read the pattern from the notation.
+          </p>
+          <label className="field checkbox">
+            <input type="checkbox" checked={guideTrack} onChange={(e) => onGuideTrackChange(e.target.checked)} />
+            <span>Play the pattern along with me</span>
+          </label>
+          <p className="hint">
+            The exercise's drum sounds play quietly with the click during a session, so you hear how it should sound.
+            Handy for a new pattern; turn it off once you know it, so you hear only yourself.
           </p>
         </div>
       )}
