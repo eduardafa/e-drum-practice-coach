@@ -22,7 +22,10 @@
     // secrets are set with `wrangler secret put GITHUB_CLIENT_SECRET` (and
     // GOOGLE_CLIENT_SECRET). A provider without both stays hidden.
     "GITHUB_CLIENT_ID": "Ov23li1mOUnX2p0O2p0h",
-    "GOOGLE_CLIENT_ID": "646327812271-uc1kvovvgrmekdqmfq7kdlrgtqgttito.apps.googleusercontent.com"
+    "GOOGLE_CLIENT_ID": "646327812271-uc1kvovvgrmekdqmfq7kdlrgtqgttito.apps.googleusercontent.com",
+    // Accounts that can use AI insights, as provider:account-number (EDU-53).
+    // The Claude API key is a secret: ANTHROPIC_API_KEY.
+    "AI_ALLOWED": "github:54603419"
   },
   "d1_databases": [
     {

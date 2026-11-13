@@ -12,6 +12,7 @@ import { PROVIDERS, configuredProviders, type ProviderId } from "./auth/provider
 import { endSession, readSession } from "./auth/sessions";
 import { json, problem } from "./http";
 import { deleteRecords, pullRecords, pushRecords } from "./records";
+import { createInsight, insightsAllowed, latestInsight } from "./insights";
 import { SESSION_COOKIE, clearCookie } from "./auth/cookies";
 
 type Handler = (request: Request, env: Env) => Promise<Response>;
@@ -23,6 +24,7 @@ const ROUTES = new Map<string, Partial<Record<string, Handler>>>([
   ["/api/auth/signout", { POST: signOut }],
   ["/api/records", { GET: signedIn(pullRecords), POST: signedIn(pushRecords), DELETE: signedIn(deleteRecords) }],
   ["/api/account", { DELETE: signedIn(deleteAccount) }],
+  ["/api/insights", { GET: signedIn(latestInsight), POST: signedIn(createInsight) }],
   ...PROVIDERS.flatMap((provider): [string, Partial<Record<string, Handler>>][] => [
     [`/api/auth/${provider}/start`, { GET: (_, env) => startSignIn(env, provider) }],
     [`/api/auth/${provider}/callback`, { GET: (request, env) => finishSignIn(request, env, provider) }],
@@ -97,7 +99,14 @@ async function health(env: Env): Promise<Response> {
 
 export interface MeResponse {
   /** Null when signed out. Name and picture come from the provider at sign-in. */
-  user: { id: string; provider: ProviderId; name: string | null; avatarUrl: string | null } | null;
+  user: {
+    id: string;
+    provider: ProviderId;
+    name: string | null;
+    avatarUrl: string | null;
+    /** On the AI insights allow-list (EDU-53). */
+    insights: boolean;
+  } | null;
   /** The sign-in options that are set up on the server. */
   providers: ProviderId[];
 }
@@ -107,7 +116,13 @@ async function me(request: Request, env: Env): Promise<Response> {
   const session = await readSession(env.DB, request);
   const body: MeResponse = {
     // The ID is this app's own random one: the app keys its sync progress by it.
-    user: session && { id: session.userId, provider: session.provider, name: session.name, avatarUrl: session.avatarUrl },
+    user: session && {
+      id: session.userId,
+      provider: session.provider,
+      name: session.name,
+      avatarUrl: session.avatarUrl,
+      insights: await insightsAllowed(env, session.userId),
+    },
     providers: configuredProviders(env),
   };
   return json(body, 200, session?.setCookie ? { "Set-Cookie": session.setCookie } : {});

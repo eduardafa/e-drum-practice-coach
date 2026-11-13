@@ -31,6 +31,7 @@ export function testEnv(overrides: Partial<Env> = {}, options?: { migrate?: bool
       GITHUB_CLIENT_SECRET: "gh-secret",
       GOOGLE_CLIENT_ID: "google-client",
       GOOGLE_CLIENT_SECRET: "google-secret",
+      AI_ALLOWED: "",
       ...overrides,
     },
   };

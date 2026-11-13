@@ -31,6 +31,7 @@ describe("fetchAccount", () => {
       provider: "google",
       name: "Bea Beats",
       avatarUrl: "https://lh3.googleusercontent.com/a/x",
+      insights: false,
       providers: ["github", "google"],
     });
     // Before the first sign-in with this version: no name or picture yet. A non-HTTPS picture is dropped.
