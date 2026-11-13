@@ -4,6 +4,8 @@ import { CalibrationPanel } from "./CalibrationPanel";
 import { KeyboardHint } from "./KeyboardHint";
 import { LiveCount } from "./LiveCount";
 import { BigCount } from "./BigCount";
+import { practicePlan, type PlanBlock } from "./history/plan";
+import { PracticePlanBanner, PracticePlanPanel, type RunningPlan } from "./PracticePlan";
 import { MetronomeGuide } from "./MetronomeGuide";
 import { NotationStrip, type LearnView, type SessionView } from "./NotationStrip";
 import { LearnSummary } from "./LearnSummary";
@@ -45,6 +47,7 @@ import { formatDelta, KitRenderer } from "./render/kitRenderer";
 import { SettingsPanel } from "./SettingsPanel";
 import { DEFAULT_SCORING, type ScoringOptions } from "./timing/grid";
 import { loadSettings, saveSettings } from "./settings";
+import { DEFAULT_PASS_MARK } from "./playalong/trainer";
 
 /** Keyboard fallback so the app can be tried without a kit. */
 const KEY_TO_NOTE: Record<string, number> = {
@@ -156,6 +159,9 @@ export default function App() {
   const [showNextPad, setShowNextPad] = useState(saved.showNextPad ?? true);
   const [guideTrack, setGuideTrack] = useState(saved.guideTrack === true);
   const [showBigCount, setShowBigCount] = useState(saved.showBigCount ?? true);
+  /** Today's practice: the plan shown before starting, and the plan being run. */
+  const [planOpen, setPlanOpen] = useState(false);
+  const [plan, setPlan] = useState<RunningPlan | null>(null);
   /** The big count while it's shown, so the kit view can leave room for it. */
   const bigCountRef = useRef<HTMLOListElement>(null);
   const showNextPadRef = useRef(showNextPad);
@@ -473,6 +479,7 @@ export default function App() {
     if (showTrainer && (trainer?.kind === "setup" || trainer?.kind === "finished")) return closeTrainer;
     if (showResults) return () => coach.endSession();
     if (showLearnSummary) return () => coach.endLearn();
+    if (planOpen) return () => setPlanOpen(false);
     return null;
   };
 
@@ -581,6 +588,25 @@ export default function App() {
     const settings = await coach.startSession(chosen, sessionLoops, bpm, countdown ? getReadySec : 0);
     setMetronome(settings);
     setRunning(true);
+  };
+
+  /** Moves today's plan to block `index`: selects its exercise, ready to start. */
+  const goToBlock = (blocks: PlanBlock[], index: number) => {
+    const block = blocks[index];
+    if (!block) return;
+    selectExercise(block.exercise.id);
+    setPlan({ blocks, index, blockStart: performance.now() });
+  };
+
+  const startPlan = () => {
+    setPlanOpen(false);
+    goToBlock(practicePlan(history, accuracyMode, DEFAULT_PASS_MARK), 0);
+  };
+
+  /** Starts the current block's session: Learn or Play along on the block's exercise. */
+  const startBlock = (block: PlanBlock) => {
+    if (block.mode === "learn") startLearn();
+    else void startSession(metronome.bpm);
   };
 
   /** Wait mode on the current exercise: no click, the kit view shows the pads to hit and waits for them. */
@@ -831,6 +857,13 @@ export default function App() {
               onClose={closeTrainer}
             />
           )}
+          {planOpen && !plan && (
+            <PracticePlanPanel
+              blocks={practicePlan(history, accuracyMode, DEFAULT_PASS_MARK)}
+              onStart={startPlan}
+              onClose={() => setPlanOpen(false)}
+            />
+          )}
           {showLearnSummary && exercise && coach.learn && (
             <LearnSummary
               exercise={exercise}
@@ -997,6 +1030,25 @@ export default function App() {
                   </button>
                 </div>
               </output>
+            )}
+            {plan ? (
+              <PracticePlanBanner
+                plan={plan}
+                now={performance.now()}
+                onStartBlock={startBlock}
+                onNext={() => goToBlock(plan.blocks, plan.index + 1)}
+                onEnd={() => setPlan(null)}
+              />
+            ) : (
+              historyStatus === "ready" && (
+                <button
+                  className={`secondary plan-button ${planOpen ? "selected" : ""}`}
+                  aria-expanded={planOpen}
+                  onClick={releasing(() => setPlanOpen((open) => !open))}
+                >
+                  Today's practice
+                </button>
+              )
             )}
             {historyStatus !== "loading" && (
               <div className="practice-line">
