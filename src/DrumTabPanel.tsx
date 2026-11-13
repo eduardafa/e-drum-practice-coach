@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { NITRO_MAX_PADS, type PadId } from "./kit/nitroMax";
 import type { Coach } from "./live/coach";
 import { releasing } from "./releasing";
+import { Switch } from "./Switch";
 import type { BeatGrid } from "./songs/beats";
 import { drumTabFrom, guessShift, placeTab, type DrumTab, type PlacedNote } from "./songs/drumTab";
 import { MidiError, readMidiDrums } from "./songs/midiFile";
@@ -182,23 +183,14 @@ export function DrumTabPanel({
             </button>
           </fieldset>
         )}
-        <button
-          className={`secondary ${hear ? "selected" : ""}`}
-          aria-pressed={hear}
-          title="Play the tab's drum sounds over the song, to check it lines up"
-          onClick={releasing(() => setHear((h) => !h))}
-        >
-          Hear the tab
-        </button>
+        <Switch
+          checked={hear}
+          onChange={setHear}
+          label="Hear the tab"
+          title={fixed ? "Play the tab's drum sounds" : "Play the tab's drum sounds over the song, to check it lines up"}
+        />
         {fixed ? (
-          <button
-            className={`secondary ${click ? "selected" : ""}`}
-            aria-pressed={click}
-            title="A click on every beat, higher on beat 1"
-            onClick={releasing(() => setClick((on) => !on))}
-          >
-            Click
-          </button>
+          <Switch checked={click} onChange={setClick} label="Click" title="A click on every beat, higher on beat 1" />
         ) : (
           <>
             {picker("Another tab", "link-button drum-tab-open")}
