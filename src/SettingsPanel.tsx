@@ -28,6 +28,12 @@ interface Props {
   onGuideTrackChange: (on: boolean) => void;
   showBigCount: boolean;
   onShowBigCountChange: (show: boolean) => void;
+  /** The connected kit's MIDI name, or null when none is connected. */
+  kitName: string | null;
+  /** How many notes the connected kit's recorded map has (0: the standard map). */
+  kitMapNotes: number;
+  onMapKit: () => void;
+  onResetKitMap: () => void;
   onCalibrate: () => void;
   onClose: () => void;
 }
@@ -64,6 +70,10 @@ export function SettingsPanel({
   onGuideTrackChange,
   showBigCount,
   onShowBigCountChange,
+  kitName,
+  kitMapNotes,
+  onMapKit,
+  onResetKitMap,
   onCalibrate,
   onClose,
 }: Props) {
@@ -274,6 +284,24 @@ export function SettingsPanel({
         <div id="settings-panel-appearance" role="tabpanel" aria-labelledby="settings-tab-appearance">
           <h3>Theme</h3>
           <ThemeSetting />
+          <h3>Your kit</h3>
+          <p className="hint">
+            {kitName === null
+              ? "Connect your kit to map it. Until then the standard map (Alesis Nitro Max, General MIDI) is used."
+              : kitMapNotes > 0
+                ? `Using your map for "${kitName}" (${kitMapNotes} pads and zones), over the standard one.`
+                : `Using the standard map (Alesis Nitro Max, General MIDI) for "${kitName}". If some pads don't light up or count, map your kit.`}
+          </p>
+          <div className="calibration-actions">
+            <button className="secondary" onClick={releasing(onMapKit)} disabled={kitName === null}>
+              Map your kit
+            </button>
+            {kitMapNotes > 0 && (
+              <button className="secondary" onClick={releasing(onResetKitMap)}>
+                Use the standard map
+              </button>
+            )}
+          </div>
           <h3>Kit setup</h3>
           <label className="field">
             <span>Played</span>
