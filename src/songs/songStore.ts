@@ -2,7 +2,8 @@
  * Songs opened before, in this browser: each one's name, length, when it was
  * last opened, and its beat grid, under its fingerprint. Never its audio:
  * reopening a song still means picking the file, but its grid comes back
- * without analyzing it again. Validated on load, like the settings.
+ * without analyzing it again (with the drummer's corrections, and the grid as
+ * found so they can go back to it). Validated on load, like the settings.
  */
 import type { BeatGrid } from "./beats";
 
@@ -13,7 +14,10 @@ export interface RememberedSong {
   duration: number;
   /** Temporal.Instant string. */
   lastOpened: string;
+  /** The beats to play along to: as found, or as the drummer corrected them. */
   grid: BeatGrid;
+  /** The beats as the app found them, kept only once the drummer has corrected them. */
+  found?: BeatGrid;
 }
 
 const KEY = "edrum-coach:songs:v1";
@@ -44,12 +48,14 @@ function parseSong(value: unknown): RememberedSong | null {
   if (typeof title !== "string" || title.length > 300) return null;
   if (typeof duration !== "number" || !Number.isFinite(duration) || duration <= 0) return null;
   if (typeof lastOpened !== "string" || !grid) return null;
+  // A bad copy of the found beats only loses the way back to them.
+  const found = value.found === undefined ? null : parseGrid(value.found);
   try {
     Temporal.Instant.from(lastOpened);
   } catch {
     return null;
   }
-  return { fingerprint, title, duration, lastOpened, grid };
+  return { fingerprint, title, duration, lastOpened, grid, ...(found && { found }) };
 }
 
 /** The saved list, newest first; malformed entries are dropped. */
