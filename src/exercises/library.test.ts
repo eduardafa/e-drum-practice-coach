@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EXERCISES, findExercise, FIRST_STEPS, GROOVES, RUDIMENTS } from "./library";
+import { EXERCISES, findExercise, FIRST_STEPS, FIRST_STEPS_2, GROOVES, RUDIMENTS } from "./library";
 import type { Exercise } from "./types";
 import { validateExercise, validateLibrary } from "./validate";
 
@@ -18,11 +18,11 @@ describe("starter library", () => {
     expect(validateExercise(exercise)).toEqual([]);
   });
 
-  it("has each category in its own list, first steps listed first", () => {
-    expect(FIRST_STEPS.every((e) => e.category === "first-steps")).toBe(true);
+  it("has each category in its own list, first steps (both parts) listed first", () => {
+    expect([...FIRST_STEPS, ...FIRST_STEPS_2].every((e) => e.category === "first-steps")).toBe(true);
     expect(GROOVES.every((e) => e.category === "groove")).toBe(true);
     expect(RUDIMENTS.every((e) => e.category === "rudiment")).toBe(true);
-    expect(EXERCISES).toEqual([...FIRST_STEPS, ...GROOVES, ...RUDIMENTS]);
+    expect(EXERCISES).toEqual([...FIRST_STEPS, ...FIRST_STEPS_2, ...GROOVES, ...RUDIMENTS]);
   });
 
   it.each(RUDIMENTS.map((e) => [e.id, e] as const))("%s gives every note a hand", (_, exercise) => {
@@ -68,6 +68,42 @@ describe("first steps", () => {
     for (const id of ["first-hihat-quarters", "first-hihat-eighths"]) {
       expect(findExercise(id)?.notes.every((n) => n.hand === "R")).toBe(true);
     }
+  });
+});
+
+describe("first steps, part 2", () => {
+  it("are numbered in order, 4/4 and as slow as part 1", () => {
+    expect(FIRST_STEPS_2.map((e) => e.name.match(/^Part 2, step (\d+):/)?.[1])).toEqual(
+      FIRST_STEPS_2.map((_, i) => String(i + 1)),
+    );
+    for (const e of FIRST_STEPS_2) {
+      expect(e.timeSignature).toEqual({ beats: 4, unit: 4 });
+      expect(e.tempo.min).toBeLessThanOrEqual(40);
+    }
+  });
+
+  it("step 1 adds one kick, on the 'and' of 3", () => {
+    expect(ticksOf("first2-kick-and-of-3", "kick")).toEqual([0, 96, 120]);
+    expect(ticksOf("first2-kick-and-of-3", "snare")).toEqual(ticksOf("rock-8ths", "snare"));
+  });
+
+  it("step 2 moves the right hand to the ride and nothing else", () => {
+    expect(ticksOf("first2-ride", "ride")).toEqual(ticksOf("rock-8ths", "hihat"));
+    expect(ticksOf("first2-ride", "hihat")).toEqual([]);
+    expect(ticksOf("first2-ride", "kick")).toEqual(ticksOf("rock-8ths", "kick"));
+  });
+
+  it("step 4's fill is four snare eighths on 3 & 4 & of bar 2, with the hands off the hi-hat", () => {
+    const bar2 = 192;
+    expect(ticksOf("first2-first-fill", "snare")?.filter((t) => t >= bar2 + 96)).toEqual([288, 312, 336, 360]);
+    expect(ticksOf("first2-first-fill", "hihat")?.some((t) => t >= bar2 + 96)).toBe(false);
+  });
+
+  it("step 5 crashes on 1 (with the kick) where the hi-hat was, after the same fill", () => {
+    expect(ticksOf("first2-fill-crash", "crash")).toEqual([0]);
+    expect(ticksOf("first2-fill-crash", "hihat")).not.toContain(0);
+    expect(ticksOf("first2-fill-crash", "kick")).toContain(0);
+    expect(ticksOf("first2-fill-crash", "snare")).toEqual(ticksOf("first2-first-fill", "snare"));
   });
 });
 
