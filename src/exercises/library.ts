@@ -1,12 +1,98 @@
 /**
- * The starter library: common grooves and rudiments, written as drum tab.
- * See grid.ts for the symbols. Every exercise is checked by library.test.ts.
+ * The starter library: a first-steps path, common grooves and rudiments,
+ * written as drum tab. See grid.ts for the symbols. Every exercise is checked
+ * by library.test.ts.
  */
 import { fromGrid } from "./grid";
 import type { Exercise } from "./types";
 
 const FOUR_FOUR = { beats: 4, unit: 4 } as const;
 const SIX_EIGHT = { beats: 6, unit: 8 } as const;
+
+/**
+ * First steps: the Money beat built up one limb at a time, for someone who has
+ * never played. Each step adds one thing to what came before, slowly (from
+ * 40 BPM), and every step is scored like any exercise, so progress shows in
+ * History. Steps 1, 2 and 4 are the metronome guide's first three steps.
+ * Sticking is given only for the one-voice steps (hi-hat alone): on a two-voice
+ * staff the sticking row collides with the feet's rests. The other steps follow
+ * the groove convention (hi-hat right hand, snare left), as their text says.
+ */
+const FIRST_STEPS_TEMPO = { min: 40, suggested: 60, max: 100 } as const;
+
+export const FIRST_STEPS: readonly Exercise[] = [
+  fromGrid({
+    id: "first-hihat-quarters",
+    name: "Step 1: Hi-hat on every click",
+    category: "first-steps",
+    description:
+      "One hit on the closed hi-hat with your right hand on each click. Count \"1, 2, 3, 4\" out loud and land each hit right on top of the click.",
+    timeSignature: FOUR_FOUR,
+    bars: 1,
+    tempo: FIRST_STEPS_TEMPO,
+    stepsPerBar: 4,
+    lanes: { hihat: "x x x x" },
+    sticking: "R R R R",
+  }),
+  fromGrid({
+    id: "first-hihat-eighths",
+    name: "Step 2: Hi-hat on every \"&\"",
+    category: "first-steps",
+    description:
+      "Two even hits per click with your right hand: one on the click, one exactly halfway to the next. Count \"1 & 2 & 3 & 4 &\". This is the hi-hat part of the Money beat.",
+    timeSignature: FOUR_FOUR,
+    bars: 1,
+    tempo: FIRST_STEPS_TEMPO,
+    stepsPerBar: 8,
+    lanes: { hihat: "x x x x  x x x x" },
+    sticking: "R R R R  R R R R",
+  }),
+  fromGrid({
+    id: "first-kick-snare",
+    name: "Step 3: Kick and snare",
+    category: "first-steps",
+    description:
+      "Kick pedal with your right foot on 1 and 3, snare with your left hand on 2 and 4: one hit per click, switching between them. This is the backbone of the Money beat.",
+    timeSignature: FOUR_FOUR,
+    bars: 1,
+    tempo: FIRST_STEPS_TEMPO,
+    stepsPerBar: 4,
+    lanes: {
+      snare: "- x - x",
+      kick: "x - x -",
+    },
+  }),
+  fromGrid({
+    id: "first-hihat-kick",
+    name: "Step 4: Hi-hat and kick",
+    category: "first-steps",
+    description:
+      "Keep the hi-hat eighths from step 2 and press the kick together with the hi-hat on 1 and 3. The two should sound as one hit.",
+    timeSignature: FOUR_FOUR,
+    bars: 1,
+    tempo: FIRST_STEPS_TEMPO,
+    stepsPerBar: 8,
+    lanes: {
+      hihat: "x x x x  x x x x",
+      kick: "x - - -  x - - -",
+    },
+  }),
+  fromGrid({
+    id: "first-hihat-snare",
+    name: "Step 5: Hi-hat and snare",
+    category: "first-steps",
+    description:
+      "Hi-hat eighths with your right hand, and the snare with your left hand together with the hi-hat on 2 and 4. Next, add the kick from step 4 and you're playing the Money beat.",
+    timeSignature: FOUR_FOUR,
+    bars: 1,
+    tempo: FIRST_STEPS_TEMPO,
+    stepsPerBar: 8,
+    lanes: {
+      hihat: "x x x x  x x x x",
+      snare: "- - x -  - - x -",
+    },
+  }),
+];
 
 export const GROOVES: readonly Exercise[] = [
   fromGrid({
@@ -151,7 +237,7 @@ export const RUDIMENTS: readonly Exercise[] = [
   }),
 ];
 
-export const EXERCISES: readonly Exercise[] = [...GROOVES, ...RUDIMENTS];
+export const EXERCISES: readonly Exercise[] = [...FIRST_STEPS, ...GROOVES, ...RUDIMENTS];
 
 export function findExercise(id: string): Exercise | undefined {
   return EXERCISES.find((e) => e.id === id);

@@ -78,6 +78,10 @@ export function MetronomeGuide({ coach, running, basicsOpen, onApply, onToggleMe
         {step.metronome.subdivision === 2 ? "scoring every \"&\", with soft clicks on them" : "scoring the beats"}. Your
         skill level and latency offset don't change.
       </p>
+      <p className="hint">
+        To have each step scored note by note, open the exercise library and play the <strong>First steps</strong>{" "}
+        exercises in order.
+      </p>
       {running && <LiveCount coach={coach} />}
     </section>
   );
