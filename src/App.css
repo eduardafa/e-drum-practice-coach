@@ -582,20 +582,6 @@ button:focus-visible {
   color: var(--warn);
 }
 
-.link-button {
-  display: block;
-  background: none;
-  border: 0;
-  padding: 4px 0;
-  margin-top: 6px;
-  color: var(--accent);
-  font: inherit;
-  font-size: 13px;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  cursor: pointer;
-}
-
 .live-count {
   list-style: none;
   display: flex;
@@ -1807,10 +1793,6 @@ button.primary.danger {
   font-size: 13px;
 }
 
-.link-button.selected {
-  text-decoration-thickness: 2px;
-}
-
 /* Pad heatmap: the kit from above, pads filled on one violet scale (--heat-0 to --heat-4). */
 .heatmap-head {
   display: flex;
@@ -2406,10 +2388,6 @@ button.secondary.danger:hover:not(:disabled) {
   margin: 4px 0 10px;
 }
 
-.account-more .link-button {
-  text-align: left;
-}
-
 /* ---- Coach's notes (AI insights, EDU-53) ---- */
 
 .insights {
@@ -2833,10 +2811,6 @@ button.secondary.danger:hover:not(:disabled) {
 .grid-tools button.primary,
 .grid-tools button.secondary {
   padding: 4px 12px;
-  font-size: 13px;
-}
-
-.grid-tools .link-button {
   font-size: 13px;
 }
 
