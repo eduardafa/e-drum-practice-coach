@@ -28,6 +28,21 @@ export function songTitle(fileName: string): string {
   return fileName.replace(/\.[^.]+$/, "") || fileName;
 }
 
+/**
+ * A search for the song's drum tab on Songsterr, from its title: underscores
+ * become spaces and a leading track number ("04 ", "1. ", "12-") is dropped,
+ * since a file name like "04_Ghosts_I" would match nothing. Only a link: the
+ * tab is read on Songsterr's site, and nothing is fetched from it.
+ */
+export function tabSearchUrl(title: string): string {
+  const query = title
+    .replace(/[_]+/g, " ")
+    .replace(/^\s*\d{1,3}\s*[-.)]?\s+/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return `https://www.songsterr.com/?pattern=${encodeURIComponent(query || title)}`;
+}
+
 /** "3:07" for 187 seconds; "1:02:05" past an hour. */
 export function formatDuration(seconds: number): string {
   const total = Math.max(0, Math.floor(seconds));

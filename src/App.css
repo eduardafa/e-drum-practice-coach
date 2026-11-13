@@ -2807,3 +2807,9 @@ button.primary.danger {
 .grid-tools .link-button {
   font-size: 13px;
 }
+
+/* "Find the drum tab": a plain link to Songsterr, at the end of the song's header. */
+.song-tab-link {
+  white-space: nowrap;
+  color: var(--accent);
+}
