@@ -1,3 +1,4 @@
+import { PATHS, type Path } from "./exercises/path";
 import { firstStepsProgress, type StepProgress } from "./history/firstSteps";
 import type { HistoryRecord } from "./history/record";
 import type { AccuracyMode } from "./playalong/results";
@@ -28,18 +29,38 @@ function bestLabel(row: StepProgress): string {
  * each. Over all of history, so it doesn't follow the Progress range.
  */
 export function FirstStepsSection({ records, accuracyMode }: { records: readonly HistoryRecord[]; accuracyMode: AccuracyMode }) {
-  const progress = firstStepsProgress(records, accuracyMode, DEFAULT_PASS_MARK);
-  if (!progress.started) return null;
+  return (
+    <>
+      {PATHS.map((path) => (
+        <PathProgress key={path.id} path={path} records={records} accuracyMode={accuracyMode} />
+      ))}
+    </>
+  );
+}
+
+/** One path, once it's started or the beat leading into it has passed. */
+function PathProgress({
+  path,
+  records,
+  accuracyMode,
+}: {
+  path: Path;
+  records: readonly HistoryRecord[];
+  accuracyMode: AccuracyMode;
+}) {
+  const progress = firstStepsProgress(records, accuracyMode, DEFAULT_PASS_MARK, path);
+  if (!progress.unlocked) return null;
   const { rows, passedSteps, totalSteps, next } = progress;
+  const titleId = `path-${path.id}-title`;
 
   return (
-    <section className="first-steps-progress" aria-labelledby="first-steps-title">
-      <h3 id="first-steps-title">First steps</h3>
+    <section className="first-steps-progress" aria-labelledby={titleId}>
+      <h3 id={titleId}>{path.title}</h3>
       <p className="hint">
         {passedSteps} of {totalSteps} steps passed
         {next
           ? ` · up next: ${next.exercise.name}. A step passes with a run of ${percent(DEFAULT_PASS_MARK)} or more.`
-          : ". Every step and the Money beat passed: try the Money beat a little faster each week."}
+          : `. Every step and the ${rows.at(-1)?.exercise.name ?? "goal"} passed: play it a little faster each week.`}
       </p>
       <ol className="first-steps-list">
         {rows.map((row) => (

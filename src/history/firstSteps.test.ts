@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { FIRST_STEPS } from "../exercises/library";
-import { PATH_GOAL_ID } from "../exercises/path";
+import { PATH_GOAL_ID, PATHS } from "../exercises/path";
 import { firstStepsProgress } from "./firstSteps";
 import type { HistoryRecord, SessionRecord } from "./record";
 
@@ -95,5 +95,21 @@ describe("firstStepsProgress", () => {
     expect(firstStepsProgress([trainer], "partial", PASS).rows[0].sessions).toBe(0);
     const round: HistoryRecord = { ...session(STEP1, 0.95), trainerRunId: "run-1" };
     expect(firstStepsProgress([trainer, round], "partial", PASS).rows[0]).toMatchObject({ sessions: 1, status: "passed" });
+  });
+
+  it("works for part 2, which unlocks once the Money beat passes", () => {
+    const part2 = PATHS[1];
+    const before = firstStepsProgress([session(PATH_GOAL_ID, 0.85)], "partial", PASS, part2);
+    expect(before.unlocked).toBe(false);
+    const after = firstStepsProgress([session(PATH_GOAL_ID, 0.92)], "partial", PASS, part2);
+    expect(after).toMatchObject({ unlocked: true, started: false, passedSteps: 0, totalSteps: part2.steps.length });
+    expect(after.next?.exercise.id).toBe(part2.steps[0].id);
+    expect(after.rows.at(-1)).toMatchObject({ goal: true });
+    expect(after.rows.at(-1)?.exercise.id).toBe(part2.goalId);
+  });
+
+  it("unlocks part 1 only once it's started (nothing leads into it)", () => {
+    expect(firstStepsProgress([], "partial", PASS).unlocked).toBe(false);
+    expect(firstStepsProgress([session(STEP1, 0.2)], "partial", PASS).unlocked).toBe(true);
   });
 });

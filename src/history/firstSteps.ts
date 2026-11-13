@@ -1,11 +1,11 @@
 /**
- * Progress along the First steps path, from saved sessions: for each step
- * (and the Money beat it leads to), the best run so far and whether it
+ * Progress along a First steps path, from saved sessions: for each step
+ * (and the beat it leads to), the best run so far and whether it
  * passed. Uses the same pass rule as the results screen's Next button, over
  * all of history: a passed step stays passed.
  */
-import { findExercise, FIRST_STEPS } from "../exercises/library";
-import { PATH_GOAL_ID } from "../exercises/path";
+import { findExercise } from "../exercises/library";
+import { PATHS, type Path } from "../exercises/path";
 import type { Exercise } from "../exercises/types";
 import type { AccuracyMode } from "../playalong/results";
 import type { HistoryRecord } from "./record";
@@ -31,31 +31,40 @@ export interface FirstStepsProgress {
   totalSteps: number;
   /** The first row not passed yet, or null when everything has. */
   next: StepProgress | null;
-  /** Whether any numbered step has been played; the History page shows the path from then on. */
+  /** Whether any numbered step has been played. */
   started: boolean;
+  /** Started, or the exercise leading into it has passed: the History page shows the path then. */
+  unlocked: boolean;
+}
+
+/** The best accuracy over `records` for one exercise, or null if none was scored. */
+function bestRun(records: readonly HistoryRecord[], exerciseId: string, mode: AccuracyMode) {
+  let sessions = 0;
+  let best: StepProgress["best"] = null;
+  for (const r of records) {
+    if (r.kind !== "session" || r.exerciseId !== exerciseId) continue;
+    sessions += 1;
+    const accuracy = r.accuracy[mode];
+    if (accuracy === null) continue;
+    if (!best || accuracy > best.accuracy || (accuracy === best.accuracy && r.bpm > best.bpm)) {
+      best = { accuracy, bpm: r.bpm };
+    }
+  }
+  return { sessions, best };
 }
 
 export function firstStepsProgress(
   records: readonly HistoryRecord[],
   mode: AccuracyMode,
   passMark: number,
+  path: Path = PATHS[0],
 ): FirstStepsProgress {
-  const goal = findExercise(PATH_GOAL_ID);
-  const path = goal ? [...FIRST_STEPS, goal] : [...FIRST_STEPS];
+  const goal = findExercise(path.goalId);
+  const exercises = goal ? [...path.steps, goal] : [...path.steps];
 
   let nextFound = false;
-  const rows = path.map((exercise): StepProgress => {
-    let sessions = 0;
-    let best: StepProgress["best"] = null;
-    for (const r of records) {
-      if (r.kind !== "session" || r.exerciseId !== exercise.id) continue;
-      sessions += 1;
-      const accuracy = r.accuracy[mode];
-      if (accuracy === null) continue;
-      if (!best || accuracy > best.accuracy || (accuracy === best.accuracy && r.bpm > best.bpm)) {
-        best = { accuracy, bpm: r.bpm };
-      }
-    }
+  const rows = exercises.map((exercise): StepProgress => {
+    const { sessions, best } = bestRun(records, exercise.id, mode);
     const passed = best !== null && best.accuracy >= passMark;
     const status: StepStatus = passed ? "passed" : nextFound ? "later" : "next";
     if (status === "next") nextFound = true;
@@ -63,11 +72,14 @@ export function firstStepsProgress(
   });
 
   const steps = rows.filter((r) => !r.goal);
+  const started = steps.some((r) => r.sessions > 0);
+  const leadIn = path.afterId === null ? null : bestRun(records, path.afterId, mode).best;
   return {
     rows,
     passedSteps: steps.filter((r) => r.status === "passed").length,
     totalSteps: steps.length,
     next: rows.find((r) => r.status === "next") ?? null,
-    started: steps.some((r) => r.sessions > 0),
+    started,
+    unlocked: started || (leadIn !== null && leadIn.accuracy >= passMark),
   };
 }
