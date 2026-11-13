@@ -51,7 +51,8 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
   how to delete it is on the privacy page (`public/privacy.html`, served at `/privacy`).
 - Coach's notes (allow-listed accounts): on the History page, Claude (Haiku 5.5, the cheapest) writes a few beginner-friendly tips
   from a summary of the last 30 days' numbers, never raw hits or account details. Limited to 5 a day per account
-  and a $5 monthly budget, and the same stats on the same day reuse the stored tips.
+  and a $5 monthly budget, and the same stats on the same day reuse the stored tips. The owner gets an email (via
+  Resend) when the month's AI spend passes $1 and again at $4.
 - Progress charts: for each exercise, accuracy and fastest tempo per day (or per week over longer spans) for the
   last 7 days, 30 days or all time, with a one-line summary such as "Money beat: 72% → 88% over 2 weeks,
   70 → 84 BPM" and a table view.

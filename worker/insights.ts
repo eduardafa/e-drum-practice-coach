@@ -12,6 +12,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { sha256Hex } from "./auth/crypto";
 import { json, problem } from "./http";
+import { checkSpendAlerts, monthStart } from "./alerts";
 
 /** The cheapest Claude model by default (owner decision, 2026-11-13); EDU-57 adds a choice. */
 export const MODEL = "claude-haiku-5-5";
@@ -131,8 +132,6 @@ export class InsightError extends Error {
   }
 }
 
-const monthStart = (now: Date) => new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
-
 /** GET /api/insights: the latest insight and today's remaining count, or 404 when not allowed. */
 export async function latestInsight(_request: Request, env: Env, userId: string, now = new Date()): Promise<Response> {
   if (!(await insightsAllowed(env, userId))) return problem(404, "not-found", "No such API route.");
@@ -201,6 +200,7 @@ export async function createInsight(
       await env.DB.prepare("INSERT INTO insights (user_id, created_at, day, summary_hash, body, cost_micros) VALUES (?, ?, ?, ?, ?, ?)")
         .bind(userId, now.toISOString(), "failed", hash, "null", error.costMicros)
         .run();
+      await checkSpendAlerts(env, now);
     }
     return problem(502, "insight-failed", "Couldn't write tips just now. Try again in a little while.");
   }
@@ -209,5 +209,6 @@ export async function createInsight(
   await env.DB.prepare("INSERT INTO insights (user_id, created_at, day, summary_hash, body, cost_micros) VALUES (?, ?, ?, ?, ?, ?)")
     .bind(userId, created, day, hash, JSON.stringify(result.insight), result.costMicros)
     .run();
+  await checkSpendAlerts(env, now);
   return json({ insight: result.insight, createdAt: created, remainingToday: await remainingToday(env, userId, now), cached: false });
 }
