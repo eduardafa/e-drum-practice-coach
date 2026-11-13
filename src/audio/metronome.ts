@@ -17,6 +17,7 @@ import {
 import type { TimingGrid } from "../timing/grid";
 import type { TickCommand } from "./tickCommand";
 import { playClick } from "./voices";
+import { DEFAULT_VOLUME } from "./volume";
 
 const TICK_MS = 25;
 const LOOKAHEAD_SEC = 0.12;
@@ -32,7 +33,9 @@ export class Metronome {
   private cursor: ScheduleCursor | null = null;
   private readonly clock = new ClockMapper();
   private listeners = new Set<BeatListener>();
-  volume = 0.6;
+  /** Clicks go through this: volume gain, then a limiter, then the speakers. */
+  private bus: GainNode | null = null;
+  private volumeValue = DEFAULT_VOLUME;
 
   constructor(
     private settings: MetronomeSettings,
@@ -45,6 +48,16 @@ export class Metronome {
 
   get currentSettings(): MetronomeSettings {
     return this.settings;
+  }
+
+  /** Click volume as a gain, 0 to MAX_VOLUME (see ./volume). Applies to clicks already scheduled too. */
+  get volume(): number {
+    return this.volumeValue;
+  }
+
+  set volume(volume: number) {
+    this.volumeValue = volume;
+    if (this.bus) this.bus.gain.value = volume;
   }
 
   setSettings(settings: MetronomeSettings): void {
@@ -63,7 +76,10 @@ export class Metronome {
    * (autoplay policy).
    */
   async audioContext(): Promise<AudioContext> {
-    if (!this.ctx) this.ctx = new AudioContext({ latencyHint: "interactive" });
+    if (!this.ctx) {
+      this.ctx = new AudioContext({ latencyHint: "interactive" });
+      this.bus = clickBus(this.ctx, this.volumeValue);
+    }
     await this.ctx.resume();
     return this.ctx;
   }
@@ -101,12 +117,14 @@ export class Metronome {
     this.worker = null;
     void this.ctx?.close();
     this.ctx = null;
+    this.bus = null;
   }
 
   private schedule(): void {
     const ctx = this.ctx;
+    const bus = this.bus;
     const cursor = this.cursor;
-    if (!ctx || !cursor) return;
+    if (!ctx || !bus || !cursor) return;
 
     this.clock.update(sampleClocks(ctx));
 
@@ -121,7 +139,7 @@ export class Metronome {
       // A listener may stop the metronome mid-batch (calibration does after its last click).
       if (!this.cursor) break;
       if (step.beat || this.settings.clickSubdivisions) {
-        playClick(ctx, ctx.destination, step.time, step.downbeat ? "downbeat" : step.beat ? "beat" : "sub", this.volume);
+        playClick(ctx, bus, step.time, step.downbeat ? "downbeat" : step.beat ? "beat" : "sub", 1);
       }
       const performanceTime = this.clock.toPerformanceMs(step.time);
       this.grid.add({
@@ -133,4 +151,22 @@ export class Metronome {
       for (const l of this.listeners) l({ ...step, performanceTime });
     }
   }
+}
+
+/**
+ * Volume gain into a fast limiter. Above 100% the gain pushes the click past
+ * full scale; the limiter (instant attack, hard knee, high ratio) holds the
+ * peaks just under it, so a boost is louder, not clipped.
+ */
+function clickBus(ctx: AudioContext, volume: number): GainNode {
+  const gain = ctx.createGain();
+  gain.gain.value = volume;
+  const limiter = ctx.createDynamicsCompressor();
+  limiter.threshold.value = -3;
+  limiter.knee.value = 0;
+  limiter.ratio.value = 20;
+  limiter.attack.value = 0;
+  limiter.release.value = 0.1;
+  gain.connect(limiter).connect(ctx.destination);
+  return gain;
 }

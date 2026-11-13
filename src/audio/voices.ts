@@ -7,27 +7,40 @@
 import type { Dynamic } from "../exercises/types";
 import type { PadId } from "../kit/nitroMax";
 
-const CLICK_DURATION_SEC = 0.03;
+const CLICK_DECAY_SEC = 0.06;
 
-/** A short sine blip: higher on the downbeat, lower off the beat. */
+/** Pitch per click: higher on the downbeat, lower off the beat. All in the ear's most sensitive range. */
+const CLICK_PITCH = { downbeat: 2000, beat: 1500, sub: 1000 } as const;
+
+/**
+ * A woodblock-like click: a square wave (its odd harmonics make it much
+ * louder to the ear than a pure sine of the same peak, and they survive
+ * small laptop speakers), softened by a low-pass so it isn't harsh, with a
+ * fast attack and a 60 ms decay. A pure 30 ms sine, used before, was too
+ * short and too thin to hear over the acoustic thud of rubber pads.
+ */
 export function playClick(
   ctx: BaseAudioContext,
   out: AudioNode,
   time: number,
   kind: "downbeat" | "beat" | "sub",
   volume: number,
-): void {
+): OscillatorNode {
   const osc = ctx.createOscillator();
+  osc.type = "square";
+  osc.frequency.value = CLICK_PITCH[kind];
+  const tone = ctx.createBiquadFilter();
+  tone.type = "lowpass";
+  tone.frequency.value = 6000;
   const gain = ctx.createGain();
-  osc.frequency.value = kind === "downbeat" ? 1600 : kind === "beat" ? 1100 : 800;
-  const peak = volume * (kind === "sub" ? 0.4 : 1);
-  // Fast attack and exponential decay give a crisp, clearly placed transient.
+  const peak = volume * (kind === "sub" ? 0.5 : 1);
   gain.gain.setValueAtTime(0.0001, time);
   gain.gain.exponentialRampToValueAtTime(Math.max(peak, 0.0002), time + 0.001);
-  gain.gain.exponentialRampToValueAtTime(0.0001, time + CLICK_DURATION_SEC);
-  osc.connect(gain).connect(out);
+  gain.gain.exponentialRampToValueAtTime(0.0001, time + CLICK_DECAY_SEC);
+  osc.connect(tone).connect(gain).connect(out);
   osc.start(time);
-  osc.stop(time + CLICK_DURATION_SEC + 0.01);
+  osc.stop(time + CLICK_DECAY_SEC + 0.01);
+  return osc;
 }
 
 const DYNAMIC_GAIN: Record<Dynamic, number> = { ghost: 0.22, normal: 0.6, accent: 1 };

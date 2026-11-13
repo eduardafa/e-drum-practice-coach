@@ -150,7 +150,8 @@ export class Coach {
     this.endSession();
     this.metronome.stop();
     const ctx = await this.metronome.audioContext();
-    this.preview.play(ctx, exercise, bpm, this.metronome.volume, onEnd);
+    // The pad voices have no limiter, so a boosted click volume isn't applied to them.
+    this.preview.play(ctx, exercise, bpm, Math.min(1, this.metronome.volume), onEnd);
   }
 
   /** Starts a calibration run for a skill level. Call from a user gesture. */
