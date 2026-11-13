@@ -6,8 +6,10 @@
  * rudiments, and for grooves the usual right-handed setup (hi-hat, ride
  * and crash with the right hand, snare with the left, kick with the right
  * foot, hi-hat pedal with the left). Toms in a groove have no fixed hand,
- * so they count for their pad but not for a hand.
+ * so they count for their pad but not for a hand. On a left-handed
+ * (mirrored) kit every limb swaps sides; see src/handedness.ts.
  */
+import type { Handedness } from "../handedness";
 import type { PadId } from "../kit/nitroMax";
 import type { HistoryRecord, SessionRecord } from "./record";
 import { RunningStats } from "./running";
@@ -31,8 +33,18 @@ const GROOVE_LIMB: Partial<Record<PadId, Limb>> = {
   hihatPedal: "LF",
 };
 
-/** The limb that plays a note: its sticking if written, else the right-handed groove setup. */
-export function limbOf(voice: { pad: PadId; hand: "R" | "L" | null }): Limb | null {
+const MIRRORED: Readonly<Record<Limb, Limb>> = { RH: "LH", LH: "RH", RF: "LF", LF: "RF" };
+
+/**
+ * The limb that plays a note: its sticking if written, else the groove setup.
+ * Both are written for a right-handed kit; a left-handed kit mirrors them.
+ */
+export function limbOf(voice: { pad: PadId; hand: "R" | "L" | null }, handedness: Handedness = "right"): Limb | null {
+  const limb = rightHandedLimb(voice);
+  return limb && handedness === "left" ? MIRRORED[limb] : limb;
+}
+
+function rightHandedLimb(voice: { pad: PadId; hand: "R" | "L" | null }): Limb | null {
   if (voice.pad === "kick") return "RF";
   if (voice.pad === "hihatPedal") return "LF";
   if (voice.hand === "R") return "RH";
@@ -68,7 +80,11 @@ class Acc {
 const isSession = (r: HistoryRecord): r is SessionRecord => r.kind === "session";
 
 /** Timing per limb and per pad over the sessions played on or after `from` (null: all). */
-export function timingStats(records: readonly HistoryRecord[], from: Temporal.PlainDate | null): TimingStats {
+export function timingStats(
+  records: readonly HistoryRecord[],
+  from: Temporal.PlainDate | null,
+  handedness: Handedness = "right",
+): TimingStats {
   const limbs = new Map<Limb, Acc>();
   const pads = new Map<PadId, Acc>();
   const get = <K>(map: Map<K, Acc>, key: K) => {
@@ -85,7 +101,7 @@ export function timingStats(records: readonly HistoryRecord[], from: Temporal.Pl
     for (const [index, , deltaMs] of r.notes) {
       const voice = r.voices[index];
       if (!voice) continue;
-      const limb = limbOf(voice);
+      const limb = limbOf(voice, handedness);
       const accs = [get(pads, voice.pad), ...(limb ? [get(limbs, limb)] : [])];
       for (const acc of accs) {
         if (deltaMs === null) acc.missed++;

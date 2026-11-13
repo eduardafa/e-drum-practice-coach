@@ -4,6 +4,8 @@ import { EXERCISES } from "./exercises/library";
 import { startingTempo } from "./exercises/practice";
 import { formatTimeSignature, tabOf, type TabCell } from "./exercises/tab";
 import type { Exercise } from "./exercises/types";
+import { displayedExercise } from "./handedness";
+import { useHandedness } from "./HandednessContext";
 
 type Filter = "all" | Exercise["category"];
 
@@ -131,6 +133,9 @@ function ExerciseCard({
 }) {
   const { min, suggested, max } = exercise.tempo;
   const titleId = `library-${exercise.id}`;
+  // Hands and description as played on the drummer's kit (mirrored when left-handed).
+  const handedness = useHandedness();
+  const shown = useMemo(() => displayedExercise(exercise, handedness), [exercise, handedness]);
   return (
     <li className={`library-card ${selected ? "selected" : ""}`} aria-labelledby={titleId}>
       <div className="library-card-head">
@@ -140,8 +145,8 @@ function ExerciseCard({
           {remembered && bpm !== suggested && ` · yours ${bpm}`}
         </span>
       </div>
-      <p className="library-description">{exercise.description}</p>
-      <TabPreview exercise={exercise} player={previewing ? player : null} />
+      <p className="library-description">{shown.description}</p>
+      <TabPreview exercise={shown} player={previewing ? player : null} />
       <div className="calibration-actions">
         <button
           className="secondary"

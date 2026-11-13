@@ -3,6 +3,7 @@
  * requestAnimationFrame loop and reads LiveState directly every frame,
  * so React never re-renders because of a hit.
  */
+import { kitLayout, type Handedness } from "../handedness";
 import { NITRO_MAX_PADS, type PadId, type PadInfo } from "../kit/nitroMax";
 import type { LiveHit, LiveState } from "../live/liveState";
 import { onThemeChange, withColorProbe } from "../theme";
@@ -63,6 +64,8 @@ const PAD_LANES: readonly PadId[] = NITRO_MAX_PADS.map((p) => p.id);
 
 export interface RendererOptions {
   getToleranceMs: () => number;
+  /** Left-handed kits are drawn mirrored. Read every frame, so a change shows at once. */
+  getHandedness: () => Handedness;
 }
 
 export class KitRenderer {
@@ -129,7 +132,7 @@ export class KitRenderer {
     const boxX = (width - boxW) / 2;
     const boxY = (kitHeight - boxH) / 2;
 
-    for (const pad of NITRO_MAX_PADS) {
+    for (const pad of kitLayout(NITRO_MAX_PADS, this.options.getHandedness())) {
       this.drawPad(pad, boxX + pad.x * boxW, boxY + pad.y * boxH, pad.r * boxH, now);
     }
     this.drawTimingStrip(0, kitHeight, width, stripHeight, now);

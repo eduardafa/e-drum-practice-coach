@@ -8,6 +8,8 @@ import { NotationStrip, type SessionView } from "./NotationStrip";
 import type { AccuracyMode } from "./playalong/results";
 import { DEFAULT_GET_READY_SEC } from "./playalong/getReady";
 import { GetReady } from "./GetReady";
+import { DEFAULT_HANDEDNESS, type Handedness } from "./handedness";
+import { HandednessContext } from "./HandednessContext";
 import { DEFAULT_SESSION_LOOPS, type PlayAlongSession } from "./playalong/session";
 import { ResultsPanel } from "./ResultsPanel";
 import { nextRound, type RoundRecord, type TrainerConfig } from "./playalong/trainer";
@@ -141,6 +143,10 @@ export default function App() {
   const exercise = exerciseId === null ? null : (findExercise(exerciseId) ?? null);
   const [sessionLoops, setSessionLoops] = useState(saved.sessionLoops ?? DEFAULT_SESSION_LOOPS);
   const [getReadySec, setGetReadySec] = useState(saved.getReadySec ?? DEFAULT_GET_READY_SEC);
+  const [handedness, setHandedness] = useState<Handedness>(saved.handedness ?? DEFAULT_HANDEDNESS);
+  /** For the kit renderer, which reads it every frame outside React. */
+  const handednessRef = useRef(handedness);
+  handednessRef.current = handedness;
   const [accuracyMode, setAccuracyMode] = useState<AccuracyMode>(saved.accuracyMode ?? "partial");
   /** The last tempo used for each exercise, so choosing one again picks up where the drummer left off. */
   const [exerciseTempos, setExerciseTempos] = useState<Record<string, number>>(saved.exerciseTempos ?? {});
@@ -182,6 +188,7 @@ export default function App() {
     if (!canvas) return;
     const renderer = new KitRenderer(canvas, coach.live, {
       getToleranceMs: () => coach.scoring.toleranceMs,
+      getHandedness: () => handednessRef.current,
     });
     renderer.start();
     return () => renderer.dispose();
@@ -201,8 +208,9 @@ export default function App() {
       exerciseTempos,
       volume,
       getReadySec,
+      handedness,
     });
-  }, [metronome, scoring, skillLevel, guideSeen, exerciseId, accuracyMode, sessionLoops, exerciseTempos, volume, getReadySec]);
+  }, [metronome, scoring, skillLevel, guideSeen, exerciseId, accuracyMode, sessionLoops, exerciseTempos, volume, getReadySec, handedness]);
 
   // Remember the tempo of the exercise on the staff, however it changed (− / +, typed, a retry, the trainer).
   if (exerciseId !== null && exerciseTempos[exerciseId] !== metronome.bpm) {
@@ -666,291 +674,295 @@ export default function App() {
   const updateScoring = (patch: Partial<ScoringOptions>) => setScoring((s) => ({ ...s, ...patch }));
 
   return (
-    <div className={`app ${view === "history" ? "history-view" : ""}`}>
-      <header className="topbar">
-        <h1>E-drum Practice Coach</h1>
-        <div className="topbar-actions">
-          <AccountMenu
-            account={account}
-            signInResult={SIGN_IN_RESULT}
-            open={accountOpen}
-            syncStatus={syncStatus}
-            onToggle={toggleAccount}
-            onSignOut={signOut}
-            onSignOutAndRemove={signOutAndRemove}
-            onDeleteAccount={deleteMyAccount}
-          />
-          <MidiPanel status={midi} />
-        </div>
-      </header>
-
-      <main className="stage" hidden={view === "history"}>
-        <NotationStrip
-          coach={coach}
-          exercise={exercise}
-          onSelect={selectExercise}
-          onBrowse={toggleLibrary}
-          libraryOpen={libraryOpen}
-          session={sessionView}
-          loops={sessionLoops}
-          onLoopsChange={setSessionLoops}
-          getReadySec={getReadySec}
-          onGetReadyChange={setGetReadySec}
-          onPlay={() => void startSession(metronome.bpm)}
-          onStop={trainer ? stopTrainer : stopSession}
-          onTrain={() => {
-            coach.endSession();
-            setTrainer({ kind: "setup" });
-          }}
-          trainerStatus={
-            trainer?.kind === "round" || trainer?.kind === "between"
-              ? `Tempo trainer, round ${trainerRounds.length + 1}${trainerConfig ? ` (target ${trainerConfig.targetBpm} BPM)` : ""} · `
-              : null
-          }
-        />
-        <canvas ref={canvasRef} className="kit-canvas" aria-label="Live view of the drum kit" />
-        <GetReady coach={coach} />
-        {guideOpen && !calibrating && (
-          <MetronomeGuide
-            coach={coach}
-            running={running}
-            basicsOpen={guideFirstOpen}
-            onApply={(settings) => setMetronome(settings)}
-            onToggleMetronome={() => void toggleMetronome()}
-            onClose={() => setGuideOpen(false)}
-          />
-        )}
-        {settingsOpen && !calibrating && (
-          <SettingsPanel
-            metronome={metronome}
-            onMetronomeChange={updateMetronome}
-            volume={volume}
-            onVolumeChange={setVolume}
-            scoring={scoring}
-            onScoringChange={updateScoring}
-            skillLevel={skillLevel}
-            onSkillLevelChange={applySkillLevel}
-            accuracyMode={accuracyMode}
-            onAccuracyModeChange={setAccuracyMode}
-            onCalibrate={() => void startCalibration()}
-            onClose={() => setSettingsOpen(false)}
-          />
-        )}
-        {libraryOpen && !calibrating && (
-          <LibraryPanel
-            selectedId={exerciseId}
-            tempos={exerciseTempos}
-            player={coach.preview}
-            previewingId={previewingId}
-            onPreview={previewExercise}
-            onStopPreview={stopPreview}
-            onSelect={selectExercise}
-            onClose={closeLibrary}
-          />
-        )}
-        {showTrainer && exercise && trainer && trainer.kind !== "round" && (
-          <TrainerPanel
-            exercise={exercise}
-            stage={trainer}
-            config={trainerConfig}
-            rounds={trainerRounds}
-            onStart={startTrainer}
-            onStop={stopTrainer}
-            onClose={closeTrainer}
-          />
-        )}
-        {showResults && exercise && coach.session && (
-          <ResultsPanel
-            exercise={exercise}
-            results={coach.session.results()}
-            mode={accuracyMode}
-            bpm={coach.session.bpm}
-            loops={coach.session.loops}
-            record={lastSession}
-            onRetry={(change) => void startSession(stepBpm(coach.session?.bpm ?? metronome.bpm, change))}
-            onNext={(next) => {
-              // Select it (staff, tempo memory), then start it at once: the countdown gives time to get ready.
-              selectExercise(next.id);
-              void startSession(startingTempo(next, exerciseTempos), true, next);
-            }}
-            onClose={() => coach.endSession()}
-          />
-        )}
-        {calibrating && (
-          <CalibrationPanel
-            coach={coach}
-            level={calibrationLevel}
-            currentLevel={skillLevel}
-            onSwitchLevel={applySkillLevel}
-            currentOffsetMs={scoring.latencyOffsetMs}
-            onRetry={() => void startCalibration()}
-            onClose={endCalibration}
-          />
-        )}
-      </main>
-
-      <aside className="controls" hidden={view === "history"}>
-        <fieldset className="group play" disabled={calibrating}>
-          {!guideSeen && (
-            <output className="suggestion first-visit">
-              <p>New to playing with a metronome? Learn to count and play along.</p>
-              <button className="primary" onClick={releasing(openGuide)}>
-                Open the guide
-              </button>
-            </output>
-          )}
-          <div className="play-row">
-            <button
-              className={`primary start ${running ? "active" : ""}`}
-              onClick={releasing(() => void toggleMetronome())}
-            >
-              {running ? "Stop" : "Start"} <kbd>M</kbd>
-            </button>
-            <button
-              className={`secondary ${settingsOpen ? "selected" : ""}`}
-              aria-expanded={settingsOpen}
-              onClick={releasing(toggleSettings)}
-            >
-              <span className="icon" aria-hidden>
-                ⚙
-              </span>
-              Settings
-            </button>
-          </div>
-          <LiveCount coach={coach} />
-          <div className="tempo">
-            <label htmlFor="tempo">Tempo</label>
-            <button
-              className="secondary step"
-              aria-label="Slower"
-              title="1 BPM slower (Shift: 5)"
-              onClick={(e) => {
-                const delta = e.shiftKey ? -5 : -1;
-                releasing(() => updateMetronome({ bpm: stepBpm(metronome.bpm, delta) }))(e);
-              }}
-            >
-              −
-            </button>
-            <input
-              id="tempo"
-              type="number"
-              className="num"
-              min={MIN_BPM}
-              max={MAX_BPM}
-              value={tempoDraft ?? metronome.bpm}
-              onFocus={(e) => {
-                setTempoDraft(String(metronome.bpm));
-                e.currentTarget.select();
-              }}
-              // Typing "120" passes through "1" and "12": apply only values in range while typing,
-              // and settle the rest (clamped, or back to the tempo if not a number) on Enter or blur.
-              onChange={(e) => {
-                setTempoDraft(e.target.value);
-                const bpm = Number(e.target.value);
-                if (e.target.value !== "" && bpm >= MIN_BPM && bpm <= MAX_BPM) updateMetronome({ bpm: Math.round(bpm) });
-              }}
-              onBlur={() => {
-                const bpm = tempoDraft === null || discardTempoDraft.current ? null : parseBpm(tempoDraft);
-                if (bpm !== null) updateMetronome({ bpm });
-                discardTempoDraft.current = false;
-                setTempoDraft(null);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") e.currentTarget.blur();
-                if (e.key === "Escape") {
-                  discardTempoDraft.current = true;
-                  e.currentTarget.blur();
-                }
-              }}
+    <HandednessContext.Provider value={handedness}>
+      <div className={`app ${view === "history" ? "history-view" : ""}`}>
+        <header className="topbar">
+          <h1>E-drum Practice Coach</h1>
+          <div className="topbar-actions">
+            <AccountMenu
+              account={account}
+              signInResult={SIGN_IN_RESULT}
+              open={accountOpen}
+              syncStatus={syncStatus}
+              onToggle={toggleAccount}
+              onSignOut={signOut}
+              onSignOutAndRemove={signOutAndRemove}
+              onDeleteAccount={deleteMyAccount}
             />
-            <button
-              className="secondary step"
-              aria-label="Faster"
-              title="1 BPM faster (Shift: 5)"
-              onClick={(e) => {
-                const delta = e.shiftKey ? 5 : 1;
-                releasing(() => updateMetronome({ bpm: stepBpm(metronome.bpm, delta) }))(e);
-              }}
-            >
-              +
-            </button>
-            <span className="unit">BPM</span>
+            <MidiPanel status={midi} />
           </div>
+        </header>
 
-          <h2>This session</h2>
-          <dl className="tiles">
-            <div>
-              <dt>On time</dt>
-              <dd>{stats.onTimePct === null ? "—" : `${stats.onTimePct.toFixed(0)}%`}</dd>
-              <dd className="tile-note">
-                {stats.scored === 0 ? "no hits yet" : stats.scored === 1 ? "of 1 hit" : `of ${stats.scored} hits`}
-              </dd>
-            </div>
-            <div>
-              <dt>Average</dt>
-              <dd>{stats.meanMs === null ? "—" : formatDelta(stats.meanMs)}</dd>
-              <dd className="tile-note">
-                {stats.meanMs === null || Math.round(stats.meanMs) === 0 ? "\u00a0" : stats.meanMs < 0 ? "early" : "late"}
-              </dd>
-            </div>
-            <div>
-              <dt>Consistency</dt>
-              <dd>{stats.spreadMs === null ? "—" : `±${stats.spreadMs.toFixed(0)} ms`}</dd>
-              <dd className="tile-note">spread</dd>
-            </div>
-          </dl>
-          <p className="level-summary">{levelSummary}</p>
-          {suggestion !== null && suggestion !== dismissedSuggestion && stats.spreadMs !== null && (
-            <output className="suggestion">
-              <p>
-                Your hits vary by ±{stats.spreadMs.toFixed(0)} ms. The {SKILL_PROFILES[suggestion].label} window (±
-                {SKILL_PROFILES[suggestion].toleranceMs} ms) fits you best right now.
-              </p>
-              <div className="calibration-actions">
-                <button className="primary" onClick={releasing(() => applySkillLevel(suggestion))}>
-                  Switch to {SKILL_PROFILES[suggestion].label}
+        <main className="stage" hidden={view === "history"}>
+          <NotationStrip
+            coach={coach}
+            exercise={exercise}
+            onSelect={selectExercise}
+            onBrowse={toggleLibrary}
+            libraryOpen={libraryOpen}
+            session={sessionView}
+            loops={sessionLoops}
+            onLoopsChange={setSessionLoops}
+            getReadySec={getReadySec}
+            onGetReadyChange={setGetReadySec}
+            onPlay={() => void startSession(metronome.bpm)}
+            onStop={trainer ? stopTrainer : stopSession}
+            onTrain={() => {
+              coach.endSession();
+              setTrainer({ kind: "setup" });
+            }}
+            trainerStatus={
+              trainer?.kind === "round" || trainer?.kind === "between"
+                ? `Tempo trainer, round ${trainerRounds.length + 1}${trainerConfig ? ` (target ${trainerConfig.targetBpm} BPM)` : ""} · `
+                : null
+            }
+          />
+          <canvas ref={canvasRef} className="kit-canvas" aria-label="Live view of the drum kit" />
+          <GetReady coach={coach} />
+          {guideOpen && !calibrating && (
+            <MetronomeGuide
+              coach={coach}
+              running={running}
+              basicsOpen={guideFirstOpen}
+              onApply={(settings) => setMetronome(settings)}
+              onToggleMetronome={() => void toggleMetronome()}
+              onClose={() => setGuideOpen(false)}
+            />
+          )}
+          {settingsOpen && !calibrating && (
+            <SettingsPanel
+              metronome={metronome}
+              onMetronomeChange={updateMetronome}
+              volume={volume}
+              onVolumeChange={setVolume}
+              scoring={scoring}
+              onScoringChange={updateScoring}
+              skillLevel={skillLevel}
+              onSkillLevelChange={applySkillLevel}
+              accuracyMode={accuracyMode}
+              onAccuracyModeChange={setAccuracyMode}
+              handedness={handedness}
+              onHandednessChange={setHandedness}
+              onCalibrate={() => void startCalibration()}
+              onClose={() => setSettingsOpen(false)}
+            />
+          )}
+          {libraryOpen && !calibrating && (
+            <LibraryPanel
+              selectedId={exerciseId}
+              tempos={exerciseTempos}
+              player={coach.preview}
+              previewingId={previewingId}
+              onPreview={previewExercise}
+              onStopPreview={stopPreview}
+              onSelect={selectExercise}
+              onClose={closeLibrary}
+            />
+          )}
+          {showTrainer && exercise && trainer && trainer.kind !== "round" && (
+            <TrainerPanel
+              exercise={exercise}
+              stage={trainer}
+              config={trainerConfig}
+              rounds={trainerRounds}
+              onStart={startTrainer}
+              onStop={stopTrainer}
+              onClose={closeTrainer}
+            />
+          )}
+          {showResults && exercise && coach.session && (
+            <ResultsPanel
+              exercise={exercise}
+              results={coach.session.results()}
+              mode={accuracyMode}
+              bpm={coach.session.bpm}
+              loops={coach.session.loops}
+              record={lastSession}
+              onRetry={(change) => void startSession(stepBpm(coach.session?.bpm ?? metronome.bpm, change))}
+              onNext={(next) => {
+                // Select it (staff, tempo memory), then start it at once: the countdown gives time to get ready.
+                selectExercise(next.id);
+                void startSession(startingTempo(next, exerciseTempos), true, next);
+              }}
+              onClose={() => coach.endSession()}
+            />
+          )}
+          {calibrating && (
+            <CalibrationPanel
+              coach={coach}
+              level={calibrationLevel}
+              currentLevel={skillLevel}
+              onSwitchLevel={applySkillLevel}
+              currentOffsetMs={scoring.latencyOffsetMs}
+              onRetry={() => void startCalibration()}
+              onClose={endCalibration}
+            />
+          )}
+        </main>
+
+        <aside className="controls" hidden={view === "history"}>
+          <fieldset className="group play" disabled={calibrating}>
+            {!guideSeen && (
+              <output className="suggestion first-visit">
+                <p>New to playing with a metronome? Learn to count and play along.</p>
+                <button className="primary" onClick={releasing(openGuide)}>
+                  Open the guide
                 </button>
-                <button className="secondary" onClick={releasing(() => setDismissedSuggestion(suggestion))}>
-                  Not now
+              </output>
+            )}
+            <div className="play-row">
+              <button
+                className={`primary start ${running ? "active" : ""}`}
+                onClick={releasing(() => void toggleMetronome())}
+              >
+                {running ? "Stop" : "Start"} <kbd>M</kbd>
+              </button>
+              <button
+                className={`secondary ${settingsOpen ? "selected" : ""}`}
+                aria-expanded={settingsOpen}
+                onClick={releasing(toggleSettings)}
+              >
+                <span className="icon" aria-hidden>
+                  ⚙
+                </span>
+                Settings
+              </button>
+            </div>
+            <LiveCount coach={coach} />
+            <div className="tempo">
+              <label htmlFor="tempo">Tempo</label>
+              <button
+                className="secondary step"
+                aria-label="Slower"
+                title="1 BPM slower (Shift: 5)"
+                onClick={(e) => {
+                  const delta = e.shiftKey ? -5 : -1;
+                  releasing(() => updateMetronome({ bpm: stepBpm(metronome.bpm, delta) }))(e);
+                }}
+              >
+                −
+              </button>
+              <input
+                id="tempo"
+                type="number"
+                className="num"
+                min={MIN_BPM}
+                max={MAX_BPM}
+                value={tempoDraft ?? metronome.bpm}
+                onFocus={(e) => {
+                  setTempoDraft(String(metronome.bpm));
+                  e.currentTarget.select();
+                }}
+                // Typing "120" passes through "1" and "12": apply only values in range while typing,
+                // and settle the rest (clamped, or back to the tempo if not a number) on Enter or blur.
+                onChange={(e) => {
+                  setTempoDraft(e.target.value);
+                  const bpm = Number(e.target.value);
+                  if (e.target.value !== "" && bpm >= MIN_BPM && bpm <= MAX_BPM) updateMetronome({ bpm: Math.round(bpm) });
+                }}
+                onBlur={() => {
+                  const bpm = tempoDraft === null || discardTempoDraft.current ? null : parseBpm(tempoDraft);
+                  if (bpm !== null) updateMetronome({ bpm });
+                  discardTempoDraft.current = false;
+                  setTempoDraft(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") e.currentTarget.blur();
+                  if (e.key === "Escape") {
+                    discardTempoDraft.current = true;
+                    e.currentTarget.blur();
+                  }
+                }}
+              />
+              <button
+                className="secondary step"
+                aria-label="Faster"
+                title="1 BPM faster (Shift: 5)"
+                onClick={(e) => {
+                  const delta = e.shiftKey ? 5 : 1;
+                  releasing(() => updateMetronome({ bpm: stepBpm(metronome.bpm, delta) }))(e);
+                }}
+              >
+                +
+              </button>
+              <span className="unit">BPM</span>
+            </div>
+
+            <h2>This session</h2>
+            <dl className="tiles">
+              <div>
+                <dt>On time</dt>
+                <dd>{stats.onTimePct === null ? "—" : `${stats.onTimePct.toFixed(0)}%`}</dd>
+                <dd className="tile-note">
+                  {stats.scored === 0 ? "no hits yet" : stats.scored === 1 ? "of 1 hit" : `of ${stats.scored} hits`}
+                </dd>
+              </div>
+              <div>
+                <dt>Average</dt>
+                <dd>{stats.meanMs === null ? "—" : formatDelta(stats.meanMs)}</dd>
+                <dd className="tile-note">
+                  {stats.meanMs === null || Math.round(stats.meanMs) === 0 ? "\u00a0" : stats.meanMs < 0 ? "early" : "late"}
+                </dd>
+              </div>
+              <div>
+                <dt>Consistency</dt>
+                <dd>{stats.spreadMs === null ? "—" : `±${stats.spreadMs.toFixed(0)} ms`}</dd>
+                <dd className="tile-note">spread</dd>
+              </div>
+            </dl>
+            <p className="level-summary">{levelSummary}</p>
+            {suggestion !== null && suggestion !== dismissedSuggestion && stats.spreadMs !== null && (
+              <output className="suggestion">
+                <p>
+                  Your hits vary by ±{stats.spreadMs.toFixed(0)} ms. The {SKILL_PROFILES[suggestion].label} window (±
+                  {SKILL_PROFILES[suggestion].toleranceMs} ms) fits you best right now.
+                </p>
+                <div className="calibration-actions">
+                  <button className="primary" onClick={releasing(() => applySkillLevel(suggestion))}>
+                    Switch to {SKILL_PROFILES[suggestion].label}
+                  </button>
+                  <button className="secondary" onClick={releasing(() => setDismissedSuggestion(suggestion))}>
+                    Not now
+                  </button>
+                </div>
+              </output>
+            )}
+            {historyStatus !== "loading" && (
+              <div className="practice-line">
+                <span>{historyStatus === "off" ? "History is off in this browser" : practiceSummary}</span>
+                <button className="secondary history-button" onClick={releasing(openHistory)}>
+                  History
                 </button>
               </div>
-            </output>
-          )}
-          {historyStatus !== "loading" && (
-            <div className="practice-line">
-              <span>{historyStatus === "off" ? "History is off in this browser" : practiceSummary}</span>
-              <button className="secondary history-button" onClick={releasing(openHistory)}>
-                History
+            )}
+            {/* Until the guide is opened, the first-visit prompt above stands in for this link. */}
+            {guideSeen && (
+              <button className="link-button" onClick={releasing(openGuide)}>
+                How to play with the metronome
               </button>
-            </div>
-          )}
-          {/* Until the guide is opened, the first-visit prompt above stands in for this link. */}
-          {guideSeen && (
-            <button className="link-button" onClick={releasing(openGuide)}>
-              How to play with the metronome
-            </button>
-          )}
-        </fieldset>
+            )}
+          </fieldset>
 
-        {/* The keys, while no kit is playing. */}
-        {!(midi.state === "ready" && midi.selectedId) && <KeyboardHint />}
-      </aside>
+          {/* The keys, while no kit is playing. */}
+          {!(midi.state === "ready" && midi.selectedId) && <KeyboardHint />}
+        </aside>
 
-      {view === "history" && (
-        <main className="history-view-main">
-          <HistoryPage
-            records={history}
-            status={historyStatus}
-            accuracyMode={accuracyMode}
-            selectedExerciseId={exerciseId}
-            onClear={clearHistory}
-            onBack={backToPractice}
-            signedIn={account.status === "signed-in"}
-            insights={account.status === "signed-in" && account.insights}
-          />
-        </main>
-      )}
-    </div>
+        {view === "history" && (
+          <main className="history-view-main">
+            <HistoryPage
+              records={history}
+              status={historyStatus}
+              accuracyMode={accuracyMode}
+              selectedExerciseId={exerciseId}
+              onClear={clearHistory}
+              onBack={backToPractice}
+              signedIn={account.status === "signed-in"}
+              insights={account.status === "signed-in" && account.insights}
+            />
+          </main>
+        )}
+      </div>
+    </HandednessContext.Provider>
   );
 }
 

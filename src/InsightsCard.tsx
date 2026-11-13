@@ -12,6 +12,7 @@ import { insightSummary } from "./history/insightSummary";
 import type { HistoryRecord } from "./history/record";
 import type { AccuracyMode } from "./playalong/results";
 import { releasing } from "./releasing";
+import { useHandedness } from "./HandednessContext";
 
 interface Props {
   records: readonly HistoryRecord[];
@@ -31,6 +32,7 @@ const cost = (dollars: number) => "about $" + dollars.toFixed(dollars < 0.01 ? 3
  * the drummer presses the button.
  */
 export function InsightsCard({ records, accuracyMode }: Props) {
+  const handedness = useHandedness();
   const [reply, setReply] = useState<InsightReply | null>(null);
   const [models, setModels] = useState<AiModelOption[]>([]);
   const [chosen, setChosen] = useState<string | null>(savedModel);
@@ -60,7 +62,7 @@ export function InsightsCard({ records, accuracyMode }: Props) {
     setError(null);
     try {
       if (!model) return;
-      setReply(await requestInsight(insightSummary(records, Temporal.Now.plainDateISO(), accuracyMode), model.id));
+      setReply(await requestInsight(insightSummary(records, Temporal.Now.plainDateISO(), accuracyMode, handedness), model.id));
     } catch (e) {
       setError(e instanceof InsightUnavailable ? e.message : "Couldn't get tips just now. Check your connection.");
     } finally {
