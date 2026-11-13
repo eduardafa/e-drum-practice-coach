@@ -6,7 +6,29 @@ import type { BeatGrid } from "./songs/beats";
 import { drumTabFrom, guessShift, placeTab, type DrumTab, type PlacedNote } from "./songs/drumTab";
 import { MidiError, readMidiDrums } from "./songs/midiFile";
 import { TAB_SPEEDS } from "./songs/tabSong";
+import { TabNotation } from "./TabNotation";
 import { onThemeChange, withColorProbe } from "./theme";
+
+/** How the tab is shown: drum notation, or simple lanes (a row per pad) for drummers who don't read notation yet. */
+type TabView = "notation" | "lanes";
+const VIEW_KEY = "edrum-coach:tab-view";
+
+/** The view chosen last time in this browser; notation the first time. */
+function savedView(): TabView {
+  try {
+    return localStorage.getItem(VIEW_KEY) === "lanes" ? "lanes" : "notation";
+  } catch {
+    return "notation";
+  }
+}
+
+function saveView(view: TabView): void {
+  try {
+    localStorage.setItem(VIEW_KEY, view);
+  } catch {
+    // Storage blocked: the choice lasts until the page closes.
+  }
+}
 
 /** A MIDI file bigger than this isn't a drum part. */
 const MAX_TAB_BYTES = 4 * 1024 * 1024;
@@ -46,6 +68,11 @@ export function DrumTabPanel({
   const [error, setError] = useState<string | null>(null);
   const [hear, setHear] = useState(fixed !== undefined);
   const [click, setClick] = useState(false);
+  const [view, setView] = useState<TabView>(savedView);
+  const chooseView = (next: TabView) => {
+    setView(next);
+    saveView(next);
+  };
   const placed = useMemo(() => (open && grid ? placeTab(open.tab, grid, shift) : null), [open, grid, shift]);
 
   // The coach lights the next pads from the placed tab, and plays it when asked.
@@ -183,7 +210,36 @@ export function DrumTabPanel({
       </div>
       {error && <p className="hint warn-note">{error}</p>}
       {placed && grid ? (
-        <TabStrip coach={coach} notes={placed} grid={grid} />
+        <>
+          <fieldset className="segmented" aria-label="Show the tab as">
+            <legend className="visually-hidden">Show the tab as</legend>
+            {(
+              [
+                ["notation", "Notation"],
+                ["lanes", "Lanes"],
+              ] as const
+            ).map(([id, label]) => (
+              <label key={id} title={id === "lanes" ? "A row per pad: no notation to read" : "Drum notation, two bars at a time"}>
+                <input
+                  type="radio"
+                  name="tab-view"
+                  value={id}
+                  checked={view === id}
+                  onChange={(e) => {
+                    e.currentTarget.blur();
+                    chooseView(id);
+                  }}
+                />
+                <span>{label}</span>
+              </label>
+            ))}
+          </fieldset>
+          {view === "notation" ? (
+            <TabNotation coach={coach} tab={open.tab} grid={grid} shift={fixed ? 0 : shift} />
+          ) : (
+            <TabStrip coach={coach} notes={placed} grid={grid} />
+          )}
+        </>
       ) : (
         <p className="hint">The tab appears once the song's beats are found.</p>
       )}

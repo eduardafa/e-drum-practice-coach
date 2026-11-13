@@ -137,7 +137,7 @@ export function SongPanel({
 
 
   return (
-    <section className="notation open song-panel" aria-label="Song">
+    <section className={`notation open song-panel ${tabOnly ? "tab-only" : ""}`} aria-label={tabOnly ? "Drum tab" : "Song"}>
       <div className="notation-header">
         <span className="notation-label">{tabOnly ? "Drum tab" : "Song"}</span>
         <span className="song-title">{song.title}</span>
