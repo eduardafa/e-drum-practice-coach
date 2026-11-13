@@ -1,27 +1,18 @@
 /**
  * Finds a song's beats off the main thread, so the page stays responsive
- * during the second or so a song takes. A dedicated worker: only the page that
- * created it can message it; messages are still validated.
+ * during the second or so a song takes.
+ *
+ * This is a dedicated worker: only the page that created it can send it
+ * messages, so there's no origin to check, and worker messages carry an empty
+ * origin anyway (an allow-list of origins rejects every song). Messages are
+ * still validated, since their shape isn't guaranteed at runtime.
  */
 import { findBeats } from "./beats";
 import { parseBeatsRequest, type BeatsReply } from "./beatsMessages";
 
 const reply = (message: BeatsReply) => self.postMessage(message);
-const TRUSTED_ORIGINS = new Set(
-  [
-    self.location.origin,
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-  ].map((origin) => origin.toLowerCase()),
-);
 
 self.addEventListener("message", (e: MessageEvent<unknown>) => {
-  const origin = (e.origin || "").toLowerCase();
-  if (!TRUSTED_ORIGINS.has(origin)) {
-    reply({ kind: "error", message: "Untrusted origin" });
-    return;
-  }
-
   const request = parseBeatsRequest(e.data);
   if (!request) {
     reply({ kind: "error", message: "Bad request" });
