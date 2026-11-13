@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { BeatGridTools } from "./BeatGridTools";
 import { SONG_VOLUME, type Coach } from "./live/coach";
 import { releasing } from "./releasing";
 import type { BeatGrid } from "./songs/beats";
@@ -11,8 +12,10 @@ export interface OpenSong {
   peaks: Float32Array;
   /** Recognizes this song again later, without storing its audio. */
   fingerprint: string;
-  /** Its beats, once found (or saved from before); null while they're being found. */
+  /** Its beats, once found (or saved from before, corrections included); null while they're being found. */
   grid: BeatGrid | null;
+  /** The beats as the app found them, to go back to after corrections; null while they're being found. */
+  found: BeatGrid | null;
 }
 
 /** Beat lines for the waveform, in its 0..peaks coordinates: every beat, with each beat 1 separately. */
@@ -54,12 +57,15 @@ export function SongPanel({
   coach,
   song,
   analyzing,
+  onGridChange,
   onClose,
 }: {
   coach: Coach;
   song: OpenSong;
   /** Finding the beats: 0 to 1, or null when not running. */
   analyzing: number | null;
+  /** The drummer corrected the beats. */
+  onGridChange: (grid: BeatGrid) => void;
   onClose: () => void;
 }) {
   /** Playing, and whether it's somewhere in the middle (for "Resume"): React only re-renders when these change. */
@@ -95,10 +101,14 @@ export function SongPanel({
       seek?.setAttribute("aria-valuetext", `${formatDuration(pos)} of ${formatDuration(song.duration)}`);
       setPlaying(coach.song.playing);
       setMidway(pos > 0 && pos < song.duration);
+      coach.tickSongClick(song.grid);
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(raf);
+      coach.stopSongClick();
+    };
   }, [coach, song]);
 
 
@@ -150,10 +160,19 @@ export function SongPanel({
           onInput={(e) => coach.song.seek(Number(e.currentTarget.value), SONG_VOLUME)}
         />
       </div>
+      {song.grid && (
+        <BeatGridTools
+          coach={coach}
+          grid={song.grid}
+          found={song.found}
+          duration={song.duration}
+          onChange={onGridChange}
+        />
+      )}
       <p className="hint">
         {song.grid
-          ? "The lines are the beats the app found; the stronger ones are beat 1. Scoring against them comes next: for now, drum along freely."
-          : "Finding the song's beats. You can already play it."}
+          ? "The lines are the song's beats; the stronger ones are beat 1. Scoring against them comes next: for now, drum along freely."
+          : "Finding the song's beats: the lines appear on the waveform when it's done. You can listen to the song meanwhile."}
       </p>
     </section>
   );

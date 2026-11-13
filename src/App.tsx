@@ -687,7 +687,13 @@ export default function App() {
 
         <main className="stage" hidden={view === "history"}>
           {songs.song ? (
-            <SongPanel coach={coach} song={songs.song} analyzing={songs.analyzing} onClose={songs.close} />
+            <SongPanel
+              coach={coach}
+              song={songs.song}
+              analyzing={songs.analyzing}
+              onGridChange={songs.setGrid}
+              onClose={songs.close}
+            />
           ) : (
             <NotationStrip
               coach={coach}
