@@ -2489,3 +2489,76 @@ button.primary.danger {
 .first-steps-list li.next .step-status {
   color: var(--text);
 }
+
+/* Today's practice: the plan before it starts, and the running block in the side panel. */
+.plan-blocks {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.plan-blocks li {
+  display: grid;
+  gap: 2px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.plan-kind {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.plan-mode {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.plan-button {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.plan-banner {
+  display: grid;
+  gap: 4px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  background: var(--accent-soft);
+}
+
+.plan-banner-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.plan-banner-time {
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.plan-banner-block {
+  font-weight: 600;
+}
+
+.plan-banner-note {
+  font-size: 13px;
+}
+
+.plan-banner.time-up {
+  border-color: var(--warn);
+}
