@@ -29,7 +29,8 @@ describe("snapTab", () => {
 
   it("moves a note snapped to the end of a beat onto the next beat, without doubling it", () => {
     const snapped = snapTab(tab([[0.99, "kick"], [1, "kick"]]));
-    expect(snapped).toEqual([{ tick: 48, pad: "kick", open: false }]);
+    // Both strokes are written as the one note, so both are scored through it.
+    expect(snapped).toEqual([{ tick: 48, pad: "kick", open: false, ids: [0, 1] }]);
   });
 });
 

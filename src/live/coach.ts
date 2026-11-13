@@ -10,6 +10,7 @@ import { SongPlayer } from "../songs/player";
 import { SongClick } from "../songs/songClick";
 import type { PlacedNote } from "../songs/drumTab";
 import { SongPlayAlong } from "../songs/songPlayAlong";
+import type { SongTabScoring } from "../songs/tabScoring";
 import { SongTabSound } from "../songs/songTabSound";
 import { SONG_BEATS_PER_BAR } from "../songs/songSteps";
 import { previewPlan, type PreviewPlan } from "../exercises/preview";
@@ -93,6 +94,8 @@ export class Coach {
   private readonly songClick = new SongClick();
   /** Drumming along to the song, scored against its beats; null otherwise. */
   private songAlong: SongPlayAlong | null = null;
+  /** The tab's scoring from the last play-along, kept on screen after it stops. */
+  private lastSongTabScore: SongTabScoring | null = null;
   private songAlongTimer: ReturnType<typeof setInterval> | null = null;
   /** When the song play-along's countdown ends (performance.now() ms); 0 when there's none. */
   private songCountdownEndMs = 0;
@@ -292,7 +295,8 @@ export class Coach {
     const startAt = countdownStart + countdownSec;
     this.songCountdownEndMs = countdownSec > 0 ? performance.now() + (startAt - ctx.currentTime) * 1000 : 0;
     this.song.play(ctx, SONG_VOLUME, startAt);
-    this.songAlong = new SongPlayAlong(grid, this.metronome.currentSettings.subdivision);
+    this.lastSongTabScore = null;
+    this.songAlong = new SongPlayAlong(grid, this.metronome.currentSettings.subdivision, this.scoring, this.songTab);
     this.song.onEnded = () => this.endSongPlayAlong();
     const tick = () => this.songAlong?.tick(ctx, this.song, this.grid, this.live);
     this.songAlongTimer = setInterval(tick, SONG_ALONG_TICK_MS);
@@ -318,6 +322,7 @@ export class Coach {
     this.songCountdownBeeps = [];
     this.songCountdownEndMs = 0;
     if (!this.songAlong) return;
+    this.lastSongTabScore = this.songAlong.tabScore;
     this.songAlong = null;
     this.song.onEnded = null;
     this.song.pause();
@@ -355,6 +360,13 @@ export class Coach {
   /** Sets (or clears) the open song's placed drum tab. */
   setSongTab(tab: readonly PlacedNote[] | null): void {
     this.songTab = tab;
+    this.songAlong?.setTab(tab);
+    this.lastSongTabScore = null;
+  }
+
+  /** The drum tab's note-by-note scoring while playing along to the song (or from the last time), or null. */
+  get songTabScore(): SongTabScoring | null {
+    return this.songAlong ? this.songAlong.tabScore : this.lastSongTabScore;
   }
 
   /** Whether a drum tab is shown with the song (the small metronome then sits beside it, not over the kit). */
@@ -536,6 +548,7 @@ export class Coach {
     const played = { pad: mapping?.pad ?? null, zone: mapping?.zone ?? null, time, velocity: event.velocity };
     this.playAlong?.hit(played);
     this.learning?.hit(played);
+    this.songAlong?.hit(played);
     if (this.calibration) {
       this.calibration.addHit(time);
       if (this.calibration.finished) this.stopCalibrationClicks();
