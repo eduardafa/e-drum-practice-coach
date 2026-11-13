@@ -104,12 +104,14 @@ const STAFF_Y = 30;
 
 /**
  * Draws every bar of the exercise in one row into `host` (its contents are
- * replaced) and returns where each note landed. Call loadNotationFonts() first.
+ * replaced) and returns where each note landed. A narrower `barWidth` packs
+ * the notes closer, so the same staff is drawn bigger in the same width.
+ * Call loadNotationFonts() first.
  */
-export function engraveExercise(exercise: Exercise, host: HTMLDivElement): StaffLayout {
+export function engraveExercise(exercise: Exercise, host: HTMLDivElement, barWidth = BAR_WIDTH): StaffLayout {
   host.replaceChildren();
   const ts = exercise.timeSignature;
-  const width = exercise.bars * BAR_WIDTH + FIRST_BAR_EXTRA + 2;
+  const width = exercise.bars * barWidth + FIRST_BAR_EXTRA + 2;
   const renderer = new Renderer(host, Renderer.Backends.SVG);
   renderer.resize(width, HEIGHT);
   const ctx = renderer.getContext();
@@ -122,8 +124,8 @@ export function engraveExercise(exercise: Exercise, host: HTMLDivElement): Staff
 
   let x = 0;
   for (let bar = 0; bar < exercise.bars; bar++) {
-    const barWidth = BAR_WIDTH + (bar === 0 ? FIRST_BAR_EXTRA : 0);
-    const stave = new Stave(x, STAFF_Y, barWidth);
+    const staveWidth = barWidth + (bar === 0 ? FIRST_BAR_EXTRA : 0);
+    const stave = new Stave(x, STAFF_Y, staveWidth);
     if (bar === 0) stave.addClef("percussion").addTimeSignature(`${ts.beats}/${ts.unit}`);
     stave.setContext(ctx).draw();
 
@@ -171,7 +173,7 @@ export function engraveExercise(exercise: Exercise, host: HTMLDivElement): Staff
         e.notes.forEach((n, k) => marks.push({ index: exercise.notes.indexOf(n), x: headX, y: ys[k] }));
       });
     }
-    x += barWidth;
+    x += staveWidth;
   }
 
   const lengthTicks = exerciseLengthTicks(exercise);
