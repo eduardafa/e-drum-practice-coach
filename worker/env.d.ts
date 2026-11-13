@@ -6,6 +6,8 @@ interface Env {
   GOOGLE_CLIENT_SECRET?: string;
   /** Claude API key for insights (EDU-53). Without it, insights are off. */
   ANTHROPIC_API_KEY?: string;
+  /** OpenAI API key for insights (EDU-57). Without it, OpenAI models aren't offered. */
+  OPENAI_API_KEY?: string;
   /** Resend API key and recipient for spending alerts (EDU-58). Without both, alerts are off. */
   RESEND_API_KEY?: string;
   ALERT_EMAIL?: string;

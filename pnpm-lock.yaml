@@ -175,6 +175,9 @@ importers:
       '@vexflow-fonts/bravura':
         specifier: 1.0.2
         version: 1.0.2
+      openai:
+        specifier: ^7.54.0
+        version: 7.54.0(undici@7.30.1)(ws@8.21.0)
       react:
         specifier: ^19.3.1
         version: 19.3.1
@@ -1214,6 +1217,33 @@ packages:
     resolution: {integrity: sha512-5vvB5+W7ePv+p3uqxi+RcW1XAzLW0/hxt3/4X4Lc4qHudzOhmBiBwOY6DRob4WnanAEGvNcLjF+KNOufrUoEQw==}
     engines: {node: '>=12.20.0'}
 
+  openai@7.54.0:
+    resolution: {integrity: sha512-1fKNSPuyR4xIhivt69u6eW9bDZ2hzzNa9PAnQ1rYhr9DWqjrl6OUIKMBmKWT3vCT0XoGkjdP/I0nXZmRYRsazw==}
+    engines: {node: '>=22.0.0'}
+    peerDependencies:
+      '@aws-sdk/credential-provider-node': '>=3.972.0 <4'
+      '@smithy/hash-node': '>=4.3.0 <5'
+      '@smithy/signature-v4': '>=5.4.0 <6'
+      google-auth-library: '>=9.15.1 <12'
+      undici: '>=5 <9'
+      ws: ^8.21.0
+      zod: ^3.25 || ^4.0
+    peerDependenciesMeta:
+      '@aws-sdk/credential-provider-node':
+        optional: true
+      '@smithy/hash-node':
+        optional: true
+      '@smithy/signature-v4':
+        optional: true
+      google-auth-library:
+        optional: true
+      undici:
+        optional: true
+      ws:
+        optional: true
+      zod:
+        optional: true
+
   oxlint-tsgolint@7.0.2006:
     resolution: {integrity: sha512-5B3UtH71kycPHUC1kFEIffivEAs49SUmkJuHZOZnTY0NPj4legp0bcsCQucuLVNCoJzDucS68P2C4WIhP+LypQ==}
     hasBin: true
@@ -2065,6 +2095,11 @@ snapshots:
   nanoid@3.3.20: {}
 
   obug@3.0.0: {}
+
+  openai@7.54.0(undici@7.30.1)(ws@8.21.0):
+    optionalDependencies:
+      undici: 7.30.1
+      ws: 8.21.0
 
   oxlint-tsgolint@7.0.2006:
     optionalDependencies:

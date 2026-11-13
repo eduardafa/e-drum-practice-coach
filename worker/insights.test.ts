@@ -19,8 +19,8 @@ const INSIGHT: Insight = {
   encouragement: "Your accuracy is climbing.",
 };
 
-async function setup(allowed = "github:42", key = "sk-test") {
-  const t = testEnv({ AI_ALLOWED: allowed, ANTHROPIC_API_KEY: key });
+async function setup(allowed = "github:42", key = "sk-test", openai = "") {
+  const t = testEnv({ AI_ALLOWED: allowed, ANTHROPIC_API_KEY: key, OPENAI_API_KEY: openai });
   db = t.db;
   const signIn = async (subject: string) => {
     const userId = await findOrCreateUser(t.env.DB, "github", { subject, name: null, avatarUrl: null });
@@ -29,16 +29,18 @@ async function setup(allowed = "github:42", key = "sk-test") {
   return { env: t.env, signIn };
 }
 
-const post = (cookie: string, summary: unknown) =>
-  request("/api/insights", { method: "POST", headers: { Cookie: cookie, Origin: ORIGIN }, body: JSON.stringify({ summary }) });
+const post = (cookie: string, summary: unknown, model?: string) =>
+  request("/api/insights", { method: "POST", headers: { Cookie: cookie, Origin: ORIGIN }, body: JSON.stringify({ summary, model }) });
 
 const fakeWriter = (costMicros = 60_000) => {
   const calls: string[] = [];
-  const write: WriteInsight = (_env, summary) => {
+  const models: string[] = [];
+  const write: WriteInsight = (_env, model, summary) => {
     calls.push(summary);
+    models.push(model.id);
     return Promise.resolve({ insight: INSIGHT, costMicros });
   };
-  return { write, calls };
+  return { write, calls, models };
 };
 
 const noon = new Date("2026-11-13T12:00:00Z");
@@ -75,10 +77,10 @@ describe("writing insights", () => {
     const res = await createInsight(post(cookie, { streak: 3 }), env, userId, noon, write);
     expect(await res.json()).toMatchObject({ insight: INSIGHT, remainingToday: DAILY_LIMIT - 1, cached: false });
     expect(calls).toEqual(['{"streak":3}']);
-    expect(db?.query("SELECT day, cost_micros FROM insights")).toEqual([{ day: "2026-11-13", cost_micros: 60_000 }]);
+    expect(db?.query("SELECT day, cost_micros, model FROM insights")).toEqual([{ day: "2026-11-13", cost_micros: 60_000, model: "claude-haiku-5-5" }]);
 
     const latest = await handle(request("/api/insights", { headers: { Cookie: cookie } }), env);
-    expect(await latest.json()).toMatchObject({ insight: INSIGHT });
+    expect(await latest.json()).toMatchObject({ insight: INSIGHT, model: "Claude Haiku 5.5" });
   });
 
   it("returns today's insight for the same summary without paying again", async () => {
@@ -155,5 +157,72 @@ describe("parseInsight", () => {
     expect(parseInsight(JSON.stringify(many))?.tips).toHaveLength(4);
     expect(parseInsight("not json")).toBeNull();
     expect(parseInsight(JSON.stringify({ headline: "h", tips: [], encouragement: "e" }))).toBeNull();
+  });
+});
+
+describe("choosing the model", () => {
+  it("lists the models whose provider has a key, cheapest first, each with a rough cost per tip", async () => {
+    const { env, signIn } = await setup("github:42", "sk-test", "sk-openai");
+    const { cookie } = await signIn("42");
+    const body: { models: { id: string; provider: string; approxCostPerTip: number }[] } = await (
+      await handle(request("/api/insights", { headers: { Cookie: cookie } }), env)
+    ).json();
+    expect(body.models.map((m) => m.id)).toEqual([
+      "claude-haiku-5-5",
+      "claude-sonnet-5-5",
+      "claude-opus-5-5",
+      "gpt-6-luna",
+      "gpt-6.1-terra",
+      "gpt-6.1-sol",
+      "gpt-6-astra",
+    ]);
+    const haiku = body.models[0]?.approxCostPerTip ?? 0;
+    expect(haiku).toBeLessThan(0.01);
+    expect(body.models.find((m) => m.id === "claude-opus-5-5")?.approxCostPerTip).toBeGreaterThan(haiku);
+
+    const { env: claudeOnly, signIn: signInClaude } = await setup("github:42", "sk-test", "");
+    const c = await signInClaude("42");
+    const only: { models: { provider: string }[] } = await (await handle(request("/api/insights", { headers: { Cookie: c.cookie } }), claudeOnly)).json();
+    expect(new Set(only.models.map((m) => m.provider))).toEqual(new Set(["anthropic"]));
+  });
+
+  it("writes with the chosen model, and works with only OpenAI set up", async () => {
+    const { env, signIn } = await setup("github:42", "", "sk-openai");
+    const { userId, cookie } = await signIn("42");
+    const { write, models } = fakeWriter();
+    const res = await createInsight(post(cookie, { n: 1 }, "gpt-6-luna"), env, userId, noon, write);
+    expect(await res.json()).toMatchObject({ model: "GPT-6 Luna" });
+    expect(models).toEqual(["gpt-6-luna"]);
+    // No model given: the first available (OpenAI's cheapest, since Claude has no key).
+    await createInsight(post(cookie, { n: 2 }), env, userId, noon, write);
+    expect(models).toEqual(["gpt-6-luna", "gpt-6-luna"]);
+  });
+
+  it("refuses models not on the list, or whose provider has no key", async () => {
+    const { env, signIn } = await setup("github:42", "sk-test", "");
+    const { userId, cookie } = await signIn("42");
+    const { write, calls } = fakeWriter();
+    for (const model of ["gpt-6-luna", "o3-pro", "claude-opus-4-1"]) {
+      // oxlint-disable-next-line no-await-in-loop -- each must be refused
+      const res = await createInsight(post(cookie, { n: 1 }, model), env, userId, noon, write);
+      expect(res.status).toBe(400);
+    }
+    expect(calls).toEqual([]);
+  });
+
+  it("caches per model: the same stats with another model is a new call", async () => {
+    const { env, signIn } = await setup("github:42", "sk-test", "sk-openai");
+    const { userId, cookie } = await signIn("42");
+    const { write, models } = fakeWriter();
+    await createInsight(post(cookie, { n: 1 }, "claude-haiku-5-5"), env, userId, noon, write);
+    await createInsight(post(cookie, { n: 1 }, "claude-haiku-5-5"), env, userId, noon, write);
+    await createInsight(post(cookie, { n: 1 }, "gpt-6-luna"), env, userId, noon, write);
+    expect(models).toEqual(["claude-haiku-5-5", "gpt-6-luna"]);
+  });
+
+  it("is off when no provider has a key", async () => {
+    const { env, signIn } = await setup("github:42", "", "");
+    const { cookie } = await signIn("42");
+    expect((await handle(request("/api/insights", { headers: { Cookie: cookie } }), env)).status).toBe(404);
   });
 });

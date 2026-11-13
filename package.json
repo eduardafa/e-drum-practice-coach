@@ -18,6 +18,7 @@
     "@anthropic-ai/sdk": "^1.7.0",
     "@vexflow-fonts/academico": "1.0.1",
     "@vexflow-fonts/bravura": "1.0.2",
+    "openai": "^7.54.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "vexflow": "5.0.0"

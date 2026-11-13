@@ -2257,3 +2257,23 @@ button.primary.danger {
   margin: 8px 0 0;
   color: var(--muted);
 }
+
+.insights-model {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  margin-top: 8px;
+}
+
+.insights-model .field {
+  margin: 0;
+}
+
+.insights-model .field > span:first-child {
+  flex-basis: auto;
+  margin-right: 8px;
+}
+
+.insights .hint a {
+  color: var(--accent);
+}
