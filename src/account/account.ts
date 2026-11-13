@@ -72,6 +72,18 @@ export async function signOut(): Promise<void> {
   if (!res.ok) throw new Error(`Sign-out failed: ${res.status}`);
 }
 
+/** Deletes the account and everything synced to it. Throws if the server couldn't do it. */
+export async function deleteAccount(): Promise<void> {
+  const res = await fetch("/api/account", { method: "DELETE", credentials: "same-origin" });
+  if (!res.ok) throw new Error(`Account deletion failed: ${res.status}`);
+}
+
+/** Deletes the account's synced history (the account stays). Throws if the server couldn't do it. */
+export async function deleteSyncedHistory(): Promise<void> {
+  const res = await fetch("/api/records", { method: "DELETE", credentials: "same-origin" });
+  if (!res.ok) throw new Error(`Deleting synced history failed: ${res.status}`);
+}
+
 export const signInUrl = (provider: Provider) => `/api/auth/${provider}/start`;
 
 export type SignInResult = "ok" | "failed" | "canceled" | "unavailable";

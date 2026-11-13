@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseRecord, type HistoryRecord } from "./record";
-import { PUSH_BATCH, SignedOutError, syncOnce, type Ledger, type SyncStore } from "./sync";
+import { PUSH_BATCH, SignedOutError, StorageFullError, syncOnce, type Ledger, type SyncStore } from "./sync";
 
 /** A server whose only record is from a future version of the app. */
 const futureServer = () => Promise.resolve(Response.json({ records: [{ v: 99, id: "future" }], next: 1, more: false }));
@@ -55,6 +55,11 @@ function memoryLedger(): Ledger {
     owner: (id) => owners.get(id),
     claim: (ids, u) => {
       for (const id of ids) if (!owners.has(id)) owners.set(id, u);
+    },
+    ownedBy: (u) => [...owners].filter(([, o]) => o === u).map(([id]) => id),
+    forget: (u) => {
+      cursors.delete(u);
+      for (const [id, o] of owners) if (o === u) owners.delete(id);
     },
   };
 }
@@ -150,5 +155,17 @@ describe("syncOnce", () => {
     const { pulled } = await syncOnce("ana", store, memoryLedger(), futureServer);
     expect(pulled).toEqual([]);
     expect(store.ids()).toEqual([]);
+  });
+});
+
+const full = () => Promise.resolve(Response.json({ error: "storage-full", message: "full" }, { status: 413 }));
+
+/** A server that has no new records but refuses uploads as full. */
+const fullServer = (_input: string, init?: RequestInit) =>
+  init?.method === "POST" ? full() : Promise.resolve(Response.json({ records: [], next: 0, more: false }));
+
+describe("storage limit", () => {
+  it("reports a full account so the app can say so", async () => {
+    await expect(syncOnce("ana", memoryStore([rec("a")]), memoryLedger(), fullServer)).rejects.toBeInstanceOf(StorageFullError);
   });
 });

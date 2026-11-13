@@ -2187,3 +2187,31 @@ button.primary.danger {
 .account-text .sync-status.error {
   color: var(--warn);
 }
+
+/* ---- Account actions (EDU-45) ---- */
+
+.account-more {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 12px;
+  font-size: 13px;
+}
+
+.link-button.danger-link {
+  color: var(--danger);
+}
+
+.account-delete p {
+  margin: 4px 0 8px;
+  font-size: 13px;
+}
+
+.history-clear-account {
+  margin: 4px 0 10px;
+}
+
+.account-more .link-button {
+  text-align: left;
+}

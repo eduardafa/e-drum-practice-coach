@@ -32,10 +32,17 @@ export interface Ledger {
   /** The account a record was synced with, if any. */
   owner(recordId: string): string | undefined;
   claim(recordIds: readonly string[], userId: string): void;
+  /** IDs of the records synced with this account. */
+  ownedBy(userId: string): string[];
+  /** Drops everything about this account (after deleting it, or removing its history from this browser). */
+  forget(userId: string): void;
 }
 
 /** The server said the session is gone: the drummer needs to sign in again. */
 export class SignedOutError extends Error {}
+
+/** The account's synced history has reached the server's size limit. */
+export class StorageFullError extends Error {}
 
 export interface SyncResult {
   /** Records from other devices, now stored here. */
@@ -49,6 +56,10 @@ type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 async function call(fetcher: Fetch, input: string, init?: RequestInit): Promise<Response> {
   const res = await fetcher(input, { credentials: "same-origin", ...init });
   if (res.status === 401) throw new SignedOutError("Signed out");
+  if (res.status === 413) {
+    const body: unknown = await res.json().catch(() => null);
+    if (isObject(body) && body.error === "storage-full") throw new StorageFullError("Synced history is full");
+  }
   if (!res.ok) throw new Error(`Sync request failed: ${res.status}`);
   return res;
 }
@@ -132,6 +143,12 @@ export function localLedger(key = "edrum-coach:sync:v1"): Ledger {
     claim: (recordIds, userId) => {
       if (recordIds.length === 0) return;
       for (const id of recordIds) state.owners[id] ??= userId;
+      save();
+    },
+    ownedBy: (userId) => Object.keys(state.owners).filter((id) => state.owners[id] === userId),
+    forget: (userId) => {
+      delete state.cursors[userId];
+      for (const id of Object.keys(state.owners)) if (state.owners[id] === userId) delete state.owners[id];
       save();
     },
   };

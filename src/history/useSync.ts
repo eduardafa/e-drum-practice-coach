@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 import type { HistoryRecord } from "./record";
-import { SignedOutError, localLedger, syncOnce, type Ledger, type SyncStore } from "./sync";
+import { SignedOutError, StorageFullError, syncOnce, type Ledger, type SyncStore } from "./sync";
 
 export type SyncStatus =
   | { state: "off" }
   | { state: "syncing" }
   | { state: "synced"; at: Date }
   | { state: "offline" }
-  | { state: "error" };
+  | { state: "error" }
+  /** The account's synced history is at its size limit; new sessions stay in this browser. */
+  | { state: "full" };
 
 /** After a failed sync, try again this much later (or as soon as the browser is back online). */
 const RETRY_MS = 60_000;
@@ -101,6 +103,9 @@ export class SyncLoop {
       if (error instanceof SignedOutError) {
         this.onStatus({ state: "off" });
         this.handlers.onSignedOut();
+      } else if (error instanceof StorageFullError) {
+        // No timed retry: the next saved session tries again (and fails fast).
+        this.onStatus({ state: "full" });
       } else {
         console.warn("Sync failed, will retry:", error);
         this.onStatus({ state: navigator.onLine ? "error" : "offline" });
@@ -118,13 +123,14 @@ const OFF: SyncStatus = { state: "off" };
 export function useSync(
   userId: string | null,
   store: SyncStore,
+  ledger: Ledger,
   ready: boolean,
   onPulled: (records: HistoryRecord[]) => void,
   onSignedOut: () => void,
 ) {
   const [status, setStatus] = useState<SyncStatus>(OFF);
   // The loop outlives renders; it's handed the current callbacks after each one.
-  const [loop] = useState(() => new SyncLoop(store, localLedger(), setStatus));
+  const [loop] = useState(() => new SyncLoop(store, ledger, setStatus));
   useEffect(() => loop.setHandlers({ onPulled, onSignedOut }));
 
   useEffect(() => {

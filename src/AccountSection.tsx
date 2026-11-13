@@ -11,6 +11,8 @@ interface Props {
   signInResult: SignInResult | null;
   syncStatus: SyncStatus;
   onSignOut: () => Promise<boolean>;
+  onSignOutAndRemove: () => Promise<boolean>;
+  onDeleteAccount: () => Promise<boolean>;
 }
 
 /** How syncing is going, in a few words. */
@@ -24,6 +26,8 @@ function syncText(status: SyncStatus): string {
       return "You're offline. Your history will sync when you're back online.";
     case "error":
       return "Couldn't sync just now. It'll try again in a minute.";
+    case "full":
+      return "Your synced history is full. New sessions stay in this browser.";
     case "off":
       return "History syncs while you're signed in.";
   }
@@ -37,19 +41,26 @@ const RESULT_TEXT: Record<SignInResult, string> = {
 };
 
 /** Signing in to sync history across devices: the account menu's content. */
-export function AccountSection({ account, signInResult, syncStatus, onSignOut }: Props) {
-  const [signingOut, setSigningOut] = useState(false);
-  const [signOutFailed, setSignOutFailed] = useState(false);
+export function AccountSection({ account, signInResult, syncStatus, onSignOut, onSignOutAndRemove, onDeleteAccount }: Props) {
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleted, setDeleted] = useState(false);
   // The sign-in message is about the redirect that opened the app; signing out makes it stale.
   const [resultShown, setResultShown] = useState(true);
 
-  const signOut = async () => {
-    setSigningOut(true);
-    const ok = await onSignOut();
-    setSigningOut(false);
-    setSignOutFailed(!ok);
-    if (ok) setResultShown(false);
+  /** Runs an account action, with a busy state and a message if it fails. */
+  const act = async (action: () => Promise<boolean>, failure: string, after?: () => void) => {
+    setBusy(true);
+    const ok = await action();
+    setBusy(false);
+    setFailed(ok ? null : failure);
+    if (ok) {
+      setResultShown(false);
+      after?.();
+    }
   };
+  const offline = "Check your connection and try again.";
 
   return (
     <div className="account">
@@ -72,6 +83,11 @@ export function AccountSection({ account, signInResult, syncStatus, onSignOut }:
 
       {account.status === "signed-out" && (
         <>
+          {deleted && (
+            <p className="account-result" aria-live="polite">
+              Your account and its synced history were deleted.
+            </p>
+          )}
           <p className="hint">
             Your history is saved in this browser only. Sign in to keep it safe and see it on your other devices.
           </p>
@@ -111,11 +127,52 @@ export function AccountSection({ account, signInResult, syncStatus, onSignOut }:
                 {syncText(syncStatus)}
               </span>
             </span>
-            <button className="secondary" disabled={signingOut} onClick={releasing(() => void signOut())}>
-              {signingOut ? "Signing out…" : "Sign out"}
+            <button
+              className="secondary"
+              disabled={busy}
+              onClick={releasing(() => void act(onSignOut, `Couldn't sign out. ${offline}`))}
+            >
+              Sign out
             </button>
           </div>
-          {signOutFailed && <p className="hint warn-note">Couldn't sign out. Check your connection and try again.</p>}
+          {failed && <p className="hint warn-note">{failed}</p>}
+
+          <div className="account-more">
+            {/* For a computer that isn't yours: your synced sessions don't stay behind. */}
+            <button
+              className="link-button"
+              disabled={busy}
+              onClick={releasing(() => void act(onSignOutAndRemove, `Couldn't sign out. ${offline}`))}
+            >
+              Sign out and remove your history from this browser
+            </button>
+            {confirmingDelete ? (
+              <div className="account-delete">
+                <p>
+                  Delete your account and all the history synced to it, on every device? History saved in this browser
+                  stays here. This can't be undone.
+                </p>
+                <div className="calibration-actions">
+                  <button
+                    className="primary danger"
+                    disabled={busy}
+                    onClick={releasing(
+                      () => void act(onDeleteAccount, `Couldn't delete your account. ${offline}`, () => setDeleted(true)),
+                    )}
+                  >
+                    Delete account
+                  </button>
+                  <button className="secondary" disabled={busy} onClick={releasing(() => setConfirmingDelete(false))}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button className="link-button danger-link" disabled={busy} onClick={releasing(() => setConfirmingDelete(true))}>
+                Delete my account
+              </button>
+            )}
+          </div>
           <p className="hint">
             <a href="/privacy">Privacy</a>
           </p>

@@ -11,6 +11,8 @@ interface Props {
   syncStatus: SyncStatus;
   onToggle: () => void;
   onSignOut: () => Promise<boolean>;
+  onSignOutAndRemove: () => Promise<boolean>;
+  onDeleteAccount: () => Promise<boolean>;
 }
 
 /**
@@ -19,7 +21,16 @@ interface Props {
  * (offline, a preview, local development). Closing follows the app's panel
  * rule: Esc, a press outside, or the button again.
  */
-export function AccountMenu({ account, signInResult, open, syncStatus, onToggle, onSignOut }: Props) {
+export function AccountMenu({
+  account,
+  signInResult,
+  open,
+  syncStatus,
+  onToggle,
+  onSignOut,
+  onSignOutAndRemove,
+  onDeleteAccount,
+}: Props) {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDialogElement>(null);
   const wasOpen = useRef(false);
@@ -55,7 +66,14 @@ export function AccountMenu({ account, signInResult, open, syncStatus, onToggle,
       {open && (
         // A non-modal <dialog>: the page stays usable, and a press outside closes it.
         <dialog ref={menuRef} open id="account-menu" className="account-menu" aria-label="Account" tabIndex={-1}>
-          <AccountSection account={account} signInResult={signInResult} syncStatus={syncStatus} onSignOut={onSignOut} />
+          <AccountSection
+            account={account}
+            signInResult={signInResult}
+            syncStatus={syncStatus}
+            onSignOut={onSignOut}
+            onSignOutAndRemove={onSignOutAndRemove}
+            onDeleteAccount={onDeleteAccount}
+          />
         </dialog>
       )}
     </div>

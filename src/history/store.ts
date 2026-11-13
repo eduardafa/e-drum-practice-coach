@@ -77,6 +77,15 @@ export class HistoryStore {
     await done(tx);
   }
 
+  async deleteMany(ids: readonly string[]): Promise<void> {
+    if (ids.length === 0) return;
+    const db = await this.open();
+    const tx = db.transaction(STORE, "readwrite");
+    const store = tx.objectStore(STORE);
+    for (const id of ids) store.delete(id);
+    await done(tx);
+  }
+
   async clear(): Promise<void> {
     const db = await this.open();
     const tx = db.transaction(STORE, "readwrite");

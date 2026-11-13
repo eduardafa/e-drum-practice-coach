@@ -11,7 +11,8 @@ import { finishSignIn, startSignIn } from "./auth/oauth";
 import { PROVIDERS, configuredProviders, type ProviderId } from "./auth/providers";
 import { endSession, readSession } from "./auth/sessions";
 import { json, problem } from "./http";
-import { pullRecords, pushRecords } from "./records";
+import { deleteRecords, pullRecords, pushRecords } from "./records";
+import { SESSION_COOKIE, clearCookie } from "./auth/cookies";
 
 type Handler = (request: Request, env: Env) => Promise<Response>;
 
@@ -20,7 +21,8 @@ const ROUTES = new Map<string, Partial<Record<string, Handler>>>([
   ["/api/health", { GET: (_, env) => health(env) }],
   ["/api/me", { GET: me }],
   ["/api/auth/signout", { POST: signOut }],
-  ["/api/records", { GET: signedIn(pullRecords), POST: signedIn(pushRecords) }],
+  ["/api/records", { GET: signedIn(pullRecords), POST: signedIn(pushRecords), DELETE: signedIn(deleteRecords) }],
+  ["/api/account", { DELETE: signedIn(deleteAccount) }],
   ...PROVIDERS.flatMap((provider): [string, Partial<Record<string, Handler>>][] => [
     [`/api/auth/${provider}/start`, { GET: (_, env) => startSignIn(env, provider) }],
     [`/api/auth/${provider}/callback`, { GET: (request, env) => finishSignIn(request, env, provider) }],
@@ -37,8 +39,8 @@ export async function handle(request: Request, env: Env): Promise<Response> {
   if (!methods) return problem(404, "not-found", "No such API route.");
   const handler = methods[request.method];
   if (!handler) {
-    const allowed = Object.keys(methods).join(", ");
-    return problem(405, "method-not-allowed", `Use ${allowed}.`, { Allow: allowed });
+    const accepted = Object.keys(methods).join(", ");
+    return problem(405, "method-not-allowed", `Use ${accepted}.`, { Allow: accepted });
   }
 
   // Anything that changes data must come from the app itself. SameSite=Lax
@@ -48,14 +50,34 @@ export async function handle(request: Request, env: Env): Promise<Response> {
     return problem(403, "forbidden", "Requests that change data must come from the app.");
   }
 
+  // Sign-in is limited per IP address; signed-in calls per account (in signedIn).
+  if (url.pathname.startsWith("/api/auth/") && !(await withinLimit(env.AUTH_LIMIT, `ip:${clientIp(request)}`))) {
+    return tooMany();
+  }
+
   return handler(request, env);
 }
 
-/** Wraps a handler that needs a signed-in user: 401 otherwise. */
+const clientIp = (request: Request) => request.headers.get("CF-Connecting-IP") ?? "unknown";
+
+async function withinLimit(limiter: RateLimit, key: string): Promise<boolean> {
+  try {
+    return (await limiter.limit({ key })).success;
+  } catch (error) {
+    // A limiter outage shouldn't lock everyone out.
+    console.error("rate limiter failed", error);
+    return true;
+  }
+}
+
+const tooMany = () => problem(429, "rate-limited", "Too many requests. Try again in a minute.", { "Retry-After": "60" });
+
+/** Wraps a handler that needs a signed-in user: 401 otherwise, 429 over the per-account limit. */
 function signedIn(handler: (request: Request, env: Env, userId: string) => Promise<Response>): Handler {
   return async (request, env) => {
     const session = await readSession(env.DB, request);
     if (!session) return problem(401, "signed-out", "Sign in to sync your history.");
+    if (!(await withinLimit(env.API_LIMIT, `user:${session.userId}`))) return tooMany();
     const res = await handler(request, env, session.userId);
     if (session.setCookie) res.headers.append("Set-Cookie", session.setCookie);
     return res;
@@ -93,6 +115,15 @@ async function me(request: Request, env: Env): Promise<Response> {
 
 async function signOut(request: Request, env: Env): Promise<Response> {
   return new Response(null, { status: 204, headers: { "Set-Cookie": await endSession(env.DB, request), "Cache-Control": "no-store" } });
+}
+
+/**
+ * Deletes the account and everything stored with it: identities, sessions
+ * and synced records all go with the user row (ON DELETE CASCADE).
+ */
+async function deleteAccount(_request: Request, env: Env, userId: string): Promise<Response> {
+  await env.DB.prepare("DELETE FROM users WHERE id = ?").bind(userId).run();
+  return new Response(null, { status: 204, headers: { "Set-Cookie": clearCookie(SESSION_COOKIE), "Cache-Control": "no-store" } });
 }
 
 export default {
