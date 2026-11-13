@@ -26,6 +26,8 @@ interface Props {
   onShowNextPadChange: (show: boolean) => void;
   guideTrack: boolean;
   onGuideTrackChange: (on: boolean) => void;
+  showBigCount: boolean;
+  onShowBigCountChange: (show: boolean) => void;
   onCalibrate: () => void;
   onClose: () => void;
 }
@@ -60,6 +62,8 @@ export function SettingsPanel({
   onShowNextPadChange,
   guideTrack,
   onGuideTrackChange,
+  showBigCount,
+  onShowBigCountChange,
   onCalibrate,
   onClose,
 }: Props) {
@@ -152,6 +156,10 @@ export function SettingsPanel({
               onChange={(e) => onMetronomeChange({ clickSubdivisions: e.target.checked })}
             />
             <span>Click on subdivisions</span>
+          </label>
+          <label className="field checkbox">
+            <input type="checkbox" checked={showBigCount} onChange={(e) => onShowBigCountChange(e.target.checked)} />
+            <span>Big count over the kit</span>
           </label>
           <label className="field">
             <span>Volume</span>

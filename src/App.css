@@ -124,11 +124,74 @@ body,
   flex-direction: column;
 }
 
+/* The kit view's canvas, with overlays (the big count) positioned over it. */
+.kit-area {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  min-height: 0;
+}
+
 .kit-canvas {
   display: block;
   width: 100%;
   flex: 1 1 0;
   min-height: 0;
+}
+
+/*
+ * The big count: across the top of the kit view, large enough to read from
+ * the drum throne. Translucent and click-through, so it never blocks the kit.
+ */
+.big-count {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: baseline;
+  gap: clamp(6px, 1.2vw, 14px);
+  margin: 0;
+  padding: 4px 14px;
+  list-style: none;
+  pointer-events: none;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.big-count li {
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.big-count li.beat {
+  font-size: clamp(28px, 7vh, 64px);
+}
+
+.big-count li.sub {
+  font-size: clamp(18px, 4vh, 36px);
+  font-weight: 600;
+}
+
+.big-count li.one {
+  color: var(--text);
+}
+
+.big-count li.now {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.big-count.dense li.beat {
+  font-size: clamp(22px, 5vh, 44px);
+}
+
+.big-count.dense li.sub {
+  font-size: clamp(14px, 3vh, 26px);
 }
 
 .controls {
