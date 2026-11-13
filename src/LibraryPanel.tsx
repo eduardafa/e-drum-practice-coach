@@ -325,7 +325,7 @@ function SongOpener({
                 <span className="recent-song-meta">
                   {formatDuration(s.duration)} · ≈ {Math.round(s.grid.bpm)} BPM
                 </span>
-                <button className="link-button" onClick={() => onForget(s.fingerprint)} aria-label={`Forget ${s.title}`}>
+                <button className="secondary" onClick={() => onForget(s.fingerprint)} aria-label={`Forget ${s.title}`}>
                   Forget
                 </button>
               </li>

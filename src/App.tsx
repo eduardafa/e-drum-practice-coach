@@ -1013,9 +1013,9 @@ export default function App() {
                 </button>
               </div>
             )}
-            {/* Until the guide is opened, the first-visit prompt above stands in for this link. */}
+            {/* Until the guide is opened, the first-visit prompt above stands in for this button. */}
             {guideSeen && (
-              <button className="link-button" onClick={releasing(openGuide)}>
+              <button className="secondary guide-button" onClick={releasing(openGuide)}>
                 How to play with the metronome
               </button>
             )}
