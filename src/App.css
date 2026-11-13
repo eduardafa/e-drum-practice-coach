@@ -921,6 +921,14 @@ fieldset.group.play {
   gap: 12px;
 }
 
+/* Buttons on the right of a panel's header, next to Close. */
+.overlay-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .overlay h2 {
   font-size: 15px;
   margin: 0;
@@ -1283,24 +1291,6 @@ fieldset.group.play {
   margin: 12px 0 4px;
   padding: 0;
   border: 0;
-}
-
-/* Labels never break inside; if the row is too narrow, whole buttons move to a second row. */
-.library-filters button.secondary {
-  padding: 4px 12px;
-  font-size: 13px;
-  white-space: nowrap;
-}
-
-.library-filters .link-button {
-  margin: 0 0 0 auto;
-  white-space: nowrap;
-}
-
-.library-filters .link-button:disabled {
-  color: var(--muted);
-  text-decoration: none;
-  cursor: default;
 }
 
 .library-list {
@@ -2109,9 +2099,9 @@ button.primary.danger {
   color: var(--accent);
 }
 
-/* ---- Settings tabs ---- */
+/* ---- Tabs (Settings, the exercise library: Tabs.tsx) ---- */
 
-.settings-tabs {
+.tab-list {
   display: flex;
   flex-wrap: wrap;
   gap: 2px;
@@ -2119,7 +2109,8 @@ button.primary.danger {
   border-bottom: 1px solid var(--border);
 }
 
-.settings-tabs button {
+.tab-list button {
+  white-space: nowrap;
   background: none;
   border: 0;
   border-bottom: 2px solid transparent;
@@ -2131,11 +2122,11 @@ button.primary.danger {
   cursor: pointer;
 }
 
-.settings-tabs button:hover {
+.tab-list button:hover {
   color: var(--text);
 }
 
-.settings-tabs button.selected {
+.tab-list button.selected {
   color: var(--text);
   font-weight: 600;
   border-bottom-color: var(--accent);
@@ -3017,15 +3008,12 @@ button.primary.danger {
 }
 
 /* "Open a drum tab" in the Songs tab: next to Open a song, outlined rather than filled. */
-.tab-opener {
+/* Open a song and Open a drum tab, side by side (wrapping only when there's no room). */
+.song-open-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-}
-
-.tab-opener .hint {
-  margin: 0;
 }
 
 .song-open-button.secondary-look {

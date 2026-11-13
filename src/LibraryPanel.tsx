@@ -8,6 +8,7 @@ import { displayedExercise } from "./handedness";
 import { useHandedness } from "./HandednessContext";
 import { formatDuration, SONG_EXTENSIONS } from "./songs/song";
 import type { RememberedSong } from "./songs/songStore";
+import { tabId, tabPanelId, Tabs } from "./Tabs";
 
 /** An exercise category, everything, or the songs opener. */
 type Filter = "all" | Exercise["category"] | "songs";
@@ -75,7 +76,7 @@ export function LibraryPanel({
     const panel = panelRef.current;
     const first =
       panel?.querySelector<HTMLButtonElement>(".library-card.selected .primary") ??
-      panel?.querySelector<HTMLButtonElement>(".library-filters button");
+      panel?.querySelector<HTMLButtonElement>(".tab-list [aria-selected=true]");
     first?.focus();
     return () => {
       if (before instanceof HTMLElement && before.isConnected) before.focus();
@@ -86,53 +87,58 @@ export function LibraryPanel({
     <section ref={panelRef} className="overlay library" aria-labelledby="library-title">
       <div className="overlay-header">
         <h2 id="library-title">Exercises</h2>
-        <button className="secondary" onClick={onClose} aria-label="Close exercises">
-          Close <kbd>Esc</kbd>
-        </button>
-      </div>
-      <fieldset className="library-filters">
-        <legend className="visually-hidden">Show</legend>
-        {FILTERS.map((f) => (
-          <button
-            key={f.id}
-            className={`secondary ${filter === f.id ? "selected" : ""}`}
-            aria-pressed={filter === f.id}
-            onClick={() => setFilter(f.id)}
-          >
-            {f.label}
+        <div className="overlay-header-actions">
+          {selectedId !== null && (
+            <button
+              className="secondary"
+              onClick={() => onSelect(null)}
+              title="Clear the chosen exercise and practice with the metronome alone"
+            >
+              Just the metronome
+            </button>
+          )}
+          <button className="secondary" onClick={onClose} aria-label="Close exercises">
+            Close <kbd>Esc</kbd>
           </button>
-        ))}
-        <button className="link-button" onClick={() => onSelect(null)} disabled={selectedId === null}>
-          Just the metronome
-        </button>
-      </fieldset>
-      {filter === "songs" ? (
-        <SongOpener onOpen={onOpenSong} onOpenTab={onOpenTab} loading={songLoading} error={songError} recent={recentSongs} onForget={onForgetSong} />
-      ) : (
-        <>
-          <ul className="library-list">
-            {shown.map((exercise) => (
-              <ExerciseCard
-                key={exercise.id}
-                exercise={exercise}
-                bpm={startingTempo(exercise, tempos)}
-                remembered={tempos[exercise.id] !== undefined}
-                selected={exercise.id === selectedId}
-                previewing={exercise.id === previewingId}
-                player={player}
-                onPreview={onPreview}
-                onStopPreview={onStopPreview}
-                onSelect={onSelect}
-              />
-            ))}
-          </ul>
-          <p className="hint">
-            In the patterns, green is an accent (play it louder), faint is a ghost note (very quiet) and an outline is an
-            open hi-hat. Listen plays one loop with a click on every beat. Choosing an exercise sets the metronome to fit
-            it, at your last tempo for it or its suggested tempo.
-          </p>
-        </>
-      )}
+        </div>
+      </div>
+      <Tabs tabs={FILTERS} selected={filter} onSelect={setFilter} label="Show" idPrefix="library" />
+      <div id={tabPanelId("library", filter)} role="tabpanel" aria-labelledby={tabId("library", filter)}>
+        {filter === "songs" ? (
+          <SongOpener
+            onOpen={onOpenSong}
+            onOpenTab={onOpenTab}
+            loading={songLoading}
+            error={songError}
+            recent={recentSongs}
+            onForget={onForgetSong}
+          />
+        ) : (
+          <>
+            <ul className="library-list">
+              {shown.map((exercise) => (
+                <ExerciseCard
+                  key={exercise.id}
+                  exercise={exercise}
+                  bpm={startingTempo(exercise, tempos)}
+                  remembered={tempos[exercise.id] !== undefined}
+                  selected={exercise.id === selectedId}
+                  previewing={exercise.id === previewingId}
+                  player={player}
+                  onPreview={onPreview}
+                  onStopPreview={onStopPreview}
+                  onSelect={onSelect}
+                />
+              ))}
+            </ul>
+            <p className="hint">
+              In the patterns, green is an accent (play it louder), faint is a ghost note (very quiet) and an outline is an
+              open hi-hat. Listen plays one loop with a click on every beat. Choosing an exercise sets the metronome to fit
+              it, at your last tempo for it or its suggested tempo.
+            </p>
+          </>
+        )}
+      </div>
     </section>
   );
 }
@@ -285,22 +291,22 @@ function SongOpener({
   return (
     <div className="song-opener">
       <p>
-        Open a song you own from your computer and play along to it. MP3, M4A, WAV, OGG and FLAC files work.
+        Open a song you own from your computer and play along to it. MP3, M4A, WAV, OGG and FLAC files work. No song
+        file? Open a drum tab, a MIDI file (.mid), to practice the drum part on its own, at its own tempo or slower.
       </p>
-      <label className={`song-open-button ${loading ? "busy" : ""}`}>
-        {loading ? "Opening the song" : "Open a song"}
-        <input
-          type="file"
-          accept={SONG_EXTENSIONS.map((e) => `.${e}`).join(",") + ",audio/*"}
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            e.target.value = "";
-            if (file) onOpen(file);
-          }}
-        />
-      </label>
-      {error && <p className="hint warn-note">{error}</p>}
-      <div className="tab-opener">
+      <div className="song-open-row">
+        <label className={`song-open-button ${loading ? "busy" : ""}`}>
+          {loading ? "Opening the song" : "Open a song"}
+          <input
+            type="file"
+            accept={SONG_EXTENSIONS.map((e) => `.${e}`).join(",") + ",audio/*"}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (file) onOpen(file);
+            }}
+          />
+        </label>
         <label className="song-open-button secondary-look">
           Open a drum tab
           <input
@@ -313,8 +319,8 @@ function SongOpener({
             }}
           />
         </label>
-        <span className="hint">No song file? Practice a drum part from a MIDI file (.mid) on its own, at its own tempo or slower.</span>
       </div>
+      {error && <p className="hint warn-note">{error}</p>}
       {recent.length > 0 && (
         <div className="recent-songs">
           <h3>Opened before</h3>
