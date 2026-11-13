@@ -124,7 +124,7 @@ body,
   flex-direction: column;
 }
 
-/* The kit view's canvas, with overlays (the big count) positioned over it. */
+/* The kit view's canvas, with overlays (the small metronome) positioned over it. */
 .kit-area {
   position: relative;
   display: flex;
@@ -140,58 +140,74 @@ body,
 }
 
 /*
- * The big count: across the top of the kit view, large enough to read from
- * the drum throne. Translucent and click-through, so it never blocks the kit.
+ * The small metronome: a pendulum and a dot per beat in the kit view's top-left
+ * corner. Click-through, so it never blocks the kit.
  */
-.big-count {
+.small-metronome {
   position: absolute;
   top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 12px;
   display: flex;
-  align-items: baseline;
-  gap: clamp(6px, 1.2vw, 14px);
-  margin: 0;
-  padding: 4px 14px;
-  list-style: none;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
   pointer-events: none;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--bg) 70%, transparent);
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel) 85%, transparent);
+  border: 1px solid var(--border);
 }
 
-.big-count li {
-  padding: 2px 6px;
-  border-radius: 8px;
-  font-weight: 700;
-  color: var(--muted);
+.small-metronome-body {
+  width: 22px;
+  height: 26px;
+  overflow: visible;
 }
 
-.big-count li.beat {
-  font-size: clamp(28px, 7vh, 64px);
+.small-metronome-case {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 2;
+  stroke-linejoin: round;
 }
 
-.big-count li.sub {
-  font-size: clamp(18px, 4vh, 36px);
-  font-weight: 600;
+.small-metronome-arm {
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  transform-origin: 14px 26px;
+  transition-property: transform;
+  transition-timing-function: ease-in-out;
 }
 
-.big-count li.one {
-  color: var(--text);
+.small-metronome-beats {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.big-count li.now {
+.small-metronome-beats li {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--border);
+}
+
+.small-metronome-beats li.one {
+  width: 14px;
+  height: 14px;
+}
+
+.small-metronome-beats li.now {
   background: var(--accent);
-  color: var(--on-accent);
 }
 
-.big-count.dense li.beat {
-  font-size: clamp(22px, 5vh, 44px);
-}
-
-.big-count.dense li.sub {
-  font-size: clamp(14px, 3vh, 26px);
+@media (prefers-reduced-motion: reduce) {
+  .small-metronome-arm {
+    transition: none;
+  }
 }
 
 .controls {

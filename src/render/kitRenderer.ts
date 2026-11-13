@@ -71,7 +71,7 @@ export interface RendererOptions {
   getHandedness: () => Handedness;
   /** Pads to light up as "play this next", with a strength from 0 to 1. Read every frame. */
   getCues: (now: number) => readonly PadCue[];
-  /** Space to leave at the top for an overlay (the big count), in CSS px; 0 when none. */
+  /** Space to leave at the top for an overlay (the small metronome), in CSS px; 0 when none. */
   getTopInset: () => number;
 }
 
@@ -132,7 +132,7 @@ export class KitRenderer {
 
     const stripHeight = Math.max(90, height * 0.22);
     const kitHeight = height - stripHeight;
-    // An overlay along the top (the big count) gets its own space, so it never covers the cymbals.
+    // An overlay along the top (the small metronome) gets its own space, so it never covers the cymbals.
     const topInset = Math.min(this.options.getTopInset(), kitHeight * 0.4);
 
     // Fit a 1.6:1 box for the kit, centered in the kit area below any overlay.

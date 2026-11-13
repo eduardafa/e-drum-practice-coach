@@ -34,8 +34,8 @@ export interface SavedSettings {
   showNextPad?: boolean;
   /** Play the exercise's drum sounds along with the click during a session. */
   guideTrack?: boolean;
-  /** Show the count large over the kit view while the metronome runs (on unless turned off). */
-  showBigCount?: boolean;
+  /** Show a small metronome over the kit view while the click runs (on unless turned off). */
+  showMetronome?: boolean;
 }
 
 type UnknownRecord = Record<string, unknown>;
@@ -102,7 +102,7 @@ export function parseSettings(raw: unknown): SavedSettings {
     handedness: isHandedness(raw.handedness) ? raw.handedness : undefined,
     showNextPad: typeof raw.showNextPad === "boolean" ? raw.showNextPad : undefined,
     guideTrack: raw.guideTrack === true ? true : undefined,
-    showBigCount: typeof raw.showBigCount === "boolean" ? raw.showBigCount : undefined,
+    showMetronome: typeof raw.showMetronome === "boolean" ? raw.showMetronome : undefined,
   };
 }
 
