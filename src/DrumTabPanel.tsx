@@ -118,8 +118,8 @@ export function DrumTabPanel({
           Tab: {open.name}
         </span>
         {open.tab.skipped > 0 && (
-          <span className="drum-tab-note">
-            {open.tab.skipped} {open.tab.skipped === 1 ? "note isn't" : "notes aren't"} on the kit, left out
+          <span className="drum-tab-note" title="Drum notes with no pad on the kit (such as cowbell or tambourine) are left out">
+            {open.tab.skipped} left out
           </span>
         )}
         {fixed ? (

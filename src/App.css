@@ -2829,10 +2829,32 @@ button.primary.danger {
   font-size: 13px;
 }
 
-.drum-tab-bar button.secondary,
-.drum-tab-bar label.secondary {
+.drum-tab-bar button.secondary {
   padding: 4px 12px;
   font-size: 13px;
+}
+
+/* "Open a drum tab" is a label around a file input, so it gets the button look here: outlined in the accent color to stand out. */
+.drum-tab-bar label.secondary {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.drum-tab-bar label.secondary:hover {
+  background: var(--tint);
+}
+
+/* Links stay on the bar's line. */
+.drum-tab-bar .link-button {
+  display: inline;
+  margin: 0;
+  padding: 0;
 }
 
 .drum-tab-moves {
