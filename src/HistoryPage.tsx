@@ -9,6 +9,7 @@ import { PadHeatmap } from "./PadHeatmap";
 import { heatmap } from "./history/heatmap";
 import { releasing } from "./releasing";
 import { InsightsCard } from "./InsightsCard";
+import { FirstStepsSection } from "./FirstStepsSection";
 
 export type HistoryStatus = "loading" | "ready" | "off";
 
@@ -135,6 +136,8 @@ export function HistoryPage({ records, status, accuracyMode, selectedExerciseId,
             </p>
 
             {insights && sessions > 0 && <InsightsCard records={records} accuracyMode={accuracyMode} />}
+
+            <FirstStepsSection records={records} accuracyMode={accuracyMode} />
 
             {practicedExercises(records).length > 0 && (
               <>
