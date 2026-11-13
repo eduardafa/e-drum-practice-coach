@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { findExercise, FIRST_STEPS, GROOVES } from "./library";
-import { PATH_GOAL_ID, pathAdvice } from "./path";
+import { findExercise, FIRST_STEPS, FIRST_STEPS_2, GROOVES } from "./library";
+import { PATH_GOAL_ID, PATHS, pathAdvice } from "./path";
 
 const PASS = 0.9;
 
@@ -29,7 +29,24 @@ describe("pathAdvice", () => {
     });
   });
 
-  it("gives no advice for exercises off the path, the goal included", () => {
-    for (const e of GROOVES) expect(pathAdvice(e, 1, PASS)).toBeNull();
+  it("leads from part 1's goal into part 2, through part 2, then to its goal", () => {
+    const moneyBeat = findExercise(PATH_GOAL_ID);
+    if (!moneyBeat) throw new Error("missing goal");
+    expect(pathAdvice(moneyBeat, 0.95, PASS)).toEqual({ kind: "ready", next: FIRST_STEPS_2[0] });
+    FIRST_STEPS_2.slice(0, -1).forEach((step, i) => {
+      expect(pathAdvice(step, 1, PASS)?.next).toBe(FIRST_STEPS_2[i + 1]);
+    });
+    const last = FIRST_STEPS_2.at(-1);
+    if (!last) throw new Error("part 2 is empty");
+    expect(pathAdvice(last, 1, PASS)?.next.id).toBe(PATHS[1].goalId);
+  });
+
+  it("gives no advice for exercises that lead nowhere on a path, the last goal included", () => {
+    for (const e of GROOVES.filter((g) => g.id !== PATH_GOAL_ID)) expect(pathAdvice(e, 1, PASS)).toBeNull();
+  });
+
+  it("chains the paths: each starts after the previous one's goal", () => {
+    PATHS.slice(1).forEach((path, i) => expect(path.afterId).toBe(PATHS[i].goalId));
+    for (const path of PATHS) expect(findExercise(path.goalId)).toBeDefined();
   });
 });
