@@ -291,22 +291,22 @@ function SongOpener({
   return (
     <div className="song-opener">
       <p>
-        Open a song you own from your computer and play along to it. MP3, M4A, WAV, OGG and FLAC files work.
+        Open a song you own from your computer and play along to it. MP3, M4A, WAV, OGG and FLAC files work. No song
+        file? Open a drum tab, a MIDI file (.mid), to practice the drum part on its own, at its own tempo or slower.
       </p>
-      <label className={`song-open-button ${loading ? "busy" : ""}`}>
-        {loading ? "Opening the song" : "Open a song"}
-        <input
-          type="file"
-          accept={SONG_EXTENSIONS.map((e) => `.${e}`).join(",") + ",audio/*"}
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            e.target.value = "";
-            if (file) onOpen(file);
-          }}
-        />
-      </label>
-      {error && <p className="hint warn-note">{error}</p>}
-      <div className="tab-opener">
+      <div className="song-open-row">
+        <label className={`song-open-button ${loading ? "busy" : ""}`}>
+          {loading ? "Opening the song" : "Open a song"}
+          <input
+            type="file"
+            accept={SONG_EXTENSIONS.map((e) => `.${e}`).join(",") + ",audio/*"}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (file) onOpen(file);
+            }}
+          />
+        </label>
         <label className="song-open-button secondary-look">
           Open a drum tab
           <input
@@ -319,8 +319,8 @@ function SongOpener({
             }}
           />
         </label>
-        <span className="hint">No song file? Practice a drum part from a MIDI file (.mid) on its own, at its own tempo or slower.</span>
       </div>
+      {error && <p className="hint warn-note">{error}</p>}
       {recent.length > 0 && (
         <div className="recent-songs">
           <h3>Opened before</h3>
