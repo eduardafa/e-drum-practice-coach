@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { coach, historyStore, saved, SIGN_IN_RESULT } from "./appState";
 import { MidiPanel } from "./MidiPanel";
 import { useMidiStatus, useStats } from "./useStats";
+import { usePlayPreferences } from "./usePlayPreferences";
 import { DEFAULT_METRONOME } from "./live/coach";
 import { MAX_BPM, MIN_BPM, parseBpm, stepBpm, type MetronomeSettings } from "./audio/schedule";
 import { CalibrationPanel } from "./CalibrationPanel";
@@ -19,7 +20,6 @@ import { LearnSummary } from "./LearnSummary";
 import type { AccuracyMode } from "./playalong/results";
 import { DEFAULT_GET_READY_SEC } from "./playalong/getReady";
 import { GetReady } from "./GetReady";
-import { DEFAULT_HANDEDNESS, type Handedness } from "./handedness";
 import { HandednessContext } from "./HandednessContext";
 import { DEFAULT_SESSION_LOOPS, type PlayAlongSession } from "./playalong/session";
 import { ResultsPanel } from "./ResultsPanel";
@@ -81,7 +81,7 @@ export default function App() {
   );
   const [scoring, setScoring] = useState<ScoringOptions>(coach.scoring);
   const [running, setRunning] = useState(false);
-  const [volume, setVolume] = useState(saved.volume ?? coach.metronome.volume);
+  const prefs = usePlayPreferences();
   const [calibrating, setCalibrating] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -89,13 +89,7 @@ export default function App() {
   const exercise = exerciseId === null ? null : (findExercise(exerciseId) ?? null);
   const [sessionLoops, setSessionLoops] = useState(saved.sessionLoops ?? DEFAULT_SESSION_LOOPS);
   const [getReadySec, setGetReadySec] = useState(saved.getReadySec ?? DEFAULT_GET_READY_SEC);
-  const [handedness, setHandedness] = useState<Handedness>(saved.handedness ?? DEFAULT_HANDEDNESS);
   /** For the kit renderer, which reads it every frame outside React. */
-  const handednessRef = useRef(handedness);
-  handednessRef.current = handedness;
-  const [showNextPad, setShowNextPad] = useState(saved.showNextPad ?? true);
-  const [guideTrack, setGuideTrack] = useState(saved.guideTrack === true);
-  const [showBigCount, setShowBigCount] = useState(saved.showBigCount ?? true);
   /** Today's practice: the plan shown before starting, and the plan being run. */
   const [planOpen, setPlanOpen] = useState(false);
   const [plan, setPlan] = useState<RunningPlan | null>(null);
@@ -106,9 +100,6 @@ export default function App() {
     midi.state === "ready" && midi.selectedId ? (midi.devices.find((d) => d.id === midi.selectedId)?.name ?? null) : null;
   const kitMap = kitName === null ? undefined : kitMaps[kitName];
   /** The big count while it's shown, so the kit view can leave room for it. */
-  const bigCountRef = useRef<HTMLOListElement>(null);
-  const showNextPadRef = useRef(showNextPad);
-  showNextPadRef.current = showNextPad;
   const [accuracyMode, setAccuracyMode] = useState<AccuracyMode>(saved.accuracyMode ?? "partial");
   /** The last tempo used for each exercise, so choosing one again picks up where the drummer left off. */
   const [exerciseTempos, setExerciseTempos] = useState<Record<string, number>>(saved.exerciseTempos ?? {});
@@ -150,17 +141,14 @@ export default function App() {
     if (!canvas) return;
     const renderer = new KitRenderer(canvas, coach.live, {
       getToleranceMs: () => coach.scoring.toleranceMs,
-      getHandedness: () => handednessRef.current,
-      getCues: (now) => (showNextPadRef.current ? coach.cuesAt(now) : []),
-      getTopInset: () => (bigCountRef.current ? bigCountRef.current.offsetHeight + 16 : 0),
+      ...prefs.renderer,
     });
     renderer.start();
     return () => renderer.dispose();
-  }, []);
+  }, [prefs.renderer]);
 
   useEffect(() => {
     coach.metronome.setSettings(metronome);
-    coach.guideEnabled = guideTrack;
     coach.scoring = scoring;
     saveSettings({
       metronome,
@@ -171,12 +159,8 @@ export default function App() {
       accuracyMode,
       sessionLoops,
       exerciseTempos,
-      volume,
       getReadySec,
-      handedness,
-      showNextPad,
-      guideTrack: guideTrack || undefined,
-      showBigCount,
+      ...prefs.toSave,
     });
   }, [
     metronome,
@@ -187,12 +171,8 @@ export default function App() {
     accuracyMode,
     sessionLoops,
     exerciseTempos,
-    volume,
     getReadySec,
-    handedness,
-    showNextPad,
-    guideTrack,
-    showBigCount,
+    prefs.toSave,
   ]);
 
   // Remember the tempo of the exercise on the staff, however it changed (− / +, typed, a retry, the trainer).
@@ -334,9 +314,6 @@ export default function App() {
   // A finished session stops the clicks by itself; keep the Start button in step.
   if (running && !stats.running && stats.session?.phase === "done") setRunning(false);
 
-  useEffect(() => {
-    coach.metronome.volume = volume;
-  }, [volume]);
 
   // The connected kit's recorded map, over the standard one.
   useEffect(() => {
@@ -727,7 +704,7 @@ export default function App() {
   const updateScoring = (patch: Partial<ScoringOptions>) => setScoring((s) => ({ ...s, ...patch }));
 
   return (
-    <HandednessContext.Provider value={handedness}>
+    <HandednessContext.Provider value={prefs.handedness}>
       <div className={`app ${view === "history" ? "history-view" : ""}`}>
         <header className="topbar">
           <h1>E-drum Practice Coach</h1>
@@ -774,7 +751,7 @@ export default function App() {
           />
           <div className="kit-area">
             <canvas ref={canvasRef} className="kit-canvas" aria-label="Live view of the drum kit" />
-            {showBigCount && <BigCount coach={coach} ref={bigCountRef} />}
+            {prefs.showBigCount && <BigCount coach={coach} ref={prefs.bigCountRef} />}
           </div>
           <GetReady coach={coach} />
           {guideOpen && !calibrating && (
@@ -791,22 +768,22 @@ export default function App() {
             <SettingsPanel
               metronome={metronome}
               onMetronomeChange={updateMetronome}
-              volume={volume}
-              onVolumeChange={setVolume}
+              volume={prefs.volume}
+              onVolumeChange={prefs.setVolume}
               scoring={scoring}
               onScoringChange={updateScoring}
               skillLevel={skillLevel}
               onSkillLevelChange={applySkillLevel}
               accuracyMode={accuracyMode}
               onAccuracyModeChange={setAccuracyMode}
-              handedness={handedness}
-              onHandednessChange={setHandedness}
-              showNextPad={showNextPad}
-              onShowNextPadChange={setShowNextPad}
-              guideTrack={guideTrack}
-              onGuideTrackChange={setGuideTrack}
-              showBigCount={showBigCount}
-              onShowBigCountChange={setShowBigCount}
+              handedness={prefs.handedness}
+              onHandednessChange={prefs.setHandedness}
+              showNextPad={prefs.showNextPad}
+              onShowNextPadChange={prefs.setShowNextPad}
+              guideTrack={prefs.guideTrack}
+              onGuideTrackChange={prefs.setGuideTrack}
+              showBigCount={prefs.showBigCount}
+              onShowBigCountChange={prefs.setShowBigCount}
               kitName={kitName}
               kitMapNotes={kitMap ? Object.keys(kitMap).length : 0}
               onMapKit={startMapping}
