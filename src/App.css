@@ -204,6 +204,20 @@ body,
   background: var(--accent);
 }
 
+/* Beside a drum tab, on the right of the Notation / Lanes row, instead of over the kit. */
+.small-metronome.inline {
+  position: static;
+}
+
+.drum-tab-view-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 58px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .small-metronome-arm {
     transition: none;
@@ -908,6 +922,14 @@ fieldset.group.play {
   gap: 12px;
 }
 
+/* Buttons on the right of a panel's header, next to Close. */
+.overlay-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .overlay h2 {
   font-size: 15px;
   margin: 0;
@@ -1270,24 +1292,6 @@ fieldset.group.play {
   margin: 12px 0 4px;
   padding: 0;
   border: 0;
-}
-
-/* Labels never break inside; if the row is too narrow, whole buttons move to a second row. */
-.library-filters button.secondary {
-  padding: 4px 12px;
-  font-size: 13px;
-  white-space: nowrap;
-}
-
-.library-filters .link-button {
-  margin: 0 0 0 auto;
-  white-space: nowrap;
-}
-
-.library-filters .link-button:disabled {
-  color: var(--muted);
-  text-decoration: none;
-  cursor: default;
 }
 
 .library-list {
@@ -2096,9 +2100,9 @@ button.primary.danger {
   color: var(--accent);
 }
 
-/* ---- Settings tabs ---- */
+/* ---- Tabs (Settings, the exercise library: Tabs.tsx) ---- */
 
-.settings-tabs {
+.tab-list {
   display: flex;
   flex-wrap: wrap;
   gap: 2px;
@@ -2106,7 +2110,8 @@ button.primary.danger {
   border-bottom: 1px solid var(--border);
 }
 
-.settings-tabs button {
+.tab-list button {
+  white-space: nowrap;
   background: none;
   border: 0;
   border-bottom: 2px solid transparent;
@@ -2118,11 +2123,11 @@ button.primary.danger {
   cursor: pointer;
 }
 
-.settings-tabs button:hover {
+.tab-list button:hover {
   color: var(--text);
 }
 
-.settings-tabs button.selected {
+.tab-list button.selected {
   color: var(--text);
   font-weight: 600;
   border-bottom-color: var(--accent);

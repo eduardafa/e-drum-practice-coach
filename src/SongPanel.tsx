@@ -68,6 +68,7 @@ export function SongPanel({
   getReadySec,
   onGetReadyChange,
   onTabSpeed,
+  showMetronome,
   onClose,
 }: {
   coach: Coach;
@@ -81,6 +82,8 @@ export function SongPanel({
   onGetReadyChange: (seconds: number) => void;
   /** For a tab on its own: play it at this fraction of its tempo. */
   onTabSpeed: (speed: number) => void;
+  /** Show the small metronome (Settings): beside a drum tab when one is open. */
+  showMetronome: boolean;
   onClose: () => void;
 }) {
   const tabOnly = song.tab !== undefined;
@@ -237,6 +240,7 @@ export function SongPanel({
         coach={coach}
         grid={song.grid}
         fixed={fixedTab}
+        showMetronome={showMetronome}
       />
       {song.grid && !along && !tabOnly && (
         <BeatGridTools

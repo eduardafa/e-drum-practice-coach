@@ -692,6 +692,7 @@ export default function App() {
               analyzing={songs.analyzing}
               onGridChange={songs.setGrid}
               onTabSpeed={songs.setTabSpeed}
+              showMetronome={prefs.showMetronome}
               getReadySec={getReadySec}
               onGetReadyChange={setGetReadySec}
               onClose={songs.close}

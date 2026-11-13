@@ -1,6 +1,7 @@
-import { useRef, useState, type KeyboardEvent } from "react";
+import { useState } from "react";
 import { formatVolume, MAX_VOLUME, MIN_VOLUME } from "./audio/volume";
 import { isSubdivision, type MetronomeSettings } from "./audio/schedule";
+import { Tabs } from "./Tabs";
 import { ThemeSetting } from "./ThemeSetting";
 import { isHandedness, type Handedness } from "./handedness";
 import { isAccuracyMode, type AccuracyMode } from "./playalong/results";
@@ -79,25 +80,6 @@ export function SettingsPanel({
 }: Props) {
   const windowLevel = levelForTolerance(scoring.toleranceMs);
   const [tab, setTab] = useState<Tab>("metronome");
-  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
-
-  // Tabs as screen readers expect: arrows move between them (and show the
-  // new one), Home and End jump to the ends. Arrow keys aren't drum keys.
-  const onTabKey = (e: KeyboardEvent<HTMLButtonElement>, index: number) => {
-    const last = TABS.length - 1;
-    const next =
-      e.key === "ArrowRight" ? (index === last ? 0 : index + 1)
-      : e.key === "ArrowLeft" ? (index === 0 ? last : index - 1)
-      : e.key === "Home" ? 0
-      : e.key === "End" ? last
-      : null;
-    if (next === null) return;
-    e.preventDefault();
-    const target = TABS[next];
-    if (!target) return;
-    setTab(target.id);
-    tabRefs.current[next]?.focus();
-  };
 
   return (
     <section className="overlay settings" aria-labelledby="settings-title">
@@ -108,26 +90,7 @@ export function SettingsPanel({
         </button>
       </div>
 
-      <div className="settings-tabs" role="tablist" aria-label="Settings">
-        {TABS.map((t, i) => (
-          <button
-            key={t.id}
-            ref={(el) => {
-              tabRefs.current[i] = el;
-            }}
-            id={`settings-tab-${t.id}`}
-            role="tab"
-            aria-selected={tab === t.id}
-            aria-controls={`settings-panel-${t.id}`}
-            tabIndex={tab === t.id ? 0 : -1}
-            className={tab === t.id ? "selected" : ""}
-            onClick={() => setTab(t.id)}
-            onKeyDown={(e) => onTabKey(e, i)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <Tabs tabs={TABS} selected={tab} onSelect={setTab} label="Settings" idPrefix="settings" />
 
       {tab === "metronome" && (
         <div id="settings-panel-metronome" role="tabpanel" aria-labelledby="settings-tab-metronome">
