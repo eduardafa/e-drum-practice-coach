@@ -52,6 +52,11 @@ describe("parseSettings", () => {
     expect(parseSettings({ getReadySec: 7 }).getReadySec).toBeUndefined();
   });
 
+  it("keeps the guide track only when it's on", () => {
+    expect(parseSettings({ guideTrack: true }).guideTrack).toBe(true);
+    expect(parseSettings({ guideTrack: "yes" }).guideTrack).toBeUndefined();
+  });
+
   it("keeps the next-pad setting only as a boolean", () => {
     expect(parseSettings({ showNextPad: false }).showNextPad).toBe(false);
     expect(parseSettings({ showNextPad: "no" }).showNextPad).toBeUndefined();

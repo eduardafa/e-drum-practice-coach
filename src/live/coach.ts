@@ -3,7 +3,9 @@
  * together. One instance lives for the lifetime of the page.
  */
 import { Metronome } from "../audio/metronome";
+import { GuideTrack } from "../audio/guideTrack";
 import { PreviewPlayer } from "../audio/previewPlayer";
+import { previewPlan, type PreviewPlan } from "../exercises/preview";
 import { subdivisionFor } from "../exercises/practice";
 import type { Exercise } from "../exercises/types";
 import { cueLeadMs, cuesAt, type PadCue } from "../playalong/cues";
@@ -46,6 +48,11 @@ export class Coach {
   /** Plays exercises in the library browser; stopped whenever the metronome starts. */
   readonly preview = new PreviewPlayer();
   scoring: ScoringOptions = { ...DEFAULT_SCORING };
+  /** Play the exercise's drum sounds along with the click during a session (Settings). */
+  guideEnabled = false;
+  private readonly guide = new GuideTrack();
+  /** One loop of the session's exercise as sounds, planned when the session starts. */
+  private guidePlan: PreviewPlan | null = null;
   private calibration: CalibrationSession | null = null;
   /** The drummer's metronome settings, restored when calibration ends. */
   private settingsBeforeCalibration: MetronomeSettings | null = null;
@@ -78,6 +85,7 @@ export class Coach {
           this.playAlong.preview(step.performanceTime + beatMs * beatsPerBar);
         }
         if (this.bar === 1 && step.beatInBar === 0 && step.subInBeat === 0) this.playAlong?.begin(step.performanceTime);
+        if (step.beatInBar === 0 && step.subInBeat === 0) this.scheduleGuideLoop(step.time);
         if (!step.beat) return;
         this.live.addBeat({ time: step.performanceTime, downbeat: step.downbeat });
         // No more clicks needed: the target was reached or the limit is scheduled.
@@ -93,6 +101,7 @@ export class Coach {
   async startMetronome(): Promise<void> {
     if (this.calibrating) return;
     this.endLearn();
+    this.guide.stop();
     this.preview.stop();
     this.live.resetSession();
     this.bar = -1;
@@ -100,6 +109,7 @@ export class Coach {
   }
 
   stopMetronome(): void {
+    this.guide.stop();
     this.metronome.stop();
   }
 
@@ -126,6 +136,8 @@ export class Coach {
     };
     this.metronome.setSettings(settings);
     this.playAlong = new PlayAlongSession(exercise, loops, settings.bpm, this.scoring);
+    this.guide.stop();
+    this.guidePlan = previewPlan(exercise, settings.bpm);
     // Read the wall clock once per session, for history only; timing never uses it.
     this.sessionStart = { at: Temporal.Now.instant(), timeZone: Temporal.Now.timeZoneId(), perf: performance.now() };
     this.live.resetSession();
@@ -153,6 +165,21 @@ export class Coach {
 
   endLearn(): void {
     this.learning = null;
+  }
+
+  /**
+   * At a bar's first click (audio time `at`), schedules that bar's share of
+   * the guide track: a whole loop when a loop of the session starts there.
+   * Bar 0 is the count-in, so loop n starts at bar 1 + n × the exercise's bars.
+   */
+  private scheduleGuideLoop(at: number): void {
+    const session = this.playAlong;
+    const ctx = this.metronome.context;
+    if (!this.guideEnabled || !session || !this.guidePlan || !ctx || this.bar < 1) return;
+    const bar = this.bar - 1;
+    const bars = session.exercise.bars;
+    if (bar % bars !== 0 || bar / bars >= session.loops) return;
+    this.guide.scheduleLoop(ctx, this.guidePlan, at, this.metronome.volume);
   }
 
   /** Which pads the kit view should light at `now`: wait mode's step, or the session's next notes from the count-in on. */
@@ -190,6 +217,7 @@ export class Coach {
 
   /** Abandons or closes the session. */
   endSession(): void {
+    this.guide.stop();
     if (!this.playAlong) return;
     if (this.playAlong.phase !== "done") this.metronome.stop();
     this.playAlong = null;

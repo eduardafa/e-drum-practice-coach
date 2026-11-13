@@ -45,6 +45,11 @@ export class Metronome {
     private readonly grid: TimingGrid,
   ) {}
 
+  /** The audio context, once created (it's created on the first start or preview). */
+  get context(): AudioContext | null {
+    return this.ctx;
+  }
+
   get running(): boolean {
     return this.cursor !== null;
   }
