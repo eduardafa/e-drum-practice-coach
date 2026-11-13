@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { TICKS_PER_QUARTER } from "./exercises/types";
 import type { Coach } from "./live/coach";
-import { xAtTick, type StaffLayout } from "./notation/layout";
+import { MAX_STAFF_SCALE, xAtTick, type StaffLayout } from "./notation/layout";
 import type { BeatGrid } from "./songs/beats";
 import type { DrumTab } from "./songs/drumTab";
 import { BARS_PER_LINE, lineCount, snapTab, tabBeatAt, tabLine } from "./songs/tabNotation";
 
 const LINE_BEATS = BARS_PER_LINE * 4;
 /**
- * Bar width the tab is engraved at, narrower than the exercises' (420): the
- * line is scaled to the stage's width, so tighter bars draw every note bigger.
+ * Bar width the tab is engraved at, narrower than the exercises' (420), so
+ * two bars fit the stage at about the exercises' size; like theirs, the staff
+ * never grows past MAX_STAFF_SCALE.
  */
 const TAB_BAR_WIDTH = 300;
 /** Room kept above and below the notes when the empty space around a line is cut away (fits an open hi-hat's "o"). */
@@ -102,8 +103,10 @@ export function TabNotation({ coach, tab, grid, shift }: { coach: Coach; tab: Dr
     return () => cancelAnimationFrame(raf);
   }, [coach, grid, shift, lines, layout]);
 
+  const style = useMemo(() => ({ maxWidth: layout ? layout.width * MAX_STAFF_SCALE : undefined }), [layout]);
+
   return (
-    <div className="tab-notation">
+    <div className="tab-notation" style={style}>
       <p className="tab-notation-label" aria-live="polite">
         Bars {line * BARS_PER_LINE + 1} to {(line + 1) * BARS_PER_LINE}
         {line + 1 === lines && ", the last line"}

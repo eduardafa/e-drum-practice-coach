@@ -149,8 +149,8 @@ body,
   left: 12px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 12px;
+  gap: 14px;
+  padding: 8px 16px;
   pointer-events: none;
   border-radius: 999px;
   background: color-mix(in srgb, var(--panel) 85%, transparent);
@@ -158,8 +158,8 @@ body,
 }
 
 .small-metronome-body {
-  width: 22px;
-  height: 26px;
+  width: 34px;
+  height: 40px;
   overflow: visible;
 }
 
@@ -182,22 +182,22 @@ body,
 .small-metronome-beats {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 9px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .small-metronome-beats li {
-  width: 10px;
-  height: 10px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: var(--border);
 }
 
 .small-metronome-beats li.one {
-  width: 14px;
-  height: 14px;
+  width: 22px;
+  height: 22px;
 }
 
 .small-metronome-beats li.now {
@@ -2963,8 +2963,9 @@ button.primary.danger {
 .tab-notation {
   display: grid;
   gap: 2px;
-  /* The stage's full width, big enough to read from the drum throne. */
+  /* As wide as the stage allows, up to the exercises' size (max width set inline), centered. */
   width: 100%;
+  justify-self: center;
 }
 
 .tab-notation-label {

@@ -3,6 +3,9 @@
  * mapping from time to position can be tested without a browser.
  */
 
+/** A staff grows to fit the stage width, up to this many times its engraved size (exercises and tabs alike). */
+export const MAX_STAFF_SCALE = 1.6;
+
 /** Where one note of the exercise is drawn: its index in exercise.notes and its notehead's center. */
 export interface NoteMark {
   index: number;

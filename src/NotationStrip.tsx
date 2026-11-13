@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ticksPerBeat, type Exercise } from "./exercises/types";
 import type { Coach } from "./live/coach";
-import { xAtTick, type StaffLayout } from "./notation/layout";
+import { MAX_STAFF_SCALE, xAtTick, type StaffLayout } from "./notation/layout";
 import { playheadTick } from "./notation/playhead";
 import type { NoteResult } from "./playalong/matcher";
 import { GET_READY_OPTIONS } from "./playalong/getReady";
@@ -12,8 +12,6 @@ import { useHandedness } from "./HandednessContext";
 
 /** Pick the position one frame ahead, as the live count does: a frame is painted ~16 ms after it's chosen. */
 const PAINT_LOOKAHEAD_MS = 16;
-/** The staff grows to fit the stage width, up to this many times its engraved size. */
-const MAX_SCALE = 1.6;
 
 /** What the strip shows about a wait-mode (Learn) run. */
 export interface LearnView {
@@ -105,7 +103,7 @@ export function NotationStrip({
   const marksRef = useRef<HTMLDivElement>(null);
   const [layout, setLayout] = useState<StaffLayout | null>(null);
   const [status, setStatus] = useState<Status>("idle");
-  const scoreStyle = useMemo(() => ({ maxWidth: layout ? layout.width * MAX_SCALE : undefined }), [layout]);
+  const scoreStyle = useMemo(() => ({ maxWidth: layout ? layout.width * MAX_STAFF_SCALE : undefined }), [layout]);
   // Sticking and description as played on the drummer's kit. Same notes in the same order, so marks still line up.
   const handedness = useHandedness();
   const shown = useMemo(() => exercise && displayedExercise(exercise, handedness), [exercise, handedness]);
