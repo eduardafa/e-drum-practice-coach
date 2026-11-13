@@ -426,7 +426,14 @@ button:focus-visible {
 .calibration {
   position: absolute;
   top: 16px;
-  left: 50%;
+  /*
+   * Centered on the screen, not just the practice area, so it doesn't look
+   * pushed left by the side panel; but never so far right that it covers the
+   * side panel (its right edge stays 16px inside this area). The stage starts
+   * at the window's left edge, and on phones it's the full width, where both
+   * centers are the same.
+   */
+  left: min(50vw, calc(100% - min(220px, 50% - 16px) - 16px));
   transform: translateX(-50%);
   width: min(440px, calc(100% - 32px));
   padding: 18px 20px;
@@ -1230,13 +1237,17 @@ fieldset.group.play {
 .overlay.library {
   /* Below the notation header, so the exercise button that opened it stays visible. */
   top: 54px;
+  /* Room for the scrollbar is kept even when a tab doesn't need one, so nothing shifts between tabs. */
+  scrollbar-gutter: stable;
   max-height: calc(100% - 70px);
   left: 16px;
-  width: min(560px, calc(100% - 32px));
+  /* Wide enough for the five filters and "Just the metronome" on one row, scrollbar included. */
+  width: min(600px, calc(100% - 32px));
 }
 
 .library-filters {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   margin: 12px 0 4px;
@@ -1244,13 +1255,16 @@ fieldset.group.play {
   border: 0;
 }
 
+/* Labels never break inside; if the row is too narrow, whole buttons move to a second row. */
 .library-filters button.secondary {
   padding: 4px 12px;
   font-size: 13px;
+  white-space: nowrap;
 }
 
 .library-filters .link-button {
   margin: 0 0 0 auto;
+  white-space: nowrap;
 }
 
 .library-filters .link-button:disabled {
@@ -2493,7 +2507,7 @@ button.primary.danger {
 /* Today's practice: the plan before it starts, and the running block in the side panel. */
 .plan-blocks {
   list-style: none;
-  margin: 12px 0 0;
+  margin: 12px 0 16px;
   padding: 0;
   display: grid;
   gap: 6px;

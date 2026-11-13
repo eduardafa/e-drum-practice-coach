@@ -84,7 +84,7 @@ export function InsightsCard({ records, accuracyMode }: Props) {
       <div className="insights-head">
         <h3 id="insights-title">Coach's notes</h3>
         <button className="secondary" disabled={busy || left === 0 || !model} onClick={releasing(() => void ask())}>
-          {busy ? "Thinking…" : insight ? "New tips" : "Get coaching tips"}
+          {busy ? "Thinking" : insight ? "New tips" : "Get coaching tips"}
         </button>
       </div>
       {model && (

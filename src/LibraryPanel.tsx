@@ -283,7 +283,7 @@ function SongOpener({
         Open a song you own from your computer and play along to it. MP3, M4A, WAV, OGG and FLAC files work.
       </p>
       <label className={`song-open-button ${loading ? "busy" : ""}`}>
-        {loading ? "Opening…" : "Open a song…"}
+        {loading ? "Opening the song" : "Open a song"}
         <input
           type="file"
           accept={SONG_EXTENSIONS.map((e) => `.${e}`).join(",") + ",audio/*"}
