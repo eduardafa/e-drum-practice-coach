@@ -57,6 +57,11 @@ describe("parseSettings", () => {
     expect(parseSettings({ guideTrack: "yes" }).guideTrack).toBeUndefined();
   });
 
+  it("keeps the big-count setting only as a boolean", () => {
+    expect(parseSettings({ showBigCount: false }).showBigCount).toBe(false);
+    expect(parseSettings({ showBigCount: 1 }).showBigCount).toBeUndefined();
+  });
+
   it("keeps the next-pad setting only as a boolean", () => {
     expect(parseSettings({ showNextPad: false }).showNextPad).toBe(false);
     expect(parseSettings({ showNextPad: "no" }).showNextPad).toBeUndefined();

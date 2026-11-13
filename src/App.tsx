@@ -3,6 +3,7 @@ import { MAX_BPM, MIN_BPM, parseBpm, stepBpm, type MetronomeSettings } from "./a
 import { CalibrationPanel } from "./CalibrationPanel";
 import { KeyboardHint } from "./KeyboardHint";
 import { LiveCount } from "./LiveCount";
+import { BigCount } from "./BigCount";
 import { MetronomeGuide } from "./MetronomeGuide";
 import { NotationStrip, type LearnView, type SessionView } from "./NotationStrip";
 import { LearnSummary } from "./LearnSummary";
@@ -154,6 +155,9 @@ export default function App() {
   handednessRef.current = handedness;
   const [showNextPad, setShowNextPad] = useState(saved.showNextPad ?? true);
   const [guideTrack, setGuideTrack] = useState(saved.guideTrack === true);
+  const [showBigCount, setShowBigCount] = useState(saved.showBigCount ?? true);
+  /** The big count while it's shown, so the kit view can leave room for it. */
+  const bigCountRef = useRef<HTMLOListElement>(null);
   const showNextPadRef = useRef(showNextPad);
   showNextPadRef.current = showNextPad;
   const [accuracyMode, setAccuracyMode] = useState<AccuracyMode>(saved.accuracyMode ?? "partial");
@@ -222,6 +226,7 @@ export default function App() {
       handedness,
       showNextPad,
       guideTrack: guideTrack || undefined,
+      showBigCount,
     });
   }, [
     metronome,
@@ -237,6 +242,7 @@ export default function App() {
     handedness,
     showNextPad,
     guideTrack,
+    showBigCount,
   ]);
 
   // Remember the tempo of the exercise on the staff, however it changed (− / +, typed, a retry, the trainer).
@@ -762,7 +768,10 @@ export default function App() {
                 : null
             }
           />
-          <canvas ref={canvasRef} className="kit-canvas" aria-label="Live view of the drum kit" />
+          <div className="kit-area">
+            <canvas ref={canvasRef} className="kit-canvas" aria-label="Live view of the drum kit" />
+            {showBigCount && <BigCount coach={coach} ref={bigCountRef} />}
+          </div>
           <GetReady coach={coach} />
           {guideOpen && !calibrating && (
             <MetronomeGuide
@@ -792,6 +801,8 @@ export default function App() {
               onShowNextPadChange={setShowNextPad}
               guideTrack={guideTrack}
               onGuideTrackChange={setGuideTrack}
+              showBigCount={showBigCount}
+              onShowBigCountChange={setShowBigCount}
               onCalibrate={() => void startCalibration()}
               onClose={() => setSettingsOpen(false)}
             />
