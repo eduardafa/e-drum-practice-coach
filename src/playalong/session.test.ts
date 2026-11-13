@@ -85,3 +85,29 @@ describe("PlayAlongSession", () => {
     expect(latest.get(2)).toMatchObject({ status: "hit", verdict: "onTime" });
   });
 });
+
+describe("PlayAlongSession: upcoming notes for the kit view", () => {
+  it("shows the planned first loop during the count-in, the whole run while playing, and nothing after", () => {
+    const step1 = findExercise("first-hihat-quarters");
+    if (!step1) throw new Error("missing exercise");
+    const session = new PlayAlongSession(step1, 2, 60, { toleranceMs: 35, latencyOffsetMs: 0 });
+    expect(session.upcomingNotes()).toEqual([]);
+    session.preview(5000);
+    expect(session.upcomingNotes().map((n) => n.time)).toEqual([5000, 6000, 7000, 8000]);
+    session.begin(5000);
+    expect(session.upcomingNotes()).toHaveLength(8);
+    session.tick(20_000);
+    expect(session.phase).toBe("done");
+    expect(session.upcomingNotes()).toEqual([]);
+  });
+
+  it("ignores a preview once playing", () => {
+    const step1 = findExercise("first-hihat-quarters");
+    if (!step1) throw new Error("missing exercise");
+    const session = new PlayAlongSession(step1, 1, 60, { toleranceMs: 35, latencyOffsetMs: 0 });
+    session.begin(1000);
+    session.preview(9000);
+    expect(session.upcomingNotes()[0]?.time).toBe(1000);
+  });
+});
+
