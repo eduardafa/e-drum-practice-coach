@@ -11,13 +11,3 @@ allowBuilds:
 # them out. For an urgent security fix that's newer than this, add the package to
 # minimumReleaseAgeExclude temporarily, with a comment and a date to remove it.
 minimumReleaseAge: 4320
-minimumReleaseAgeExclude:
-  # Temporary (EDU-28): already locked when this policy was added, published
-  # 2026-11-09, and clean in Trivy. They pass the 3-day rule on 2026-11-12;
-  # remove this list then.
-  - oxlint
-  - "@oxlint/*"
-  - rolldown
-  - "@rolldown/*"
-  - vite
-  - "@vitejs/plugin-react"
