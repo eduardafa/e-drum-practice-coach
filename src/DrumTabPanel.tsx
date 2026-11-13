@@ -7,6 +7,7 @@ import type { BeatGrid } from "./songs/beats";
 import { drumTabFrom, guessShift, placeTab, type DrumTab, type PlacedNote } from "./songs/drumTab";
 import { MidiError, readMidiDrums } from "./songs/midiFile";
 import { TAB_SPEEDS } from "./songs/tabSong";
+import { SmallMetronome } from "./SmallMetronome";
 import { TabNotation } from "./TabNotation";
 import { onThemeChange, withColorProbe } from "./theme";
 
@@ -56,9 +57,12 @@ export function DrumTabPanel({
   coach,
   grid,
   fixed,
+  showMetronome,
 }: {
   coach: Coach;
   grid: BeatGrid | null;
+  /** Show the small metronome beside the tab, opposite the view choice (Settings). */
+  showMetronome: boolean;
   /**
    * A tab practiced on its own: `grid` is its own beats, so there's nothing to
    * line up or swap; its sounds are on by default, with a click and a speed.
@@ -205,29 +209,32 @@ export function DrumTabPanel({
       {error && <p className="hint warn-note">{error}</p>}
       {placed && grid ? (
         <>
-          <fieldset className="segmented" aria-label="Show the tab as">
-            <legend className="visually-hidden">Show the tab as</legend>
-            {(
-              [
-                ["notation", "Notation"],
-                ["lanes", "Lanes"],
-              ] as const
-            ).map(([id, label]) => (
-              <label key={id} title={id === "lanes" ? "A row per pad: no notation to read" : "Drum notation, two bars at a time"}>
-                <input
-                  type="radio"
-                  name="tab-view"
-                  value={id}
-                  checked={view === id}
-                  onChange={(e) => {
-                    e.currentTarget.blur();
-                    chooseView(id);
-                  }}
-                />
-                <span>{label}</span>
-              </label>
-            ))}
-          </fieldset>
+          <div className="drum-tab-view-row">
+            <fieldset className="segmented" aria-label="Show the tab as">
+              <legend className="visually-hidden">Show the tab as</legend>
+              {(
+                [
+                  ["notation", "Notation"],
+                  ["lanes", "Lanes"],
+                ] as const
+              ).map(([id, label]) => (
+                <label key={id} title={id === "lanes" ? "A row per pad: no notation to read" : "Drum notation, two bars at a time"}>
+                  <input
+                    type="radio"
+                    name="tab-view"
+                    value={id}
+                    checked={view === id}
+                    onChange={(e) => {
+                      e.currentTarget.blur();
+                      chooseView(id);
+                    }}
+                  />
+                  <span>{label}</span>
+                </label>
+              ))}
+            </fieldset>
+            {showMetronome && <SmallMetronome coach={coach} inline />}
+          </div>
           {view === "notation" ? (
             <TabNotation coach={coach} tab={open.tab} grid={grid} shift={fixed ? 0 : shift} />
           ) : (

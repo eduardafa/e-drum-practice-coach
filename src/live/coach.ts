@@ -357,6 +357,11 @@ export class Coach {
     this.songTab = tab;
   }
 
+  /** Whether a drum tab is shown with the song (the small metronome then sits beside it, not over the kit). */
+  get hasSongTab(): boolean {
+    return this.songTab !== null;
+  }
+
   /** Turns Hear the tab on or off. */
   setHearTab(on: boolean): void {
     this.hearTab = on;

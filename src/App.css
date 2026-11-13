@@ -204,6 +204,20 @@ body,
   background: var(--accent);
 }
 
+/* Beside a drum tab, on the right of the Notation / Lanes row, instead of over the kit. */
+.small-metronome.inline {
+  position: static;
+}
+
+.drum-tab-view-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 58px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .small-metronome-arm {
     transition: none;

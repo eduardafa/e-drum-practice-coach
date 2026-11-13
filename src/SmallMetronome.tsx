@@ -42,9 +42,11 @@ function readBeat(coach: Coach, prev: Beat): Beat {
  * current one lit, beat 1 bigger). Follows the scheduler's counts, like the
  * side panel's live count, so it moves exactly with what's heard. Decorative
  * for screen readers: the side panel's count carries it. The kit view reads
- * its height (through `ref`) to leave room above the kit.
+ * its size (through `ref`) to keep the kit from under it. With a drum tab
+ * open, it sits beside the tab instead (`inline`), where the drummer is
+ * reading, and the one over the kit hides.
  */
-export function SmallMetronome({ coach, ref }: { coach: Coach; ref?: Ref<HTMLDivElement> }) {
+export function SmallMetronome({ coach, ref, inline = false }: { coach: Coach; ref?: Ref<HTMLDivElement>; inline?: boolean }) {
   const [beat, setBeat] = useState<Beat>(() => ({
     number: null,
     inBar: 0,
@@ -67,9 +69,9 @@ export function SmallMetronome({ coach, ref }: { coach: Coach; ref?: Ref<HTMLDiv
     () => ({ transform: `rotate(${side * 24}deg)`, transitionDuration: `${Math.round(beat.beatMs)}ms` }),
     [side, beat.beatMs],
   );
-  if (beat.number === null) return null;
+  if (beat.number === null || (!inline && coach.hasSongTab)) return null;
   return (
-    <div ref={ref} className="small-metronome" aria-hidden>
+    <div ref={ref} className={`small-metronome ${inline ? "inline" : ""}`} aria-hidden>
       <svg className="small-metronome-body" viewBox="0 0 28 32">
         <path className="small-metronome-case" d="M9 2 H19 L26 30 H2 Z" />
         <line
