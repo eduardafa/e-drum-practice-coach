@@ -1,5 +1,6 @@
 import { findExercise } from "./exercises/library";
 import { isAccuracyMode, type AccuracyMode } from "./playalong/results";
+import { isGetReadySec } from "./playalong/getReady";
 import { SESSION_LOOPS } from "./playalong/session";
 import { isVolume } from "./audio/volume";
 import { isSubdivision, MAX_BPM, MIN_BPM, type MetronomeSettings } from "./audio/schedule";
@@ -24,6 +25,8 @@ export interface SavedSettings {
   exerciseTempos?: Record<string, number>;
   /** Metronome click volume, as a gain (see audio/volume). */
   volume?: number;
+  /** Seconds of get-ready countdown before a play-along session; 0 for none. */
+  getReadySec?: number;
 }
 
 type UnknownRecord = Record<string, unknown>;
@@ -86,6 +89,7 @@ export function parseSettings(raw: unknown): SavedSettings {
     sessionLoops: SESSION_LOOPS.find((n) => n === raw.sessionLoops),
     exerciseTempos: parseExerciseTempos(raw.exerciseTempos),
     volume: isVolume(raw.volume) ? raw.volume : undefined,
+    getReadySec: isGetReadySec(raw.getReadySec) ? raw.getReadySec : undefined,
   };
 }
 

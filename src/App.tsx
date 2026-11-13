@@ -6,6 +6,8 @@ import { LiveCount } from "./LiveCount";
 import { MetronomeGuide } from "./MetronomeGuide";
 import { NotationStrip, type SessionView } from "./NotationStrip";
 import type { AccuracyMode } from "./playalong/results";
+import { DEFAULT_GET_READY_SEC } from "./playalong/getReady";
+import { GetReady } from "./GetReady";
 import { DEFAULT_SESSION_LOOPS, type PlayAlongSession } from "./playalong/session";
 import { ResultsPanel } from "./ResultsPanel";
 import { nextRound, type RoundRecord, type TrainerConfig } from "./playalong/trainer";
@@ -103,6 +105,7 @@ function readStats(): Stats {
     session: session
       ? {
           phase: session.phase,
+          countdown: coach.countdownAt(now),
           loop: session.currentLoop(now),
           loops: session.loops,
           accuracy: session.results().accuracy,
@@ -137,6 +140,7 @@ export default function App() {
   const [exerciseId, setExerciseId] = useState<string | null>(saved.exerciseId ?? null);
   const exercise = exerciseId === null ? null : (findExercise(exerciseId) ?? null);
   const [sessionLoops, setSessionLoops] = useState(saved.sessionLoops ?? DEFAULT_SESSION_LOOPS);
+  const [getReadySec, setGetReadySec] = useState(saved.getReadySec ?? DEFAULT_GET_READY_SEC);
   const [accuracyMode, setAccuracyMode] = useState<AccuracyMode>(saved.accuracyMode ?? "partial");
   /** The last tempo used for each exercise, so choosing one again picks up where the drummer left off. */
   const [exerciseTempos, setExerciseTempos] = useState<Record<string, number>>(saved.exerciseTempos ?? {});
@@ -196,8 +200,9 @@ export default function App() {
       sessionLoops,
       exerciseTempos,
       volume,
+      getReadySec,
     });
-  }, [metronome, scoring, skillLevel, guideSeen, exerciseId, accuracyMode, sessionLoops, exerciseTempos, volume]);
+  }, [metronome, scoring, skillLevel, guideSeen, exerciseId, accuracyMode, sessionLoops, exerciseTempos, volume, getReadySec]);
 
   // Remember the tempo of the exercise on the staff, however it changed (− / +, typed, a retry, the trainer).
   if (exerciseId !== null && exerciseTempos[exerciseId] !== metronome.bpm) {
@@ -517,13 +522,16 @@ export default function App() {
     setSettingsOpen((open) => !open);
   };
 
-  /** Starts a play-along session at `bpm` (the current tempo, or a retry's new tempo). */
-  const startSession = async (bpm: number) => {
+  /**
+   * Starts a play-along session at `bpm` (the current tempo, or a retry's new tempo), after the
+   * get-ready countdown unless `countdown` is false (later tempo-trainer rounds: the drummer is at the kit).
+   */
+  const startSession = async (bpm: number, countdown = true) => {
     if (!exercise || coach.calibrating) return;
     closeLibrary();
     setGuideOpen(false);
     setSettingsOpen(false);
-    const settings = await coach.startSession(exercise, sessionLoops, bpm);
+    const settings = await coach.startSession(exercise, sessionLoops, bpm, countdown ? getReadySec : 0);
     setMetronome(settings);
     setRunning(true);
   };
@@ -588,7 +596,7 @@ export default function App() {
     const { nextBpm } = trainer;
     const id = setTimeout(() => {
       setTrainer({ kind: "round" });
-      void startSessionRef.current(nextBpm);
+      void startSessionRef.current(nextBpm, false);
     }, BETWEEN_ROUNDS_MS);
     return () => clearTimeout(id);
     // Only when the stage changes: the app re-renders every 150 ms, which must not restart the pause.
@@ -686,6 +694,8 @@ export default function App() {
           session={sessionView}
           loops={sessionLoops}
           onLoopsChange={setSessionLoops}
+          getReadySec={getReadySec}
+          onGetReadyChange={setGetReadySec}
           onPlay={() => void startSession(metronome.bpm)}
           onStop={trainer ? stopTrainer : stopSession}
           onTrain={() => {
@@ -699,6 +709,7 @@ export default function App() {
           }
         />
         <canvas ref={canvasRef} className="kit-canvas" aria-label="Live view of the drum kit" />
+        <GetReady coach={coach} />
         {guideOpen && !calibrating && (
           <MetronomeGuide
             coach={coach}

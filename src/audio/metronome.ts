@@ -16,7 +16,8 @@ import {
 } from "./schedule";
 import type { TimingGrid } from "../timing/grid";
 import type { TickCommand } from "./tickCommand";
-import { playClick } from "./voices";
+import { beepTimes } from "../playalong/getReady";
+import { playClick, playCountdownBeep } from "./voices";
 import { DEFAULT_VOLUME } from "./volume";
 
 const TICK_MS = 25;
@@ -33,9 +34,11 @@ export class Metronome {
   private cursor: ScheduleCursor | null = null;
   private readonly clock = new ClockMapper();
   private listeners = new Set<BeatListener>();
-  /** Clicks go through this: volume gain, then a limiter, then the speakers. */
+  /** Clicks (and countdown beeps) go through this: volume gain, then a limiter, then the speakers. */
   private bus: GainNode | null = null;
   private volumeValue = DEFAULT_VOLUME;
+  /** Countdown beeps scheduled by start(), silenced if the metronome stops first. */
+  private countdownBeeps: OscillatorNode[] = [];
 
   constructor(
     private settings: MetronomeSettings,
@@ -84,18 +87,28 @@ export class Metronome {
     return this.ctx;
   }
 
-  /** Must be called from a user gesture the first time (autoplay policy). */
-  async start(): Promise<void> {
-    if (this.running) return;
+  /**
+   * Starts clicking, after a countdown of `countdownSec` seconds (one soft
+   * beep per second) if given. Resolves with when the first click sounds, in
+   * performance.now() ms. Must be called from a user gesture the first time
+   * (autoplay policy).
+   */
+  async start(countdownSec = 0): Promise<number> {
+    if (this.running) return performance.now();
     const ctx = await this.audioContext();
 
     this.grid.clear();
     this.clock.reset();
+    const countdownStart = ctx.currentTime + START_DELAY_SEC;
     this.cursor = {
-      nextTime: ctx.currentTime + START_DELAY_SEC,
+      nextTime: countdownStart + countdownSec,
       beatInBar: 0,
       subInBeat: 0,
     };
+    // Through the click bus, so the beeps follow the volume slider (and its limiter) like the clicks.
+    const out = this.bus ?? ctx.destination;
+    this.countdownBeeps = beepTimes(countdownStart, countdownSec).map((time) => playCountdownBeep(ctx, out, time, 1));
+    const firstClickMs = performance.now() + (this.cursor.nextTime - ctx.currentTime) * 1000;
 
     if (!this.worker) {
       this.worker = new Worker(new URL("./tick.worker.ts", import.meta.url), { type: "module" });
@@ -103,10 +116,19 @@ export class Metronome {
     }
     this.worker.postMessage({ cmd: "start", intervalMs: TICK_MS } satisfies TickCommand);
     this.schedule();
+    return firstClickMs;
   }
 
   stop(): void {
     this.cursor = null;
+    for (const beep of this.countdownBeeps) {
+      try {
+        beep.stop();
+      } catch {
+        // Already finished.
+      }
+    }
+    this.countdownBeeps = [];
     this.worker?.postMessage({ cmd: "stop" } satisfies TickCommand);
     this.grid.clear();
   }

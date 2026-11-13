@@ -4,6 +4,7 @@ import type { Coach } from "./live/coach";
 import { xAtTick, type StaffLayout } from "./notation/layout";
 import { playheadTick } from "./notation/playhead";
 import type { NoteResult } from "./playalong/matcher";
+import { GET_READY_OPTIONS } from "./playalong/getReady";
 import { SESSION_LOOPS, type SessionPhase } from "./playalong/session";
 import { releasing } from "./releasing";
 
@@ -18,6 +19,8 @@ export interface SessionView {
   /** Loop being played, from 0. */
   loop: number | null;
   loops: number;
+  /** The get-ready countdown's number while it runs, else null. */
+  countdown: number | null;
   /** Live accuracy in the chosen mode, 0 to 1. */
   accuracy: number | null;
 }
@@ -32,6 +35,9 @@ interface Props {
   session: SessionView | null;
   loops: number;
   onLoopsChange: (loops: number) => void;
+  /** Seconds of get-ready countdown before a session; 0 for none. */
+  getReadySec: number;
+  onGetReadyChange: (seconds: number) => void;
   onPlay: () => void;
   onStop: () => void;
   onTrain: () => void;
@@ -46,6 +52,7 @@ function markClass(result: NoteResult | undefined): string {
 }
 
 function sessionStatus(session: SessionView): string {
+  if (session.countdown !== null) return `Get ready: the count-in starts in ${session.countdown}…`;
   if (session.phase === "countIn") return "Count-in: listen to one bar, then play.";
   if (session.phase === "done") return "Finished.";
   const accuracy = session.accuracy === null ? "" : ` · accuracy ${Math.floor(session.accuracy * 100)}%`;
@@ -68,6 +75,8 @@ export function NotationStrip({
   session,
   loops,
   onLoopsChange,
+  getReadySec,
+  onGetReadyChange,
   onPlay,
   onStop,
   onTrain,
@@ -213,6 +222,21 @@ export function NotationStrip({
               {SESSION_LOOPS.map((n) => (
                 <option key={n} value={n}>
                   {n} loops
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="Countdown before playing"
+              title="Time to get to the kit before the count-in"
+              value={getReadySec}
+              onChange={(e) => {
+                e.currentTarget.blur();
+                onGetReadyChange(Number(e.target.value));
+              }}
+            >
+              {GET_READY_OPTIONS.map((n) => (
+                <option key={n} value={n}>
+                  {n === 0 ? "No countdown" : `${n} s to get ready`}
                 </option>
               ))}
             </select>
