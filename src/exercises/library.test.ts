@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { EXERCISES, findExercise, GROOVES, RUDIMENTS } from "./library";
+import { EXERCISES, findExercise, FIRST_STEPS, GROOVES, RUDIMENTS } from "./library";
+import type { Exercise } from "./types";
 import { validateExercise, validateLibrary } from "./validate";
 
 function ticksOf(id: string, pad: string): number[] | undefined {
@@ -17,10 +18,11 @@ describe("starter library", () => {
     expect(validateExercise(exercise)).toEqual([]);
   });
 
-  it("has grooves and rudiments in the right lists", () => {
+  it("has each category in its own list, first steps listed first", () => {
+    expect(FIRST_STEPS.every((e) => e.category === "first-steps")).toBe(true);
     expect(GROOVES.every((e) => e.category === "groove")).toBe(true);
     expect(RUDIMENTS.every((e) => e.category === "rudiment")).toBe(true);
-    expect(EXERCISES).toHaveLength(10);
+    expect(EXERCISES).toEqual([...FIRST_STEPS, ...GROOVES, ...RUDIMENTS]);
   });
 
   it.each(RUDIMENTS.map((e) => [e.id, e] as const))("%s gives every note a hand", (_, exercise) => {
@@ -30,6 +32,42 @@ describe("starter library", () => {
   it("finds exercises by id", () => {
     expect(findExercise("paradiddle")?.name).toBe("Single paradiddle");
     expect(findExercise("nope")).toBeUndefined();
+  });
+});
+
+function padsOf(exercise: Exercise): Set<string> {
+  return new Set(exercise.notes.map((n) => n.pad));
+}
+
+describe("first steps", () => {
+  it("are numbered in order", () => {
+    expect(FIRST_STEPS.map((e) => e.name.match(/^Step (\d+):/)?.[1])).toEqual(
+      FIRST_STEPS.map((_, i) => String(i + 1)),
+    );
+  });
+
+  it("are 4/4, slow, and never ask for more than two pads at once", () => {
+    for (const e of FIRST_STEPS) {
+      expect(e.timeSignature).toEqual({ beats: 4, unit: 4 });
+      expect(e.tempo.min).toBeLessThanOrEqual(40);
+      expect(padsOf(e).size).toBeLessThanOrEqual(2);
+    }
+  });
+
+  it("only use the Money beat's pads, at the Money beat's positions", () => {
+    const money = findExercise("rock-8ths")?.notes ?? [];
+    const inMoneyBeat = (pad: string, tick: number) => money.some((n) => n.pad === pad && n.tick === tick);
+    for (const e of FIRST_STEPS.slice(1)) {
+      for (const n of e.notes) expect(inMoneyBeat(n.pad, n.tick), `${e.id}: ${n.pad} at ${n.tick}`).toBe(true);
+    }
+    // Step 1 is the hi-hat on the beats only: a subset of the Money beat's hi-hat too.
+    expect(ticksOf("first-hihat-quarters", "hihat")).toEqual([0, 48, 96, 144]);
+  });
+
+  it("show the hand on the hi-hat-only steps (right hand)", () => {
+    for (const id of ["first-hihat-quarters", "first-hihat-eighths"]) {
+      expect(findExercise(id)?.notes.every((n) => n.hand === "R")).toBe(true);
+    }
   });
 });
 
