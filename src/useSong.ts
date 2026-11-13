@@ -55,6 +55,7 @@ export function useSong(beforeOpen: () => void) {
 
       cancelAnalysis.current?.();
       beforeOpen();
+      coach.endSongPlayAlong();
       coach.song.load(buffer);
       setSong({
         title,
@@ -108,6 +109,7 @@ export function useSong(beforeOpen: () => void) {
     cancelAnalysis.current?.();
     cancelAnalysis.current = null;
     setAnalyzing(null);
+    coach.endSongPlayAlong();
     coach.song.load(null);
     setSong(null);
   };
