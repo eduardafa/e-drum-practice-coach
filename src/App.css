@@ -2813,3 +2813,75 @@ button.primary.danger {
   white-space: nowrap;
   color: var(--accent);
 }
+
+/* A song's drum tab: its controls, then the scrolling tab. */
+.drum-tab {
+  margin: 0 16px 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.drum-tab-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.drum-tab-bar button.secondary,
+.drum-tab-bar label.secondary {
+  padding: 4px 12px;
+  font-size: 13px;
+}
+
+.drum-tab-moves {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.drum-tab-name {
+  font-weight: 650;
+  min-width: 0;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drum-tab-note {
+  color: var(--muted);
+}
+
+/* The file input is invisible inside its label, like "Open a song". */
+.drum-tab-open {
+  position: relative;
+  cursor: pointer;
+}
+
+.drum-tab-open:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.drum-tab-open input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.drum-tab-strip {
+  display: block;
+  width: 100%;
+  border-radius: 8px;
+  background: var(--tint);
+}
+
+.drum-tab-moves {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-inline-size: 0;
+}

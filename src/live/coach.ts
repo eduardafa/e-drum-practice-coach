@@ -8,7 +8,9 @@ import { PreviewPlayer } from "../audio/previewPlayer";
 import type { BeatGrid } from "../songs/beats";
 import { SongPlayer } from "../songs/player";
 import { SongClick } from "../songs/songClick";
+import type { PlacedNote } from "../songs/drumTab";
 import { SongPlayAlong } from "../songs/songPlayAlong";
+import { SongTabSound } from "../songs/songTabSound";
 import { SONG_BEATS_PER_BAR } from "../songs/songSteps";
 import { previewPlan, type PreviewPlan } from "../exercises/preview";
 import { subdivisionFor } from "../exercises/practice";
@@ -60,6 +62,23 @@ export type HitListener = (time: number) => void;
 
 export type SessionEndListener = (session: PlayAlongSession, timing: SessionTiming) => void;
 
+/** How far ahead the kit view lights a tab's next pad, in seconds of song. */
+const TAB_CUE_LEAD_SEC = 0.6;
+
+/** The next pads to light from a song's tab at song position `position` (seconds). */
+export function songTabCues(tab: readonly PlacedNote[], position: number): PadCue[] {
+  // Only the notes near now: the tab is in time order.
+  let lo = 0, hi = tab.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1;
+    if (tab[mid].time < position - 1) lo = mid + 1;
+    else hi = mid;
+  }
+  const near: { time: number; pad: PlacedNote["pad"] }[] = [];
+  for (let i = lo; i < tab.length && tab[i].time <= position + TAB_CUE_LEAD_SEC; i++) near.push({ time: tab[i].time * 1000, pad: tab[i].pad });
+  return cuesAt(near, position * 1000, TAB_CUE_LEAD_SEC * 1000);
+}
+
 export class Coach {
   readonly midi = new MidiConnection();
   readonly grid = new TimingGrid();
@@ -78,6 +97,11 @@ export class Coach {
   /** When the song play-along's countdown ends (performance.now() ms); 0 when there's none. */
   private songCountdownEndMs = 0;
   private songCountdownBeeps: OscillatorNode[] = [];
+  /** The open song's drum tab, placed on its beats (song seconds, in time order), or null. Lights the next pads. */
+  private songTab: readonly PlacedNote[] | null = null;
+  /** Play the tab's drum sounds over the song. */
+  private hearTab = false;
+  private readonly tabSound = new SongTabSound();
   private hitListeners = new Set<HitListener>();
   scoring: ScoringOptions = { ...DEFAULT_SCORING };
   /** Play the exercise's drum sounds along with the click during a session (Settings). */
@@ -317,9 +341,25 @@ export class Coach {
     this.song.pause();
   }
 
-  /** Silences any song clicks not yet played (the song panel closed). */
+  /** Silences any song clicks and tab sounds not yet played (the song panel closed). */
   stopSongClick(): void {
     this.songClick.cancel();
+    this.tabSound.cancel();
+  }
+
+  /** Sets (or clears) the open song's placed drum tab. */
+  setSongTab(tab: readonly PlacedNote[] | null): void {
+    this.songTab = tab;
+  }
+
+  /** Turns Hear the tab on or off. */
+  setHearTab(on: boolean): void {
+    this.hearTab = on;
+  }
+
+  /** Schedules the tab's drum sounds a little ahead when Hear the tab is on; call every frame while the song is shown. */
+  tickSongTab(): void {
+    this.tabSound.tick(this.metronome.context, this.song, this.hearTab ? this.songTab : null, Math.min(1, this.metronome.volume));
   }
 
   /** Calls `listener` on every hit while subscribed (not while mapping the kit); returns the unsubscribe. */
@@ -354,6 +394,8 @@ export class Coach {
     const target = this.mappingRun?.current;
     if (target) return [{ pad: target.pad, strength: 1 }];
     if (this.learning) return this.learning.cues();
+    const tab = this.songTab;
+    if (tab && this.song.playing) return songTabCues(tab, this.song.position());
     const session = this.playAlong;
     if (!session || !this.metronome.running) return [];
     return cuesAt(session.upcomingNotes(), now - this.scoring.latencyOffsetMs, this.cueLeadMs);

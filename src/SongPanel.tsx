@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BeatGridTools } from "./BeatGridTools";
+import { DrumTabPanel } from "./DrumTabPanel";
 import { SONG_VOLUME, type Coach } from "./live/coach";
 import { GET_READY_OPTIONS } from "./playalong/getReady";
 import { releasing } from "./releasing";
@@ -112,6 +113,7 @@ export function SongPanel({
       setAlong(coach.playingAlong);
       setMidway(pos > 0 && pos < song.duration);
       coach.tickSongClick(song.grid);
+      coach.tickSongTab();
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
@@ -215,6 +217,8 @@ export function SongPanel({
           onInput={(e) => coach.song.seek(Number(e.currentTarget.value), SONG_VOLUME)}
         />
       </div>
+      {/* A new song starts with no tab: the file belongs to the song it was opened with. */}
+      <DrumTabPanel key={song.fingerprint} coach={coach} grid={song.grid} />
       {song.grid && !along && (
         <BeatGridTools
           coach={coach}
