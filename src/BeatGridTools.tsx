@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Coach } from "./live/coach";
 import { releasing } from "./releasing";
+import { Switch } from "./Switch";
 import type { BeatGrid } from "./songs/beats";
 import {
   addTap,
@@ -131,13 +132,7 @@ export function BeatGridTools({
         beat 1, where each bar starts.
       </p>
       <div className="calibration-actions">
-        <button
-          className={`secondary ${clickOn ? "selected" : ""}`}
-          aria-pressed={clickOn}
-          onClick={releasing(() => setClickOn((on) => !on))}
-        >
-          Click on the beats
-        </button>
+        <Switch checked={clickOn} onChange={setClickOn} label="Click on the beats" />
         <button
           className="secondary"
           disabled={grid.bpm * 2 > MAX_BPM}
