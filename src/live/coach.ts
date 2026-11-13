@@ -17,6 +17,9 @@ import { calibrationSetup, CalibrationSession, type CalibrationProgress } from "
 import { countAt } from "./counts";
 import { LiveState } from "./liveState";
 
+/** The MIDI controller number of the hi-hat pedal position (foot controller). */
+const HIHAT_PEDAL_CC = 4;
+
 export const DEFAULT_METRONOME: MetronomeSettings = {
   bpm: 90,
   beatsPerBar: 4,
@@ -217,8 +220,15 @@ export class Coach {
   }
 
   private handleMidi({ event, time }: TimedMidiEvent): void {
+    // CC 4 is the hi-hat pedal (foot controller): how far it's pressed.
+    if (event.kind === "controlChange" && event.controller === HIHAT_PEDAL_CC) {
+      this.live.hihatPedal.observe(event.value);
+      return;
+    }
     if (event.kind !== "noteOn") return;
     const mapping = lookupNote(event.note);
+    // The module's own open/closed choice tells which end of the pedal's range means "pressed".
+    if (mapping?.pad === "hihat") this.live.hihatPedal.learn(mapping.zone.includes("open"));
     this.playAlong?.hit({ pad: mapping?.pad ?? null, zone: mapping?.zone ?? null, time, velocity: event.velocity });
     if (this.calibration) {
       this.calibration.addHit(time);

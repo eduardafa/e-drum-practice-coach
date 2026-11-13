@@ -14,7 +14,7 @@
  * Plain data in, plain data out: serializable for practice history later.
  */
 import type { PadId } from "../kit/nitroMax";
-import type { NoteResult } from "./matcher";
+import type { HihatMixups, NoteResult } from "./matcher";
 import type { ExpectedNote } from "./timeline";
 
 export type AccuracyMode = "partial" | "strict";
@@ -62,6 +62,8 @@ export interface SessionResults extends Counts {
   spreadMs: number | null;
   /** Pads in the order they first appear in the exercise. */
   pads: PadResults[];
+  /** How many of the extra hits were hi-hat open/closed mix-ups. */
+  hihat: HihatMixups;
 }
 
 function emptyCounts(): Counts {
@@ -77,6 +79,7 @@ export function summarize(
   resultOf: (note: ExpectedNote) => NoteResult,
   extra: number,
   toleranceMs: number,
+  hihat: HihatMixups = { openInsteadOfClosed: 0, closedInsteadOfOpen: 0 },
 ): SessionResults {
   const total = emptyCounts();
   const pads = new Map<PadId, PadResults & { sumDelta: number; hits: number }>();
@@ -131,5 +134,6 @@ export function summarize(
       missed: p.missed,
       meanDeltaMs: p.hits ? p.sumDelta / p.hits : null,
     })),
+    hihat,
   };
 }

@@ -189,6 +189,47 @@ describe("NoteMatcher: a whole run", () => {
       missed: 1,
       extra: 1,
       pending: 0,
+      hihat: { openInsteadOfClosed: 0, closedInsteadOfOpen: 0 },
     });
   });
 });
+
+function hihats(notes: readonly ExpectedNote[]): ExpectedNote[] {
+  return notes.filter((n) => n.pad === "hihat");
+}
+
+describe("NoteMatcher: hi-hat mix-ups", () => {
+  it("counts an open hit in a closed note's window as a mix-up, and still as an extra", () => {
+    const { notes, matcher } = rock();
+    const first = hihats(notes)[0];
+    expect(matcher.hit({ pad: "hihat", zone: "open", time: first.time + 5 }).kind).toBe("extra");
+    expect(matcher.summary()).toMatchObject({ extra: 1, hihat: { openInsteadOfClosed: 1, closedInsteadOfOpen: 0 } });
+  });
+
+  it("counts a closed hit where the music says open", () => {
+    const { notes, matcher } = setup(exercise("open-hihat"));
+    const open = hihats(notes).find((n) => n.open);
+    if (!open) throw new Error("no open hi-hat");
+    matcher.tick(open.time - 60);
+    expect(matcher.hit({ pad: "hihat", zone: "closed", time: open.time }).kind).toBe("extra");
+    expect(matcher.summary().hihat).toEqual({ openInsteadOfClosed: 0, closedInsteadOfOpen: 1 });
+  });
+
+  it("doesn't count hits that match, hit another pad, or fall outside every window", () => {
+    const { notes, matcher } = rock();
+    const [first, second] = hihats(notes);
+    matcher.hit(on(first));
+    matcher.hit({ pad: "snare", zone: "head", time: second.time });
+    matcher.hit({ pad: "hihat", zone: "open", time: notes[notes.length - 1].time + 500 });
+    expect(matcher.summary().hihat).toEqual({ openInsteadOfClosed: 0, closedInsteadOfOpen: 0 });
+  });
+
+  it("doesn't blame a second hit on a note already played", () => {
+    const { notes, matcher } = rock();
+    const first = hihats(notes)[0];
+    matcher.hit(on(first));
+    matcher.hit({ pad: "hihat", zone: "open", time: first.time + 3 });
+    expect(matcher.summary().hihat.openInsteadOfClosed).toBe(0);
+  });
+});
+

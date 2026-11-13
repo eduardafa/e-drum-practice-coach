@@ -73,11 +73,13 @@ export class PlayAlongSession {
   /** Results over the notes resolved so far: live during the session, final once it's done. */
   results(): SessionResults {
     const matcher = this.matcher;
+    const summary = matcher?.summary();
     return summarize(
       this.notes,
       (note) => matcher?.resultOf(note) ?? { status: "pending" },
-      matcher?.summary().extra ?? 0,
+      summary?.extra ?? 0,
       this.scoring.toleranceMs,
+      summary?.hihat,
     );
   }
 

@@ -1042,6 +1042,15 @@ fieldset.group.play {
   margin-top: 10px;
 }
 
+/* A hi-hat open/closed tip, from the session's mix-ups. */
+.results .hihat-tip {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border-left: 4px solid var(--warn);
+  background: var(--tint);
+}
+
 /* First steps: whether to move on to the next step. */
 .results .path-advice {
   margin: 12px 0 0;

@@ -50,6 +50,19 @@ export interface MatchSummary {
   extra: number;
   /** Notes whose window hasn't passed yet. */
   pending: number;
+  /** Extra hits that were hi-hat mix-ups, counted among `extra`. */
+  hihat: HihatMixups;
+}
+
+/**
+ * Hi-hat hits that landed in a hi-hat note's window but sounded the other
+ * way: open where the music says closed (usually a foot resting loosely on
+ * the pedal), or closed where it says open. They're scored as extra hits,
+ * like any wrong voice; this only explains them.
+ */
+export interface HihatMixups {
+  openInsteadOfClosed: number;
+  closedInsteadOfOpen: number;
 }
 
 /** Hi-hat zones that sound open. */
@@ -73,6 +86,7 @@ export class NoteMatcher {
   /** Every note before this index is resolved. */
   private cursor = 0;
   private readonly extras: PlayedHit[] = [];
+  private readonly mixups: HihatMixups = { openInsteadOfClosed: 0, closedInsteadOfOpen: 0 };
   /**
    * The widest window. Windows differ per note, so window starts aren't in time
    * order; scans stop once a note is further away than any window could reach.
@@ -95,17 +109,30 @@ export class NoteMatcher {
   hit(hit: PlayedHit): MatchEvent {
     const time = hit.time - this.scoring.latencyOffsetMs;
     let best: ExpectedNote | null = null;
+    /** A pending hi-hat note in reach that this hit would match if it were open (or closed) instead. */
+    let otherVoice: ExpectedNote | null = null;
     // Windows on a pad don't overlap, so at most one note on this pad contains the hit.
     // Scan from the cursor while notes could still reach back to this hit.
     for (let i = this.cursor; i < this.notes.length; i++) {
       const note = this.notes[i];
       if (note.time - this.maxWindowMs > time) break;
-      if (Math.abs(time - note.time) <= note.windowMs && voiceMatches(note, hit)) {
-        best = note;
-        break;
+      if (Math.abs(time - note.time) <= note.windowMs) {
+        if (voiceMatches(note, hit)) {
+          best = note;
+          break;
+        }
+        if (!otherVoice && note.pad === "hihat" && hit.pad === "hihat" && this.results[note.id].status === "pending") {
+          otherVoice = note;
+        }
       }
     }
-    if (!best) return this.extra(hit);
+    if (!best) {
+      if (otherVoice) {
+        if (otherVoice.open) this.mixups.closedInsteadOfOpen++;
+        else this.mixups.openInsteadOfClosed++;
+      }
+      return this.extra(hit);
+    }
 
     const deltaMs = time - best.time;
     const current = this.results[best.id];
@@ -150,6 +177,7 @@ export class NoteMatcher {
       missed: 0,
       extra: this.extras.length,
       pending: 0,
+      hihat: { ...this.mixups },
     };
     for (const r of this.results) {
       if (r.status === "pending") s.pending++;

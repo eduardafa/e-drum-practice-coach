@@ -3,6 +3,9 @@ import type { SessionRecord } from "./history/record";
 import { NITRO_MAX_PADS } from "./kit/nitroMax";
 import { PadHeatmap } from "./PadHeatmap";
 import { pathAdvice } from "./exercises/path";
+import { mirrorText } from "./handedness";
+import { useHandedness } from "./HandednessContext";
+import { hihatTips } from "./playalong/hihatTips";
 import type { Exercise } from "./exercises/types";
 import { DEFAULT_PASS_MARK } from "./playalong/trainer";
 import type { AccuracyMode, SessionResults } from "./playalong/results";
@@ -46,6 +49,8 @@ export function ResultsPanel({ exercise, results, mode, bpm, loops, record, onRe
   const other: AccuracyMode = mode === "partial" ? "strict" : "partial";
   // The same pass mark the tempo trainer speeds up at.
   const advice = pathAdvice(exercise, results.accuracy[mode], DEFAULT_PASS_MARK);
+  const handedness = useHandedness();
+  const hihat = hihatTips(results.hihat).map((tip) => mirrorText(tip, handedness));
   return (
     <section className="calibration results" aria-labelledby="results-title">
       <h2 id="results-title">
@@ -107,6 +112,12 @@ export function ResultsPanel({ exercise, results, mode, bpm, loops, record, onRe
           <PadHeatmap heat={heatmap([record])} scope="this session" />
         </details>
       )}
+
+      {hihat.map((tip) => (
+        <p key={tip} className="hihat-tip">
+          {tip}
+        </p>
+      ))}
 
       {advice?.kind === "ready" && (
         <p className="path-advice ready">
