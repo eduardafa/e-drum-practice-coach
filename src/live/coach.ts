@@ -5,6 +5,7 @@
 import { Metronome } from "../audio/metronome";
 import { GuideTrack } from "../audio/guideTrack";
 import { PreviewPlayer } from "../audio/previewPlayer";
+import { SongPlayer } from "../songs/player";
 import { previewPlan, type PreviewPlan } from "../exercises/preview";
 import { subdivisionFor } from "../exercises/practice";
 import type { Exercise } from "../exercises/types";
@@ -21,6 +22,9 @@ import type { SkillLevel } from "../profiles";
 import { calibrationSetup, CalibrationSession, type CalibrationProgress } from "./calibration";
 import { countAt } from "./counts";
 import { LiveState } from "./liveState";
+
+/** The song's playback level: a little under full scale, leaving room for the click. */
+export const SONG_VOLUME = 0.9;
 
 /** The MIDI controller number of the hi-hat pedal position (foot controller). */
 const HIHAT_PEDAL_CC = 4;
@@ -48,6 +52,8 @@ export class Coach {
   readonly metronome: Metronome;
   /** Plays exercises in the library browser; stopped whenever the metronome starts. */
   readonly preview = new PreviewPlayer();
+  /** A song opened from the drummer's computer; plays on the metronome's audio context. */
+  readonly song = new SongPlayer();
   scoring: ScoringOptions = { ...DEFAULT_SCORING };
   /** Play the exercise's drum sounds along with the click during a session (Settings). */
   guideEnabled = false;
@@ -108,6 +114,7 @@ export class Coach {
   async startMetronome(): Promise<void> {
     if (this.calibrating) return;
     this.endMapping();
+    this.song.pause();
     this.endLearn();
     this.guide.stop();
     this.preview.stop();
@@ -134,6 +141,7 @@ export class Coach {
    */
   async startSession(exercise: Exercise, loops: number, bpm: number, countdownSec = 0): Promise<MetronomeSettings> {
     this.endMapping();
+    this.song.pause();
     this.endLearn();
     this.preview.stop();
     this.metronome.stop();
@@ -161,6 +169,7 @@ export class Coach {
   startLearn(exercise: Exercise, loops: number): void {
     if (this.calibrating) return;
     this.endMapping();
+    this.song.pause();
     this.preview.stop();
     this.endSession();
     this.metronome.stop();
@@ -192,6 +201,18 @@ export class Coach {
     this.guide.scheduleLoop(ctx, this.guidePlan, at, this.metronome.volume);
   }
 
+  /** Plays the opened song from its current position, on the shared audio context. Call from a user gesture. */
+  async playSong(): Promise<void> {
+    if (this.calibrating || !this.song.loaded) return;
+    this.endMapping();
+    this.endLearn();
+    this.endSession();
+    this.preview.stop();
+    this.metronome.stop();
+    const ctx = await this.metronome.audioContext();
+    this.song.play(ctx, SONG_VOLUME);
+  }
+
   /** Starts mapping the kit: nothing else runs, and each note is recorded for the pad asked for. */
   startMapping(): void {
     if (this.calibrating) return;
@@ -199,6 +220,7 @@ export class Coach {
     this.endSession();
     this.endLearn();
     this.metronome.stop();
+    this.song.pause();
     this.mappingRun = new KitMapping();
     this.mappingFeedback = null;
   }
@@ -262,6 +284,7 @@ export class Coach {
   async startPreview(exercise: Exercise, bpm: number, onEnd: () => void): Promise<void> {
     if (this.calibrating) return;
     this.endMapping();
+    this.song.pause();
     this.endLearn();
     this.endSession();
     this.metronome.stop();
@@ -273,6 +296,7 @@ export class Coach {
   /** Starts a calibration run for a skill level. Call from a user gesture. */
   async startCalibration(level: SkillLevel): Promise<void> {
     this.endMapping();
+    this.song.pause();
     this.endLearn();
     this.preview.stop();
     this.metronome.stop();
