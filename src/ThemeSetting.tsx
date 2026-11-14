@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Segmented } from "./Segmented";
 import { THEME_CHOICES, applyTheme, savedTheme, type ThemeChoice } from "./theme";
 
 /** System / Light / Dark, in Settings. */
@@ -10,19 +11,7 @@ export function ThemeSetting() {
   };
   return (
     <>
-      <fieldset className="library-filters theme-choice">
-        <legend className="visually-hidden">Theme</legend>
-        {THEME_CHOICES.map((t) => (
-          <button
-            key={t.id}
-            className={`secondary ${choice === t.id ? "selected" : ""}`}
-            aria-pressed={choice === t.id}
-            onClick={() => choose(t.id)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </fieldset>
+      <Segmented options={THEME_CHOICES} value={choice} onChange={choose} label="Theme" name="theme" />
       <p className="hint">System follows your device's light or dark setting. Saved in this browser.</p>
     </>
   );

@@ -701,21 +701,6 @@ button:focus-visible {
   margin-bottom: 6px;
 }
 
-.guide-steps {
-  border: 0;
-  margin: 0;
-  padding: 0;
-  min-width: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.guide-steps button.selected {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
 .table-scroll {
   overflow-x: auto;
   margin: 8px 0 12px;
@@ -1331,16 +1316,6 @@ fieldset.group.play {
   width: min(600px, calc(100% - 32px));
 }
 
-.library-filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin: 12px 0 4px;
-  padding: 0;
-  border: 0;
-}
-
 .library-list {
   list-style: none;
   margin: 8px 0 0;
@@ -1493,10 +1468,6 @@ fieldset.group.play {
 }
 
 /* Progress charts: accuracy and fastest tempo for one exercise over time. */
-.progress-range {
-  margin: 4px 0 2px;
-}
-
 .progress-subhead {
   margin: 16px 0 6px;
   font-size: 13px;
@@ -1861,10 +1832,6 @@ button.primary.danger {
   align-items: baseline;
   justify-content: space-between;
   gap: 4px 10px;
-}
-
-.heatmap-measure {
-  margin: 0;
 }
 
 .heatmap-caption,

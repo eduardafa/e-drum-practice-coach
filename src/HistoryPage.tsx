@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { HistoryRecord, SessionRecord, TrainerRecord } from "./history/record";
 import { formatPracticeTime, practiceDate, practiceTimeOn, streak } from "./history/streak";
 import type { AccuracyMode } from "./playalong/results";
+import { tabId, tabPanelId, Tabs } from "./Tabs";
 import { PROGRESS_RANGES, practicedExercises, rangeStart, type ProgressRange } from "./history/progress";
 import { ProgressSection } from "./ProgressSection";
 import { TimingSection } from "./TimingSection";
@@ -143,29 +144,19 @@ export function HistoryPage({ records, status, accuracyMode, selectedExerciseId,
               <>
                 <h3>Progress</h3>
                 {/* One range for everything below it, so the charts and timing agree. */}
-                <fieldset className="library-filters progress-range">
-                  <legend className="visually-hidden">Range</legend>
-                  {PROGRESS_RANGES.map((r) => (
-                    <button
-                      key={r.id}
-                      className={`secondary ${range === r.id ? "selected" : ""}`}
-                      aria-pressed={range === r.id}
-                      onClick={() => setRange(r.id)}
-                    >
-                      {r.label}
-                    </button>
-                  ))}
-                </fieldset>
-                <ProgressSection
-                  records={records}
-                  accuracyMode={accuracyMode}
-                  selectedExerciseId={selectedExerciseId}
-                  today={today}
-                  range={range}
-                />
-                <div className="history-pair">
-                  <TimingSection records={records} from={rangeStart(range, today)} />
-                  <PadHeatmap heat={heatmap(records, rangeStart(range, today))} scope={SCOPE[range]} />
+                <Tabs tabs={PROGRESS_RANGES} selected={range} onSelect={setRange} label="Range" idPrefix="progress" />
+                <div id={tabPanelId("progress", range)} role="tabpanel" aria-labelledby={tabId("progress", range)}>
+                  <ProgressSection
+                    records={records}
+                    accuracyMode={accuracyMode}
+                    selectedExerciseId={selectedExerciseId}
+                    today={today}
+                    range={range}
+                  />
+                  <div className="history-pair">
+                    <TimingSection records={records} from={rangeStart(range, today)} />
+                    <PadHeatmap heat={heatmap(records, rangeStart(range, today))} scope={SCOPE[range]} />
+                  </div>
                 </div>
               </>
             )}
