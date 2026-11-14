@@ -17,6 +17,7 @@ import { checkSpendAlerts, monthStart } from "./alerts";
 import {
   InsightError,
   approxCostPerTip,
+  failureReason,
   availableModels,
   findModel,
   parseInsight,
@@ -138,7 +139,7 @@ export async function createInsight(
       await insert.bind(userId, now.toISOString(), "failed", hash, "null", error.costMicros, model.id).run();
       await checkSpendAlerts(env, now);
     }
-    return problem(502, "insight-failed", "Couldn't write tips just now. Try again in a little while.");
+    return problem(502, "insight-failed", `Couldn't write tips: ${failureReason(error)}`);
   }
 
   const created = now.toISOString();
