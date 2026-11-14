@@ -10,7 +10,7 @@
  * provider is its default (owner decision).
  */
 import Anthropic from "@anthropic-ai/sdk";
-import OpenAI from "openai";
+import OpenAI, { APIConnectionError as OpenAIConnectionError, APIError as OpenAIError } from "openai";
 
 export type AiProvider = "anthropic" | "openai";
 
@@ -66,6 +66,30 @@ export class InsightError extends Error {
 }
 
 /** What the model must return: enforced by both APIs (strict JSON schema) and checked again here. */
+/**
+ * Why a call for tips failed, in plain words for the drummer (and the owner,
+ * who reads the same message): the provider's HTTP status says whether it's
+ * the app's key, the account's credit, the model, or a busy service. The full
+ * error still goes to the Worker log.
+ */
+export function failureReason(error: unknown): string {
+  if (error instanceof InsightError) return "the AI didn't give a usable answer. Try again.";
+  if (error instanceof Anthropic.APIConnectionError || error instanceof OpenAIConnectionError) {
+    return "the app couldn't reach the AI service. Try again in a little while.";
+  }
+  if (error instanceof Anthropic.APIError || error instanceof OpenAIError) {
+    const status = error.status ?? 0;
+    if (status === 401) return "the AI service rejected the app's API key.";
+    if (status === 403) return "the app's API key isn't allowed to use this model.";
+    if (status === 404) return "this model isn't available to the app's AI account.";
+    if (status === 400 && /credit|billing|balance/i.test(error.message)) return "the app's AI account is out of credit.";
+    if (status === 400) return "the AI service refused the request.";
+    if (status === 429) return "the AI service is limiting requests right now. Try again in a minute.";
+    if (status >= 500) return "the AI service is busy right now. Try again in a little while.";
+  }
+  return "something went wrong. Try again in a little while.";
+}
+
 export const INSIGHT_SCHEMA = {
   type: "object",
   properties: {
