@@ -18,7 +18,7 @@ import type { TimingGrid } from "../timing/grid";
 import type { TickCommand } from "./tickCommand";
 import { beepTimes } from "../playalong/getReady";
 import { playClick, playCountdownBeep } from "./voices";
-import { DEFAULT_VOLUME } from "./volume";
+import { DEFAULT_VOLUME, MAX_VOLUME, softClipCurve } from "./volume";
 
 const TICK_MS = 25;
 const LOOKAHEAD_SEC = 0.12;
@@ -34,7 +34,7 @@ export class Metronome {
   private cursor: ScheduleCursor | null = null;
   private readonly clock = new ClockMapper();
   private listeners = new Set<BeatListener>();
-  /** Clicks (and countdown beeps) go through this: volume gain, then a limiter, then the speakers. */
+  /** Clicks (and countdown beeps) go through this: volume gain, then a soft clipper, then the speakers. */
   private bus: GainNode | null = null;
   private volumeValue = DEFAULT_VOLUME;
   /** Countdown beeps scheduled by start(), silenced if the metronome stops first. */
@@ -50,7 +50,7 @@ export class Metronome {
     return this.ctx;
   }
 
-  /** Where clicks go (volume, then the limiter), once the context exists: other clicks, like a song's, follow the same slider. */
+  /** Where clicks go (volume, then the soft clipper), once the context exists: other clicks, like a song's, follow the same slider. */
   get clickOutput(): AudioNode | null {
     return this.bus;
   }
@@ -70,7 +70,7 @@ export class Metronome {
 
   set volume(volume: number) {
     this.volumeValue = volume;
-    if (this.bus) this.bus.gain.value = volume;
+    if (this.bus) this.bus.gain.value = volume / MAX_VOLUME;
   }
 
   setSettings(settings: MetronomeSettings): void {
@@ -115,7 +115,7 @@ export class Metronome {
       beatInBar: 0,
       subInBeat: 0,
     };
-    // Through the click bus, so the beeps follow the volume slider (and its limiter) like the clicks.
+    // Through the click bus, so the beeps follow the volume slider (and its soft clipper) like the clicks.
     const out = this.bus ?? ctx.destination;
     this.countdownBeeps = beepTimes(countdownStart, countdownSec).map((time) => playCountdownBeep(ctx, out, time, 1));
     const firstClickMs = performance.now() + (this.cursor.nextTime - ctx.currentTime) * 1000;
@@ -186,19 +186,21 @@ export class Metronome {
 }
 
 /**
- * Volume gain into a fast limiter. Above 100% the gain pushes the click past
- * full scale; the limiter (instant attack, hard knee, high ratio) holds the
- * peaks just under it, so a boost is louder, not clipped.
+ * Volume gain into a soft clipper. Above 100% the gain pushes the click past
+ * full scale; the clipper's curve rounds the peaks off just under it, so a
+ * boost is louder, not harshly clipped. The gain is scaled down by MAX_VOLUME
+ * and the curve scaled back up, since a WaveShaper clamps input outside -1..1.
+ *
+ * This used to be a DynamicsCompressorNode set up as a limiter. On a real
+ * laptop (not in headless Chrome) it went silent after the first boosted
+ * click and stayed silent; a WaveShaper has no state to get stuck in.
  */
 function clickBus(ctx: AudioContext, volume: number): GainNode {
   const gain = ctx.createGain();
-  gain.gain.value = volume;
-  const limiter = ctx.createDynamicsCompressor();
-  limiter.threshold.value = -3;
-  limiter.knee.value = 0;
-  limiter.ratio.value = 20;
-  limiter.attack.value = 0;
-  limiter.release.value = 0.1;
-  gain.connect(limiter).connect(ctx.destination);
+  gain.gain.value = volume / MAX_VOLUME;
+  const clipper = ctx.createWaveShaper();
+  clipper.curve = softClipCurve();
+  clipper.oversample = "4x";
+  gain.connect(clipper).connect(ctx.destination);
   return gain;
 }

@@ -469,7 +469,7 @@ export class Coach {
     this.endSession();
     this.metronome.stop();
     const ctx = await this.metronome.audioContext();
-    // The pad voices have no limiter, so a boosted click volume isn't applied to them.
+    // The pad voices skip the click's soft clipper, so a boosted click volume isn't applied to them.
     this.preview.play(ctx, exercise, bpm, Math.min(1, this.metronome.volume), onEnd);
   }
 
