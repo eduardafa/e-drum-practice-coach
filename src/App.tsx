@@ -126,6 +126,11 @@ export default function App() {
   /** A suggested level the drummer said "not now" to; not suggested again this page session. */
   const [dismissedSuggestion, setDismissedSuggestion] = useState<SkillLevel | null>(null);
 
+  // Reconnect the kit on load if the browser already allows MIDI here (no prompt; the button asks otherwise).
+  useEffect(() => {
+    void coach.midi.reconnectIfAllowed();
+  }, []);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
