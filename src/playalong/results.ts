@@ -14,7 +14,7 @@
  * Plain data in, plain data out: serializable for practice history later.
  */
 import type { PadId } from "../kit/nitroMax";
-import type { HihatMixups, NoteResult } from "./matcher";
+import type { ExtraReasons, HihatMixups, NoteResult } from "./matcher";
 import type { ExpectedNote } from "./timeline";
 
 export type AccuracyMode = "partial" | "strict";
@@ -64,6 +64,8 @@ export interface SessionResults extends Counts {
   pads: PadResults[];
   /** How many of the extra hits were hi-hat open/closed mix-ups. */
   hihat: HihatMixups;
+  /** Why the rest of the extra hits were extra. */
+  extraReasons: ExtraReasons;
 }
 
 function emptyCounts(): Counts {
@@ -80,6 +82,7 @@ export function summarize(
   extra: number,
   toleranceMs: number,
   hihat: HihatMixups = { openInsteadOfClosed: 0, closedInsteadOfOpen: 0 },
+  extraReasons: ExtraReasons = { wrongDrum: 0, twice: 0, farFromNotes: 0 },
 ): SessionResults {
   const total = emptyCounts();
   const pads = new Map<PadId, PadResults & { sumDelta: number; hits: number }>();
@@ -135,5 +138,28 @@ export function summarize(
       meanDeltaMs: p.hits ? p.sumDelta / p.hits : null,
     })),
     hihat,
+    extraReasons,
   };
+}
+
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+/**
+ * Why the extra hits were extra, in plain words, biggest reason first: what
+ * the results screen shows next to the count, so a beginner can tell a wrong
+ * drum from a doubled stroke or a hit far from any note.
+ */
+export function extraBreakdown(results: Pick<SessionResults, "extraReasons" | "hihat">): string[] {
+  const { wrongDrum, twice, farFromNotes } = results.extraReasons;
+  const hihat = results.hihat.openInsteadOfClosed + results.hihat.closedInsteadOfOpen;
+  const parts: [number, string][] = [
+    [wrongDrum, wrongDrum === 1 ? "1 on a drum that isn't written there" : `${wrongDrum} on drums that aren't written there`],
+    [hihat, plural(hihat, "hi-hat open/closed mix-up", "hi-hat open/closed mix-ups")],
+    [twice, `${plural(twice, "note", "notes")} hit twice`],
+    [farFromNotes, `${farFromNotes} too far from any note (much too early or late)`],
+  ];
+  return parts
+    .filter(([n]) => n > 0)
+    .toSorted((a, b) => b[0] - a[0])
+    .map(([, text]) => text);
 }

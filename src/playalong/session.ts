@@ -102,6 +102,7 @@ export class PlayAlongSession {
       summary?.extra ?? 0,
       this.scoring.toleranceMs,
       summary?.hihat,
+      summary?.extraReasons,
     );
   }
 
