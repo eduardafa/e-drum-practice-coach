@@ -74,7 +74,8 @@ describe("NoteMatcher: misses and extras", () => {
     const { notes, matcher } = rock();
     const snare = firstSnare(notes);
     expect(matcher.hit({ pad: "tom1", zone: "head", time: snare.time })).toMatchObject({ kind: "extra" });
-    expect(matcher.tick(snare.time + 200)).toContainEqual({ kind: "missed", note: snare });
+    expect(matcher.tick(snare.time + 250)).toContainEqual({ kind: "missed", note: snare });
+    expect(matcher.summary().extraReasons).toEqual({ wrongDrum: 1, twice: 0, farFromNotes: 0 });
   });
 
   it("counts a second hit on a normal note as extra", () => {
@@ -190,6 +191,8 @@ describe("NoteMatcher: a whole run", () => {
       extra: 1,
       pending: 0,
       hihat: { openInsteadOfClosed: 0, closedInsteadOfOpen: 0 },
+      // The crash landed with notes that were written there: a drum that isn't.
+      extraReasons: { wrongDrum: 1, twice: 0, farFromNotes: 0 },
     });
   });
 });
@@ -269,7 +272,31 @@ describe("NoteMatcher.nearAnyNote", () => {
     const { notes, matcher } = rock();
     const snare = firstSnare(notes);
     expect(matcher.nearAnyNote({ pad: "tom1", zone: "head", time: snare.time + 10 })).toBe(true);
-    // Rock beat hi-hats are 250 ms apart with windows of 100 ms: halfway between two is near nothing.
-    expect(matcher.nearAnyNote({ pad: "tom1", zone: "head", time: snare.time + 125 })).toBe(false);
+    // A second after the loop's last note, nothing is near.
+    expect(matcher.nearAnyNote({ pad: "tom1", zone: "head", time: (notes.at(-1)?.time ?? 0) + 1000 })).toBe(false);
+  });
+});
+
+describe("NoteMatcher: why a hit was extra", () => {
+  it("counts a second stroke on a note as hit twice", () => {
+    const { notes, matcher } = rock();
+    const snare = firstSnare(notes);
+    matcher.hit(on(snare));
+    matcher.hit(on(snare, 20));
+    expect(matcher.summary().extraReasons).toEqual({ wrongDrum: 0, twice: 1, farFromNotes: 0 });
+  });
+
+  it("counts a hit near no note at all as far from the notes", () => {
+    const { notes, matcher } = rock();
+    matcher.hit({ pad: "snare", zone: "head", time: (notes.at(-1)?.time ?? 0) + 1000 });
+    expect(matcher.summary().extraReasons).toEqual({ wrongDrum: 0, twice: 0, farFromNotes: 1 });
+  });
+
+  it("scores a clearly late stroke as late, not as an extra and a miss", () => {
+    const { notes, matcher } = rock();
+    const snare = firstSnare(notes);
+    // 150 ms behind: outside the old 100 ms reach, inside the snare's window now.
+    expect(matcher.hit(on(snare, 150))).toMatchObject({ kind: "hit", verdict: "late" });
+    expect(matcher.summary().extra).toBe(0);
   });
 });

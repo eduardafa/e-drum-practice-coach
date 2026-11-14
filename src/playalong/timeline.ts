@@ -33,7 +33,13 @@ export interface TimelineOptions {
   maxWindowMs: number;
 }
 
-export const DEFAULT_MAX_WINDOW_MS = 100;
+/**
+ * The most a note's window can reach either side, in ms (it's also never more
+ * than half the gap to the next note on the same pad). Wide enough that a
+ * clearly late stroke is scored as late, not as an extra hit plus a miss: a
+ * beginner's late snare is often 120-180 ms behind.
+ */
+export const DEFAULT_MAX_WINDOW_MS = 200;
 
 export function msPerTick(exercise: Pick<Exercise, "timeSignature">, bpm: number): number {
   return 60_000 / bpm / ticksPerBeat(exercise.timeSignature);
