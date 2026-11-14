@@ -34,10 +34,9 @@ export interface TimelineOptions {
 }
 
 /**
- * The most a note's window can reach either side, in ms (it's also never more
- * than half the gap to the next note on the same pad). Wide enough that a
- * clearly late stroke is scored as late, not as an extra hit plus a miss: a
- * beginner's late snare is often 120-180 ms behind.
+ * The most a note's window can reach either side, in ms, when no skill level
+ * says otherwise (sessions use the level's reach: see reachForTolerance). It's
+ * also never more than half the gap to the next note on the same pad.
  */
 export const DEFAULT_MAX_WINDOW_MS = 200;
 

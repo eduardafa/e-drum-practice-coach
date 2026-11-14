@@ -12,6 +12,7 @@
  */
 import { NoteMatcher, voiceMatches, type MatchEvent, type NoteResult, type PlayedHit } from "../playalong/matcher";
 import { DEFAULT_MAX_WINDOW_MS, type ExpectedNote } from "../playalong/timeline";
+import { reachForTolerance } from "../profiles";
 import type { ScoringOptions } from "../timing/grid";
 import type { PlacedNote } from "./drumTab";
 
@@ -100,7 +101,7 @@ export class SongTabScoring {
     fromSec: number,
   ) {
     this.matcher = new NoteMatcher([], scoring);
-    this.windows = tabWindows(notes);
+    this.windows = tabWindows(notes, reachForTolerance(scoring.toleranceMs) / 1000);
     const first = notes.findIndex((n, i) => n.time + this.windows[i] >= fromSec);
     this.next = first === -1 ? notes.length : first;
   }
@@ -158,7 +159,7 @@ export class SongTabScoring {
       this.wrong.add(note.index);
     }
     // Wrong hits older than any open window can't matter again.
-    const oldest = now - this.scoring.latencyOffsetMs - DEFAULT_MAX_WINDOW_MS * 2;
+    const oldest = now - this.scoring.latencyOffsetMs - reachForTolerance(this.scoring.toleranceMs) * 2;
     while (this.wrongHits.length > 0 && this.wrongHits[0].time - this.scoring.latencyOffsetMs < oldest) this.wrongHits.shift();
   }
 

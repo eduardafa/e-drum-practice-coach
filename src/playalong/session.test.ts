@@ -111,3 +111,14 @@ describe("PlayAlongSession: upcoming notes for the kit view", () => {
   });
 });
 
+
+describe("PlayAlongSession reach", () => {
+  it("lets a First steps drummer's very late stroke count as late", () => {
+    const firstSteps = { toleranceMs: 70, latencyOffsetMs: 0 };
+    // Hi-hat on every click at 60 BPM: notes a second apart, so the reach is the level's 300 ms.
+    const session = new PlayAlongSession(exercise("first-hihat-quarters"), 1, 60, firstSteps);
+    session.begin(1000);
+    expect(session.reachMs).toBe(300);
+    expect(session.hit({ pad: "hihat", zone: "closed", time: 1000 + 260 })).toMatchObject({ kind: "hit", verdict: "late" });
+  });
+});

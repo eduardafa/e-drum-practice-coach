@@ -157,8 +157,9 @@ export function ResultsPanel({ exercise, results, mode, bpm, loops, record, onRe
         {mode === "partial"
           ? "Partial credit: full marks inside your on-time window, less the further off a hit is. Extra hits count against you."
           : "Strict: only on-time notes count. Extra hits count against you."}{" "}
-        A late hit still counts for its note, as late, up to 200 ms behind (or halfway to the next note on that drum);
-        later than that it's an extra hit and the note is missed. Change the scoring in Settings.
+        A late hit still counts for its note, as late, up to {results.reachMs} ms behind at your skill level (or halfway
+        to the next note on that drum); later than that it's an extra hit and the note is missed. Change the scoring in
+        Settings.
       </p>
     </section>
   );

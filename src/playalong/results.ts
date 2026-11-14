@@ -15,7 +15,7 @@
  */
 import type { PadId } from "../kit/nitroMax";
 import type { ExtraReasons, HihatMixups, NoteResult } from "./matcher";
-import type { ExpectedNote } from "./timeline";
+import { DEFAULT_MAX_WINDOW_MS, type ExpectedNote } from "./timeline";
 
 export type AccuracyMode = "partial" | "strict";
 
@@ -66,6 +66,8 @@ export interface SessionResults extends Counts {
   hihat: HihatMixups;
   /** Why the rest of the extra hits were extra. */
   extraReasons: ExtraReasons;
+  /** How far from a note a hit could land and still count for it, in ms (from the skill level). */
+  reachMs: number;
 }
 
 function emptyCounts(): Counts {
@@ -83,6 +85,7 @@ export function summarize(
   toleranceMs: number,
   hihat: HihatMixups = { openInsteadOfClosed: 0, closedInsteadOfOpen: 0 },
   extraReasons: ExtraReasons = { wrongDrum: 0, twice: 0, farFromNotes: 0 },
+  reachMs = DEFAULT_MAX_WINDOW_MS,
 ): SessionResults {
   const total = emptyCounts();
   const pads = new Map<PadId, PadResults & { sumDelta: number; hits: number }>();
@@ -139,6 +142,7 @@ export function summarize(
     })),
     hihat,
     extraReasons,
+    reachMs,
   };
 }
 
