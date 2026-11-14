@@ -32,6 +32,11 @@ export function pickDefaultDevice(devices: MidiDevice[]): string | null {
   return (devices.find((d) => PREFERRED_DEVICE.test(d.name)) ?? devices[0])?.id ?? null;
 }
 
+/** The part of the Permissions API used to check for MIDI access (a stand-in in tests). */
+interface PermissionQuery {
+  query(descriptor: PermissionDescriptor): Promise<{ state: PermissionState }>;
+}
+
 export class MidiConnection {
   private access: MIDIAccess | null = null;
   private selected: MIDIInput | null = null;
@@ -57,20 +62,45 @@ export class MidiConnection {
   }
 
   async connect(): Promise<void> {
-    if (!isWebMidiSupported() || this.access) return;
+    await this.requestAccess(false);
+  }
+
+  /** Asks for MIDI access. `quiet`: a failure goes back to idle (Connect kit) instead of showing "denied". */
+  private async requestAccess(quiet: boolean): Promise<void> {
+    // Already connected, or a request is on its way (a reconnect on load and a click can overlap).
+    if (!isWebMidiSupported() || this.access || this.status.state === "requesting") return;
     this.setStatus({ state: "requesting" });
     try {
       // sysex: false keeps the permission prompt minimal; drum hits don't need it.
       this.access = await navigator.requestMIDIAccess({ sysex: false });
     } catch (err) {
-      this.setStatus({
-        state: "denied",
-        message: err instanceof Error ? err.message : String(err),
-      });
+      this.setStatus(quiet ? { state: "idle" } : { state: "denied", message: err instanceof Error ? err.message : String(err) });
       return;
     }
     this.access.addEventListener("statechange", this.handleStateChange);
     this.refresh(true);
+  }
+
+  /**
+   * Connects on page load when the browser already allows MIDI for this site,
+   * so a reload doesn't leave the kit disconnected until Connect kit is
+   * pressed again. Never prompts: without the permission (the first visit, or
+   * a browser that can't tell) it does nothing and the button asks. If the
+   * attempt fails anyway, it stays quiet and the button is there as before.
+   * Resolves with whether it connected.
+   */
+  async reconnectIfAllowed(
+    permissions: PermissionQuery | undefined = typeof navigator === "undefined" ? undefined : navigator.permissions,
+  ): Promise<boolean> {
+    if (!isWebMidiSupported() || this.access || !permissions) return false;
+    try {
+      const permission = await permissions.query({ name: "midi" });
+      if (permission.state !== "granted") return false;
+    } catch {
+      return false;
+    }
+    await this.requestAccess(true);
+    return this.access !== null;
   }
 
   select(id: string | null): void {
