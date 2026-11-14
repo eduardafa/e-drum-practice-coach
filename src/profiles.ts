@@ -25,6 +25,13 @@ export interface SkillProfile {
   toleranceMs: number;
   /** Typical spread (SD of hit timing) of a drummer at this level, in ms. */
   typicalSpreadMs: number;
+  /**
+   * How far from a note a hit can land and still count for it (as early or
+   * late), in ms either side; never more than half the gap to the next note on
+   * that drum. Wider for less steady players, so a stroke aimed at a note is
+   * scored against it instead of as an extra hit plus a miss.
+   */
+  reachMs: number;
   calibration: {
     /** Calibration tempo. Slower is easier to play steadily. */
     bpm: number;
@@ -40,6 +47,7 @@ export const SKILL_PROFILES: Readonly<Record<SkillLevel, SkillProfile>> = {
     label: "First steps",
     toleranceMs: 70,
     typicalSpreadMs: 60,
+    reachMs: 300,
     // ±12 ms is a sixth of the ±70 ms window (Beginner's ratio too), and keeps a
     // ±69 ms player's run near a minute; ±10 would take about 80 s (simulated).
     calibration: { bpm: 60, maxClicks: 96, targetUncertaintyMs: 12 },
@@ -48,6 +56,7 @@ export const SKILL_PROFILES: Readonly<Record<SkillLevel, SkillProfile>> = {
     label: "Beginner",
     toleranceMs: 35,
     typicalSpreadMs: 29,
+    reachMs: 200,
     // ±7 ms is ample next to a ±35 ms window, and halves the run for a ±29 ms player.
     calibration: { bpm: 70, maxClicks: 80, targetUncertaintyMs: 7 },
   },
@@ -55,12 +64,14 @@ export const SKILL_PROFILES: Readonly<Record<SkillLevel, SkillProfile>> = {
     label: "Intermediate",
     toleranceMs: 20,
     typicalSpreadMs: 17,
+    reachMs: 150,
     calibration: { bpm: 80, maxClicks: 48, targetUncertaintyMs: 4 },
   },
   advanced: {
     label: "Advanced",
     toleranceMs: 10,
     typicalSpreadMs: 8,
+    reachMs: 100,
     calibration: { bpm: 90, maxClicks: 32, targetUncertaintyMs: 3 },
   },
 };
@@ -68,6 +79,18 @@ export const SKILL_PROFILES: Readonly<Record<SkillLevel, SkillProfile>> = {
 /** The level whose on-time window matches this tolerance, or null for a custom value. */
 export function levelForTolerance(toleranceMs: number): SkillLevel | null {
   return SKILL_LEVELS.find((level) => SKILL_PROFILES[level].toleranceMs === toleranceMs) ?? null;
+}
+
+/**
+ * How far from a note a hit still counts for it, for an on-time window: the
+ * level with that window's reach, or for a window set by hand, the level with
+ * the nearest window.
+ */
+export function reachForTolerance(toleranceMs: number): number {
+  const nearest = SKILL_LEVELS.reduce((best, level) =>
+    Math.abs(SKILL_PROFILES[level].toleranceMs - toleranceMs) < Math.abs(SKILL_PROFILES[best].toleranceMs - toleranceMs) ? level : best,
+  );
+  return SKILL_PROFILES[nearest].reachMs;
 }
 
 /** Fewest hits before a spread is trusted enough to suggest a level. */

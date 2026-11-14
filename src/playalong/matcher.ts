@@ -52,6 +52,18 @@ export interface MatchSummary {
   pending: number;
   /** Extra hits that were hi-hat mix-ups, counted among `extra`. */
   hihat: HihatMixups;
+  /** Why the other extra hits were extra (with the hi-hat mix-ups, these add up to `extra`). */
+  extraReasons: ExtraReasons;
+}
+
+/** Why a hit matched no note, so the results can explain extra hits instead of just counting them. */
+export interface ExtraReasons {
+  /** A drum that isn't written at that moment, while other notes are (open/closed hi-hat mix-ups are counted apart). */
+  wrongDrum: number;
+  /** A second hit on a note that was already played. */
+  twice: number;
+  /** Not near any note: too early or too late for every note on that drum. */
+  farFromNotes: number;
 }
 
 /**
@@ -87,6 +99,7 @@ export class NoteMatcher {
   private cursor = 0;
   private readonly extras: PlayedHit[] = [];
   private readonly mixups: HihatMixups = { openInsteadOfClosed: 0, closedInsteadOfOpen: 0 };
+  private readonly reasons: ExtraReasons = { wrongDrum: 0, twice: 0, farFromNotes: 0 };
   /**
    * The widest window. Windows differ per note, so window starts aren't in time
    * order; scans stop once a note is further away than any window could reach.
@@ -163,6 +176,10 @@ export class NoteMatcher {
       if (otherVoice) {
         if (otherVoice.open) this.mixups.closedInsteadOfOpen++;
         else this.mixups.openInsteadOfClosed++;
+      } else if (this.nearAnyNote(hit)) {
+        this.reasons.wrongDrum++;
+      } else {
+        this.reasons.farFromNotes++;
       }
       return this.extra(hit);
     }
@@ -171,13 +188,19 @@ export class NoteMatcher {
     const current = this.results[best.id];
     if (current.status === "hit") {
       // A flam's other stroke: keep whichever is closer to the beat.
-      if (!best.flam) return this.extra(hit);
+      if (!best.flam) {
+        this.reasons.twice++;
+        return this.extra(hit);
+      }
       if (Math.abs(deltaMs) < Math.abs(current.deltaMs)) {
         this.results[best.id] = hitResult(deltaMs, classify(deltaMs, this.scoring.toleranceMs), hit.velocity);
       }
       return { kind: "flamStroke", note: best };
     }
-    if (current.status === "missed") return this.extra(hit);
+    if (current.status === "missed") {
+      this.reasons.farFromNotes++;
+      return this.extra(hit);
+    }
 
     const verdict = classify(deltaMs, this.scoring.toleranceMs);
     this.results[best.id] = hitResult(deltaMs, verdict, hit.velocity);
@@ -211,6 +234,7 @@ export class NoteMatcher {
       extra: this.extras.length,
       pending: 0,
       hihat: { ...this.mixups },
+      extraReasons: { ...this.reasons },
     };
     for (const r of this.results) {
       if (r.status === "pending") s.pending++;

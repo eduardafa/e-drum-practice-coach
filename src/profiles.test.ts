@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { closestLevel, levelForTolerance, SKILL_LEVELS, SKILL_PROFILES, suggestLevel } from "./profiles";
+import { closestLevel, levelForTolerance, reachForTolerance, SKILL_LEVELS, SKILL_PROFILES, suggestLevel } from "./profiles";
 
 describe("skill profiles", () => {
   it("tighten from beginner to advanced", () => {
@@ -78,5 +78,17 @@ describe("suggestLevel", () => {
     expect(suggestLevel("intermediate", 24)).toBeNull();
     expect(suggestLevel("beginner", 19)).toBe("intermediate");
     expect(suggestLevel("intermediate", 27)).toBe("beginner");
+  });
+});
+
+describe("reachForTolerance", () => {
+  it("lets less steady levels' hits land further from a note and still count", () => {
+    expect(SKILL_LEVELS.map((level) => reachForTolerance(SKILL_PROFILES[level].toleranceMs))).toEqual([300, 200, 150, 100]);
+  });
+
+  it("uses the nearest level for a window set by hand", () => {
+    expect(reachForTolerance(60)).toBe(300);
+    expect(reachForTolerance(30)).toBe(200);
+    expect(reachForTolerance(5)).toBe(100);
   });
 });

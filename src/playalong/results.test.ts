@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { findExercise } from "../exercises/library";
 import type { Exercise } from "../exercises/types";
 import type { NoteResult } from "./matcher";
-import { partialCredit, summarize } from "./results";
+import { extraBreakdown, partialCredit, summarize } from "./results";
 import { buildTimeline, DEFAULT_MAX_WINDOW_MS, type ExpectedNote } from "./timeline";
 
 const TOLERANCE = 20;
@@ -87,5 +87,26 @@ describe("summarize", () => {
     const r = summarize(notes, alternating, 0, TOLERANCE);
     expect(r.meanDeltaMs).toBe(0);
     expect(r.spreadMs).toBeCloseTo(Math.sqrt((12 * 100) / 11));
+  });
+});
+
+describe("extraBreakdown", () => {
+  const none = { openInsteadOfClosed: 0, closedInsteadOfOpen: 0 };
+
+  it("says why the extra hits were extra, biggest reason first", () => {
+    expect(
+      extraBreakdown({ extraReasons: { wrongDrum: 1, twice: 0, farFromNotes: 3 }, hihat: { openInsteadOfClosed: 2, closedInsteadOfOpen: 0 } }),
+    ).toEqual(["3 too far from any note (much too early or late)", "2 hi-hat open/closed mix-ups", "1 on a drum that isn't written there"]);
+  });
+
+  it("uses singular and plural words", () => {
+    expect(extraBreakdown({ extraReasons: { wrongDrum: 2, twice: 1, farFromNotes: 0 }, hihat: none })).toEqual([
+      "2 on drums that aren't written there",
+      "1 note hit twice",
+    ]);
+  });
+
+  it("is empty with no extra hits", () => {
+    expect(extraBreakdown({ extraReasons: { wrongDrum: 0, twice: 0, farFromNotes: 0 }, hihat: none })).toEqual([]);
   });
 });

@@ -32,11 +32,11 @@ function scoring(fromSec = 0) {
 }
 
 describe("tabWindows", () => {
-  it("gives each note half the gap to its pad's neighbors, capped at 100 ms", () => {
+  it("gives each note half the gap to its pad's neighbors, capped at 200 ms", () => {
     const windows = tabWindows(TAB);
-    expect(windows[0]).toBeCloseTo(0.1); // the only kick
-    expect(windows[1]).toBeCloseTo(0.1); // hi-hats 250 ms apart: half is 125, capped
-    expect(windows[3]).toBeCloseTo(0.1);
+    expect(windows[0]).toBeCloseTo(0.2); // the only kick
+    expect(windows[1]).toBeCloseTo(0.125); // hi-hats 250 ms apart: half the gap
+    expect(windows[3]).toBeCloseTo(0.2);
     const close = tabWindows([note(0, 1, "snare"), note(1, 1.1, "snare")]);
     expect(close[0]).toBeCloseTo(0.05);
     expect(close[1]).toBeCloseTo(0.05);

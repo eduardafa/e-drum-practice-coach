@@ -11,7 +11,8 @@ import type { Exercise } from "../exercises/types";
 import type { ScoringOptions } from "../timing/grid";
 import { NoteMatcher, type MatchEvent, type NoteResult, type PlayedHit } from "./matcher";
 import { summarize, type SessionResults } from "./results";
-import { buildTimeline, DEFAULT_MAX_WINDOW_MS, type ExpectedNote } from "./timeline";
+import { reachForTolerance } from "../profiles";
+import { buildTimeline, type ExpectedNote } from "./timeline";
 
 export type SessionPhase = "countIn" | "playing" | "done";
 
@@ -25,6 +26,8 @@ export class PlayAlongSession {
   private notes: readonly ExpectedNote[] = [];
   /** The first loop as it will be played, known from the count-in, for showing what comes first. */
   private previewNotes: readonly ExpectedNote[] = [];
+  /** How far from a note a hit still counts for it, from the skill level's on-time window. */
+  readonly reachMs: number;
   /** When the last note's window closes: the session ends after this, so late strokes still count. */
   private endMs = Infinity;
 
@@ -34,7 +37,9 @@ export class PlayAlongSession {
     /** Tempo, counting the exercise's beat unit. */
     readonly bpm: number,
     private readonly scoring: ScoringOptions,
-  ) {}
+  ) {
+    this.reachMs = reachForTolerance(scoring.toleranceMs);
+  }
 
   /**
    * The count-in has started and the first loop will start at `startMs`: plans
@@ -46,7 +51,7 @@ export class PlayAlongSession {
       startMs,
       bpm: this.bpm,
       loops: 1,
-      maxWindowMs: DEFAULT_MAX_WINDOW_MS,
+      maxWindowMs: this.reachMs,
     });
   }
 
@@ -63,7 +68,7 @@ export class PlayAlongSession {
       startMs,
       bpm: this.bpm,
       loops: this.loops,
-      maxWindowMs: DEFAULT_MAX_WINDOW_MS,
+      maxWindowMs: this.reachMs,
     });
     this.matcher = new NoteMatcher(this.notes, this.scoring);
     this.endMs = Math.max(...this.notes.map((n) => n.time + n.windowMs)) + this.scoring.latencyOffsetMs;
@@ -102,6 +107,8 @@ export class PlayAlongSession {
       summary?.extra ?? 0,
       this.scoring.toleranceMs,
       summary?.hihat,
+      summary?.extraReasons,
+      this.reachMs,
     );
   }
 

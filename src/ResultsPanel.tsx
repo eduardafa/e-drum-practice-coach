@@ -8,7 +8,7 @@ import { useHandedness } from "./HandednessContext";
 import { hihatTips } from "./playalong/hihatTips";
 import type { Exercise } from "./exercises/types";
 import { DEFAULT_PASS_MARK } from "./playalong/trainer";
-import type { AccuracyMode, SessionResults } from "./playalong/results";
+import { extraBreakdown, type AccuracyMode, type SessionResults } from "./playalong/results";
 import { releasing } from "./releasing";
 import { formatDelta } from "./render/kitRenderer";
 
@@ -74,7 +74,10 @@ export function ResultsPanel({ exercise, results, mode, bpm, loops, record, onRe
         <dt>Missed</dt>
         <dd>{results.missed}</dd>
         <dt>Extra hits</dt>
-        <dd>{results.extra}</dd>
+        <dd>
+          {results.extra}
+          {results.extra > 0 && <span className="extra-reasons">: {extraBreakdown(results).join(", ")}</span>}
+        </dd>
         <dt>Average</dt>
         <dd>
           {results.meanDeltaMs === null ? "—" : `${formatDelta(results.meanDeltaMs)} (${tendency(results.meanDeltaMs)})`}
@@ -154,7 +157,9 @@ export function ResultsPanel({ exercise, results, mode, bpm, loops, record, onRe
         {mode === "partial"
           ? "Partial credit: full marks inside your on-time window, less the further off a hit is. Extra hits count against you."
           : "Strict: only on-time notes count. Extra hits count against you."}{" "}
-        Change it in Settings.
+        A late hit still counts for its note, as late, up to {results.reachMs} ms behind at your skill level (or halfway
+        to the next note on that drum); later than that it's an extra hit and the note is missed. Change the scoring in
+        Settings.
       </p>
     </section>
   );
