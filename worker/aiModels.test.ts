@@ -27,9 +27,10 @@ describe("AI models", () => {
   });
 });
 
+const apiError = (status: number, message = "error") =>
+  Anthropic.APIError.generate(status, { type: "error", error: { type: "x", message } }, message, new Headers());
+
 describe("failureReason", () => {
-  const apiError = (status: number, message = "error") =>
-    Anthropic.APIError.generate(status, { type: "error", error: { type: "x", message } }, message, new Headers());
 
   it("says which part failed, from the provider's status", () => {
     expect(failureReason(apiError(401))).toContain("rejected the app's API key");
