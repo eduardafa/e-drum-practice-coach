@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { APIError } from "@anthropic-ai/sdk";
 import { describe, expect, it } from "vitest";
 import { AI_MODELS, approxCostPerTip, costMicros, failureReason, findModel, InsightError } from "./aiModels";
 
@@ -28,7 +28,7 @@ describe("AI models", () => {
 });
 
 const apiError = (status: number, message = "error") =>
-  Anthropic.APIError.generate(status, { type: "error", error: { type: "x", message } }, message, new Headers());
+  APIError.generate(status, { type: "error", error: { type: "x", message } }, message, new Headers());
 
 describe("failureReason", () => {
 
