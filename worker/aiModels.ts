@@ -9,7 +9,7 @@
  * developers.openai.com/api/docs/pricing). The cheapest model of each
  * provider is its default (owner decision).
  */
-import Anthropic from "@anthropic-ai/sdk";
+import Anthropic, { APIConnectionError as AnthropicConnectionError, APIError as AnthropicError } from "@anthropic-ai/sdk";
 import OpenAI, { APIConnectionError as OpenAIConnectionError, APIError as OpenAIError } from "openai";
 
 export type AiProvider = "anthropic" | "openai";
@@ -74,10 +74,10 @@ export class InsightError extends Error {
  */
 export function failureReason(error: unknown): string {
   if (error instanceof InsightError) return "the AI didn't give a usable answer. Try again.";
-  if (error instanceof Anthropic.APIConnectionError || error instanceof OpenAIConnectionError) {
+  if (error instanceof AnthropicConnectionError || error instanceof OpenAIConnectionError) {
     return "the app couldn't reach the AI service. Try again in a little while.";
   }
-  if (error instanceof Anthropic.APIError || error instanceof OpenAIError) {
+  if (error instanceof AnthropicError || error instanceof OpenAIError) {
     const status = error.status ?? 0;
     if (status === 401) return "the AI service rejected the app's API key.";
     if (status === 403) return "the app's API key isn't allowed to use this model.";
