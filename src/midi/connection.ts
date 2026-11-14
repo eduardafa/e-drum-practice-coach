@@ -32,6 +32,11 @@ export function pickDefaultDevice(devices: MidiDevice[]): string | null {
   return (devices.find((d) => PREFERRED_DEVICE.test(d.name)) ?? devices[0])?.id ?? null;
 }
 
+/** The part of the Permissions API used to check for MIDI access (a stand-in in tests). */
+interface PermissionQuery {
+  query(descriptor: PermissionDescriptor): Promise<{ state: PermissionState }>;
+}
+
 export class MidiConnection {
   private access: MIDIAccess | null = null;
   private selected: MIDIInput | null = null;
@@ -85,12 +90,11 @@ export class MidiConnection {
    * Resolves with whether it connected.
    */
   async reconnectIfAllowed(
-    permissions: Pick<Permissions, "query"> | undefined = typeof navigator === "undefined" ? undefined : navigator.permissions,
+    permissions: PermissionQuery | undefined = typeof navigator === "undefined" ? undefined : navigator.permissions,
   ): Promise<boolean> {
     if (!isWebMidiSupported() || this.access || !permissions) return false;
     try {
-      // "midi" is a permission name in Chrome and Edge, not yet in TypeScript's list.
-      const permission = await permissions.query({ name: "midi" as PermissionName });
+      const permission = await permissions.query({ name: "midi" });
       if (permission.state !== "granted") return false;
     } catch {
       return false;

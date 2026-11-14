@@ -18,7 +18,7 @@ describe("pickDefaultDevice", () => {
 });
 
 const permissions = (state: PermissionState | "throws") => ({
-  query: () => (state === "throws" ? Promise.reject(new TypeError("unknown permission")) : Promise.resolve({ state } as PermissionStatus)),
+  query: () => (state === "throws" ? Promise.reject(new TypeError("unknown permission")) : Promise.resolve({ state })),
 });
 
 describe("MidiConnection.reconnectIfAllowed", () => {
