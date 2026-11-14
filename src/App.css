@@ -40,6 +40,11 @@
   --on-wrong-drum: light-dark(#ffffff, #1e1033);
 
   --shadow: light-dark(rgb(15 23 42 / 0.16), rgb(0 0 0 / 0.45));
+  /* Buttons: a soft top highlight and a small drop shadow, so they read as raised and clickable. */
+  --button-highlight: light-dark(rgb(255 255 255 / 0.7), rgb(255 255 255 / 0.07));
+  --button-shadow: light-dark(rgb(15 23 42 / 0.14), rgb(0 0 0 / 0.55));
+  --button-face: light-dark(#ffffff, #1f2630);
+  --button-face-low: light-dark(#eef1f5, #181d25);
   --tint: light-dark(rgb(15 23 42 / 0.04), rgb(255 255 255 / 0.04));
   --band: light-dark(rgb(26 32 41 / 0.12), rgb(230 237 245 / 0.14));
 
@@ -325,20 +330,61 @@ select {
   font: inherit;
 }
 
-button.primary {
-  background: var(--accent);
+/*
+ * Raised buttons: a gentle top-to-bottom gradient, a highlight along the top
+ * edge and a small shadow. Hover lifts them a pixel, pressing pushes them
+ * down, so they feel like keys rather than flat labels. File pickers styled as
+ * buttons (labels) share the look.
+ */
+button.primary,
+.song-open-button {
+  --face: var(--accent);
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--face) 82%, white), var(--face));
   color: var(--on-accent);
-  border: 0;
+  border: 1px solid color-mix(in srgb, var(--face) 70%, black);
   border-radius: 8px;
   padding: 8px 16px;
   font: inherit;
   font-weight: 650;
   cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.35),
+    0 1px 2px var(--button-shadow),
+    0 3px 8px color-mix(in srgb, var(--face) 22%, transparent);
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease,
+    filter 0.12s ease;
 }
 
 button.primary.active {
-  background: var(--warn);
+  --face: var(--warn);
   color: var(--on-warn);
+}
+
+button.primary:hover:not(:disabled),
+.song-open-button:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.35),
+    0 2px 4px var(--button-shadow),
+    0 6px 14px color-mix(in srgb, var(--face) 30%, transparent);
+}
+
+button.primary:active:not(:disabled),
+.song-open-button:active {
+  transform: translateY(1px);
+  filter: brightness(0.96);
+  box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.2);
+}
+
+button.primary:disabled,
+button.secondary:disabled {
+  opacity: 0.5;
+  cursor: default;
+  transform: none;
+  box-shadow: none;
 }
 
 button.primary kbd {
@@ -441,18 +487,53 @@ fieldset.group:disabled {
   opacity: 0.5;
 }
 
-button.secondary {
-  background: transparent;
+button.secondary,
+.drum-tab-bar label.plain {
+  background: linear-gradient(to bottom, var(--button-face), var(--button-face-low));
   color: var(--text);
   border: 1px solid var(--control-border);
   border-radius: 8px;
   padding: 7px 14px;
   font: inherit;
   cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 var(--button-highlight),
+    0 1px 2px var(--button-shadow);
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease,
+    border-color 0.12s ease;
 }
 
-button.secondary:hover:not(:disabled) {
+button.secondary:hover:not(:disabled),
+.drum-tab-bar label.plain:hover {
   border-color: var(--muted);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 var(--button-highlight),
+    0 3px 8px var(--button-shadow);
+}
+
+button.secondary:active:not(:disabled),
+.drum-tab-bar label.plain:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 4px var(--button-shadow);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button.primary,
+  button.secondary,
+  .song-open-button,
+  .drum-tab-bar label.plain {
+    transition: none;
+  }
+
+  button.primary:hover:not(:disabled),
+  button.primary:active:not(:disabled),
+  button.secondary:hover:not(:disabled),
+  button.secondary:active:not(:disabled) {
+    transform: none;
+  }
 }
 
 button:focus-visible {
@@ -1833,7 +1914,7 @@ fieldset.group.play {
 }
 
 button.primary.danger {
-  background: var(--danger);
+  --face: var(--danger);
   color: var(--on-danger);
 }
 
@@ -2758,12 +2839,6 @@ button.secondary.danger:hover:not(:disabled) {
   position: relative;
   justify-self: start;
   display: inline-block;
-  padding: 8px 16px;
-  border-radius: 8px;
-  background: var(--accent);
-  color: var(--on-accent);
-  cursor: pointer;
-  font-weight: 650;
 }
 
 .song-open-button:focus-within {
@@ -2922,9 +2997,6 @@ button.secondary.danger:hover:not(:disabled) {
   display: inline-flex;
   align-items: center;
   padding: 4px 12px;
-  border: 1px solid var(--control-border);
-  border-radius: 8px;
-  color: var(--text);
   font-size: 13px;
 }
 
@@ -3071,9 +3143,12 @@ button.secondary.danger:hover:not(:disabled) {
 }
 
 .song-open-button.secondary-look {
-  background: transparent;
+  background: linear-gradient(to bottom, var(--button-face), var(--button-face-low));
   color: var(--accent);
   border: 1px solid var(--accent);
+  box-shadow:
+    inset 0 1px 0 var(--button-highlight),
+    0 1px 2px var(--button-shadow);
 }
 
 /* An on/off option (Switch.tsx): a track with a knob that slides right and fills in the accent color when on. */
