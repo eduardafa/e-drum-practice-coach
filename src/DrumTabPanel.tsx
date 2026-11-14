@@ -8,12 +8,17 @@ import { drumTabFrom, guessShift, placeTab, type DrumTab, type PlacedNote } from
 import { MidiError, readMidiDrums } from "./songs/midiFile";
 import { TAB_SPEEDS } from "./songs/tabSong";
 import type { TabNoteResult, TabScore } from "./songs/tabScoring";
+import { Segmented } from "./Segmented";
 import { SmallMetronome } from "./SmallMetronome";
 import { TabNotation } from "./TabNotation";
 import { onThemeChange, withColorProbe } from "./theme";
 
 /** How the tab is shown: drum notation, or simple lanes (a row per pad) for drummers who don't read notation yet. */
 type TabView = "notation" | "lanes";
+const TAB_VIEWS = [
+  { id: "notation", label: "Notation", title: "Drum notation, two bars at a time" },
+  { id: "lanes", label: "Lanes", title: "A row per pad: no notation to read" },
+] as const;
 const VIEW_KEY = "edrum-coach:tab-view";
 
 /** The view chosen last time in this browser; notation the first time. */
@@ -214,29 +219,13 @@ export function DrumTabPanel({
       {placed && grid ? (
         <>
           <div className="drum-tab-view-row">
-            <fieldset className="segmented" aria-label="Show the tab as">
-              <legend className="visually-hidden">Show the tab as</legend>
-              {(
-                [
-                  ["notation", "Notation"],
-                  ["lanes", "Lanes"],
-                ] as const
-              ).map(([id, label]) => (
-                <label key={id} title={id === "lanes" ? "A row per pad: no notation to read" : "Drum notation, two bars at a time"}>
-                  <input
-                    type="radio"
-                    name="tab-view"
-                    value={id}
-                    checked={view === id}
-                    onChange={(e) => {
-                      e.currentTarget.blur();
-                      chooseView(id);
-                    }}
-                  />
-                  <span>{label}</span>
-                </label>
-              ))}
-            </fieldset>
+            <Segmented
+              options={TAB_VIEWS}
+              value={view}
+              onChange={chooseView}
+              label="Show the tab as"
+              name="tab-view"
+            />
             {showMetronome && <SmallMetronome coach={coach} inline />}
           </div>
           {view === "notation" ? (

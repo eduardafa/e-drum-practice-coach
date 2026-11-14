@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import {
   binOf,
   bins,
@@ -10,6 +10,7 @@ import {
 import { kitLayout } from "./handedness";
 import { useHandedness } from "./HandednessContext";
 import { NITRO_MAX_PADS, type PadInfo } from "./kit/nitroMax";
+import { tabId, tabPanelId, Tabs } from "./Tabs";
 
 interface Props {
   heat: Heatmap;
@@ -54,6 +55,8 @@ function describe(pad: PadInfo, p: PadHeat | undefined): string {
  */
 export function PadHeatmap({ heat, scope }: Props) {
   const [measure, setMeasure] = useState<HeatMeasure>("hits");
+  // The heatmap shows on History and on the results screen: ids unique to this one.
+  const tabsId = `heatmap${useId().replaceAll(":", "")}`;
   const [active, setActive] = useState<PadInfo | null>(null);
   // Drawn as seen from the throne: mirrored on a left-handed kit.
   const pads = kitLayout(NITRO_MAX_PADS, useHandedness());
@@ -79,20 +82,9 @@ export function PadHeatmap({ heat, scope }: Props) {
     <div className="heatmap">
       <div className="heatmap-head">
         <h4 className="progress-subhead">Pads in {scope}</h4>
-        <fieldset className="library-filters heatmap-measure">
-          <legend className="visually-hidden">Color pads by</legend>
-          {MEASURES.map((m) => (
-            <button
-              key={m.id}
-              className={`secondary ${measure === m.id ? "selected" : ""}`}
-              aria-pressed={measure === m.id}
-              onClick={() => setMeasure(m.id)}
-            >
-              {m.label}
-            </button>
-          ))}
-        </fieldset>
+        <Tabs tabs={MEASURES} selected={measure} onSelect={setMeasure} label="Color pads by" idPrefix={tabsId} />
       </div>
+      <div id={tabPanelId(tabsId, measure)} role="tabpanel" aria-labelledby={tabId(tabsId, measure)}>
       <p className="heatmap-caption">{caption}</p>
 
       <div className="heatmap-plot">
@@ -146,6 +138,7 @@ export function PadHeatmap({ heat, scope }: Props) {
           ? "The more a pad stands out, the more you hit it."
           : "Strength is how hard the kit felt each hit, from 1 (softest) to 127. The more a pad stands out, the harder you hit it."}
       </p>
+      </div>
 
       {note && <p className="heatmap-note">{note}</p>}
 

@@ -4,6 +4,7 @@ import { GUIDE_COUNTS, GUIDE_START_BPM, METRONOME_GUIDE, type GuideStep } from "
 import type { Coach } from "./live/coach";
 import { LiveCount, useLiveCount } from "./LiveCount";
 import { releasing } from "./releasing";
+import { tabId, tabPanelId, Tabs } from "./Tabs";
 
 interface Props {
   coach: Coach;
@@ -15,8 +16,11 @@ interface Props {
   onClose: () => void;
 }
 
+/** The guide's steps as tabs: "Step 1", "Step 2"... */
+const GUIDE_TABS = METRONOME_GUIDE.map((s, i) => ({ id: s.id, label: `Step ${i + 1}` }));
+
 export function MetronomeGuide({ coach, running, basicsOpen, onApply, onToggleMetronome, onClose }: Props) {
-  const [stepId, setStepId] = useState(METRONOME_GUIDE[0].id);
+  const [stepId, setStepId] = useState<GuideStep["id"]>(METRONOME_GUIDE[0].id);
   const step = METRONOME_GUIDE.find((s) => s.id === stepId) ?? METRONOME_GUIDE[0];
 
   return (
@@ -47,23 +51,13 @@ export function MetronomeGuide({ coach, running, basicsOpen, onApply, onToggleMe
         </p>
       </details>
 
-      <fieldset className="guide-steps">
-        <legend className="visually-hidden">Steps</legend>
-        {METRONOME_GUIDE.map((s) => (
-          <button
-            key={s.id}
-            className={`secondary ${s.id === step.id ? "selected" : ""}`}
-            aria-pressed={s.id === step.id}
-            onClick={releasing(() => setStepId(s.id))}
-          >
-            {s.title.split(". ")[0]}
-          </button>
-        ))}
-      </fieldset>
+      <Tabs tabs={GUIDE_TABS} selected={step.id} onSelect={setStepId} label="Steps" idPrefix="guide" />
 
-      <h3>{step.title}</h3>
-      <p>{step.text}</p>
-      <PatternGrid coach={coach} step={step} />
+      <div id={tabPanelId("guide", step.id)} role="tabpanel" aria-labelledby={tabId("guide", step.id)}>
+        <h3>{step.title}</h3>
+        <p>{step.text}</p>
+        <PatternGrid coach={coach} step={step} />
+      </div>
 
       <div className="calibration-actions">
         <button className="primary" onClick={releasing(() => onApply(step.metronome))}>
