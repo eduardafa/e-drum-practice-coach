@@ -9,6 +9,8 @@ import { releasing } from "./releasing";
 import type { BeatGrid } from "./songs/beats";
 import type { SongLoop } from "./songs/player";
 import { SongLoopTools } from "./SongLoopTools";
+import { LOOP_SPEEDS } from "./songs/loopTrainer";
+import { useLoopTrainer } from "./useLoopTrainer";
 import { formatDuration, tabSearchUrl } from "./songs/song";
 
 export interface OpenSong {
@@ -30,8 +32,8 @@ export interface OpenSong {
   tab?: { name: string; part: MidiDrumPart; tab: DrumTab; speed: number };
 }
 
-/** Speeds a song can be played at (EDU-122); 50% for learning a part from scratch. */
-const SONG_SPEEDS = [1, 0.85, 0.7, 0.5] as const;
+/** Speeds a song can be played at (EDU-122), fastest first; 50% for learning a part from scratch. */
+const SONG_SPEEDS = LOOP_SPEEDS.toReversed();
 
 /** Beat lines for the waveform, in its 0..peaks coordinates: every beat, with each beat 1 separately. */
 function beatLines(grid: BeatGrid, duration: number, width: number): { beats: string; downbeats: string } {
@@ -93,8 +95,8 @@ export function SongPanel({
   onLoopChange: (loop: SongLoop | null) => void;
   /** Making a slowed copy: the speed it's for and how far along (0 to 1), or null. */
   slowing: { speed: number; done: number } | null;
-  /** The drummer picked a playback speed. */
-  onSpeedChange: (speed: number) => void;
+  /** The drummer picked a playback speed; resolves once it's playing at it (a slowed copy may be made first). */
+  onSpeedChange: (speed: number) => Promise<void>;
   /** Seconds of get-ready countdown before playing along; 0 for none. */
   getReadySec: number;
   onGetReadyChange: (seconds: number) => void;
@@ -105,6 +107,7 @@ export function SongPanel({
   onClose: () => void;
 }) {
   const tabOnly = song.tab !== undefined;
+  const trainer = useLoopTrainer({ coach, grid: song.grid, loop: song.loop, speed: song.speed, setSpeed: onSpeedChange, getReadySec });
   const fixedTab = useMemo(
     () => song.tab && { name: song.tab.name, tab: song.tab.tab, speed: song.tab.speed, onSpeed: onTabSpeed },
     [song.tab, onTabSpeed],
@@ -207,7 +210,7 @@ export function SongPanel({
                 value={slowing?.speed ?? song.speed}
                 onChange={(e) => {
                   e.currentTarget.blur();
-                  onSpeedChange(Number(e.target.value));
+                  void onSpeedChange(Number(e.target.value));
                 }}
               >
                 {SONG_SPEEDS.map((speed) => (
@@ -286,7 +289,14 @@ export function SongPanel({
         />
       </div>
       {song.grid && !tabOnly && (
-        <SongLoopTools coach={coach} grid={song.grid} loop={song.loop} duration={song.duration} onChange={onLoopChange} />
+        <SongLoopTools
+          coach={coach}
+          grid={song.grid}
+          loop={song.loop}
+          duration={song.duration}
+          onChange={onLoopChange}
+          trainer={trainer}
+        />
       )}
       {/* Each song has its own tab: the one remembered with it, if any (EDU-99). */}
       <DrumTabPanel

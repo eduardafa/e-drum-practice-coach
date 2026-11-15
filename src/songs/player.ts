@@ -223,6 +223,17 @@ export class SongPlayer {
     this.seek(this.position(), volume);
   }
 
+  /**
+   * The audio time at which this run's first pass ends: the loop's end (or the
+   * song's), reached from where playback started. Null while paused.
+   */
+  firstPassEnd(): number | null {
+    const { startedAt, offset } = this.state;
+    if (startedAt === null) return null;
+    const end = this.loopState ? this.loopState.end : this.duration;
+    return startedAt + (end - offset) / this.rate;
+  }
+
   /** What plays in the next `ahead` seconds of audio, window by window (see songWindows). */
   windows(ahead: number): PlayWindow[] {
     return this.ctx ? songWindows(this.state, this.loopState, this.duration, this.ctx.currentTime, ahead) : [];
