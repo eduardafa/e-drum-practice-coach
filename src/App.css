@@ -3283,9 +3283,14 @@ button.secondary.danger:hover:not(:disabled) {
   font-size: 14px;
 }
 
-.song-drift h3 {
+/* The same heading wherever the dialog opens (History styles its own h3s as section labels). */
+.song-drift h3,
+.history-page .song-drift h3 {
   margin: 8px 0 2px;
   font-size: 15px;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--text);
 }
 
 .song-drift-bars {
@@ -3322,9 +3327,14 @@ button.secondary.danger:hover:not(:disabled) {
   cursor: pointer;
 }
 
-.song-drift-bar:hover,
-.song-drift-bar:focus-visible {
+button.song-drift-bar:hover,
+button.song-drift-bar:focus-visible {
   background: var(--raised);
+}
+
+/* Read-only bars (a saved play-along in History). */
+span.song-drift-bar {
+  cursor: default;
 }
 
 .song-drift-bar:focus-visible {

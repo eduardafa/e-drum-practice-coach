@@ -42,6 +42,8 @@ export function useLoopTrainer({
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   /** Bumped by every start and stop, so a round from an old run never carries on. */
   const runId = useRef(0);
+  /** A random tag per page load, so run ids don't repeat across reloads or devices. */
+  const runTag = useRef(crypto.randomUUID().slice(0, 8));
 
   const clear = () => {
     if (timer.current !== null) clearInterval(timer.current);
@@ -68,7 +70,8 @@ export function useLoopTrainer({
     await setSpeed(roundSpeed);
     if (runId.current !== id) return;
     coach.song.seek(loop.start, 1);
-    await coach.startSongPlayAlong(grid, countdown);
+    // Each pass is saved to History, tagged with this run so they read as one.
+    await coach.startSongPlayAlong(grid, countdown, `loop-${id}-${runTag.current}`);
     if (runId.current !== id) return;
     setState({ phase: "playing", speed: roundSpeed, rounds });
     const passEnd = coach.song.firstPassEnd();

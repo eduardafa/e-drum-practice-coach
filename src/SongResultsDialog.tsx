@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { formatDelta } from "./render/kitRenderer";
-import type { BeatGrid } from "./songs/beats";
-import { MIN_BAR_HITS, driftByBar, hardestBar, type BarDrift, type SongRun } from "./songs/songResults";
+import { MIN_BAR_HITS, hardestBar, type BarDrift, type SongRun } from "./songs/songResults";
 
 /** Bars this far off the beat on average reach the top (or bottom) of the timeline. */
 const FULL_SCALE_MS = 60;
@@ -25,9 +24,10 @@ function barTone(b: BarDrift, toleranceMs: number): "few" | "close" | "early" | 
   return b.meanMs < 0 ? "early" : "late";
 }
 
-function barLabel(b: BarDrift): string {
-  if (b.hits === 0 || b.meanMs === null || b.onTime === null) return `Bar ${b.bar}: no hits. Loop from here.`;
-  return `Bar ${b.bar}: ${b.hits} ${b.hits === 1 ? "hit" : "hits"}, ${lean(b.meanMs)} on average, ${pct(b.onTime)} on time. Loop from here.`;
+function barLabel(b: BarDrift, canLoop: boolean): string {
+  const then = canLoop ? " Loop from here." : "";
+  if (b.hits === 0 || b.meanMs === null || b.onTime === null) return `Bar ${b.bar}: no hits.${then}`;
+  return `Bar ${b.bar}: ${b.hits} ${b.hits === 1 ? "hit" : "hits"}, ${lean(b.meanMs)} on average, ${pct(b.onTime)} on time.${then}`;
 }
 
 /**
@@ -39,18 +39,17 @@ function barLabel(b: BarDrift): string {
  */
 export function SongResultsDialog({
   run,
-  grid,
-  duration,
   toleranceMs,
+  when,
   onLoopFrom,
   onClose,
 }: {
   run: SongRun;
-  grid: BeatGrid;
-  duration: number;
   toleranceMs: number;
-  /** Loop the song from this song time (a bar's start). */
-  onLoopFrom: (seconds: number) => void;
+  /** For a saved play-along (History): when it was. */
+  when?: string;
+  /** Loop the song from this song time (a bar's start). Without it (History), the bars only show. */
+  onLoopFrom?: (seconds: number) => void;
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -61,7 +60,7 @@ export function SongResultsDialog({
     if (!dialog.open) dialog.showModal();
   }, []);
 
-  const bars = useMemo(() => driftByBar(grid, run.hits, duration), [grid, run.hits, duration]);
+  const { bars } = run;
   // Each bar's fill: up from the middle line for late, down for early, a short tick when close.
   const fills = useMemo(
     () =>
@@ -75,9 +74,10 @@ export function SongResultsDialog({
   const hardest = useMemo(() => hardestBar(bars), [bars]);
   const onTime = run.scored > 0 ? run.onTimeHits / run.scored : 0;
   const loopFrom = (seconds: number) => {
-    onLoopFrom(seconds);
+    onLoopFrom?.(seconds);
     ref.current?.close();
   };
+  const canLoop = onLoopFrom !== undefined;
 
   return (
     <dialog ref={ref} className="session-dialog song-results" aria-labelledby="song-results-title" onClose={onClose}>
@@ -85,7 +85,9 @@ export function SongResultsDialog({
         <header className="session-dialog-head">
           <div>
             <h2 id="song-results-title">{run.title}</h2>
-            <p className="session-dialog-meta">Played along at {speedLabel(run.speed)}</p>
+            <p className="session-dialog-meta">
+              {when ? `${when} · ` : ""}Played along at {speedLabel(run.speed)}
+            </p>
           </div>
           <button className="secondary" onClick={() => ref.current?.close()}>
             Close <kbd>Esc</kbd>
@@ -112,22 +114,22 @@ export function SongResultsDialog({
           <section className="song-drift" aria-labelledby="song-drift-title">
             <h3 id="song-drift-title">Where you drifted</h3>
             <p className="hint">
-              Each bar of the song you played: above the line is late, below is early, green is close to the beat. Press a bar
-              to practice from there.
+              Each bar of the song you played: above the line is late, below is early, green is close to the beat.
+              {canLoop && " Press a bar to practice from there."}
             </p>
             <div className="song-drift-bars">
               {bars.map((b, i) => {
-                const tone = barTone(b, toleranceMs);
-                return (
-                  <button
-                    key={b.bar}
-                    className={`song-drift-bar ${tone}${hardest?.bar === b.bar ? " hardest" : ""}`}
-                    aria-label={barLabel(b)}
-                    title={barLabel(b)}
-                    onClick={() => loopFrom(b.start)}
-                  >
+                const className = `song-drift-bar ${barTone(b, toleranceMs)}${hardest?.bar === b.bar ? " hardest" : ""}`;
+                const label = barLabel(b, canLoop);
+                return canLoop ? (
+                  <button key={b.bar} className={className} aria-label={label} title={label} onClick={() => loopFrom(b.start)}>
                     <span className="song-drift-fill" style={fills[i]} />
                   </button>
+                ) : (
+                  <span key={b.bar} className={className} title={label}>
+                    <span className="visually-hidden">{label}</span>
+                    <span className="song-drift-fill" style={fills[i]} aria-hidden />
+                  </span>
                 );
               })}
             </div>
@@ -139,11 +141,12 @@ export function SongResultsDialog({
         )}
 
         <div className="calibration-actions">
-          {hardest && (
+          {hardest && canLoop && (
             <button className="primary" onClick={() => loopFrom(hardest.start)}>
               Loop the hardest part (from bar {hardest.bar})
             </button>
           )}
+          {hardest && !canLoop && <p className="hint">The hardest part was bar {hardest.bar}.</p>}
           <button className="secondary" onClick={() => ref.current?.close()}>
             Close
           </button>

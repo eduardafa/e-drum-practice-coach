@@ -28,12 +28,13 @@ export interface BarDrift {
   onTime: number | null;
 }
 
-/** Everything the results screen shows about one play-along. */
+/** Everything the results screen shows about one play-along (also rebuilt from a saved song record). */
 export interface SongRun {
   title: string;
   /** Playback speed it was played at. */
   speed: number;
-  hits: SongHit[];
+  /** Where in the song the drummer drifted, bar by bar. */
+  bars: BarDrift[];
   /** Whole-run numbers, as the side panel showed them. */
   scored: number;
   onTimeHits: number;
