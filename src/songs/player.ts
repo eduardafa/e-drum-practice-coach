@@ -10,6 +10,11 @@ export interface PlayState {
   offset: number;
   /** Audio-clock time (s) when playback last started (or will start, after a countdown), or null while paused. */
   startedAt: number | null;
+  /**
+   * Song seconds per second of audio (EDU-122): 0.7 plays at 70% speed, from a
+   * slowed copy of the audio. Everything here is in song time; this converts.
+   */
+  rate?: number;
 }
 
 /** A section of the song that repeats (EDU-121), in song seconds: from `start` up to (not including) `end`. */
@@ -24,7 +29,8 @@ export interface SongLoop {
  * wraps back to its start, as the audio does.
  */
 export function positionAt(state: PlayState, now: number, duration: number, loop: SongLoop | null = null): number {
-  let pos = state.startedAt === null ? state.offset : state.offset + Math.max(0, now - state.startedAt);
+  const rate = state.rate ?? 1;
+  let pos = state.startedAt === null ? state.offset : state.offset + Math.max(0, now - state.startedAt) * rate;
   if (loop && state.startedAt !== null && pos >= loop.end) {
     pos = loop.start + ((pos - loop.end) % (loop.end - loop.start));
   }
@@ -42,13 +48,15 @@ export interface PlayWindow {
   from: number;
   to: number;
   audioStart: number;
+  /** Song seconds per audio second (EDU-122); 1 at full speed. */
+  rate: number;
 }
 
 /** The audio time at which song time `seconds` plays in this window. */
-export const windowAudioTime = (w: PlayWindow, seconds: number) => w.audioStart + (seconds - w.from);
+export const windowAudioTime = (w: PlayWindow, seconds: number) => w.audioStart + (seconds - w.from) / w.rate;
 
 /** The last song time in this window whose audio time is before `audioUntil`. */
-export const windowUntil = (w: PlayWindow, audioUntil: number) => Math.min(w.to, w.from + (audioUntil - w.audioStart));
+export const windowUntil = (w: PlayWindow, audioUntil: number) => Math.min(w.to, w.from + (audioUntil - w.audioStart) * w.rate);
 
 /** Where a scheduler got to in a list of timed items: the loop pass, and the next item in it. */
 export interface PassCursor {
@@ -99,30 +107,38 @@ const MAX_PASSES = 8;
  */
 export function songWindows(state: PlayState, loop: SongLoop | null, duration: number, now: number, ahead: number): PlayWindow[] {
   if (state.startedAt === null) return [];
+  const rate = state.rate ?? 1;
   const horizon = now + ahead;
-  const first: PlayWindow = { pass: 0, from: state.offset, to: loop ? loop.end : duration, audioStart: state.startedAt };
+  const first: PlayWindow = { pass: 0, from: state.offset, to: loop ? loop.end : duration, audioStart: state.startedAt, rate };
+  // Audio seconds the first window and each loop pass last.
+  const firstEnd = first.audioStart + (first.to - first.from) / rate;
   const out: PlayWindow[] = [];
-  if (first.audioStart + (first.to - first.from) > now) out.push(first);
+  if (firstEnd > now) out.push(first);
   if (!loop) return out;
-  const length = loop.end - loop.start;
+  const length = (loop.end - loop.start) / rate;
   // The pass playing at `now`, then on until the horizon.
-  const sinceFirstEnd = now - (first.audioStart + (first.to - first.from));
+  const sinceFirstEnd = now - firstEnd;
   let pass = Math.max(1, sinceFirstEnd > 0 ? Math.floor(sinceFirstEnd / length) + 1 : 1);
   for (let n = 0; n < MAX_PASSES; n++, pass++) {
-    const audioStart = first.audioStart + (first.to - first.from) + (pass - 1) * length;
+    const audioStart = firstEnd + (pass - 1) * length;
     if (audioStart >= horizon) break;
-    out.push({ pass, from: loop.start, to: loop.end, audioStart });
+    out.push({ pass, from: loop.start, to: loop.end, audioStart, rate });
   }
   return out;
 }
 
 /** The audio-clock time at which song position `seconds` plays, or null while paused. */
 export function audioTimeAt(state: PlayState, seconds: number): number | null {
-  return state.startedAt === null ? null : state.startedAt + (seconds - state.offset);
+  return state.startedAt === null ? null : state.startedAt + (seconds - state.offset) / (state.rate ?? 1);
 }
 
 export class SongPlayer {
+  /** The song as opened: its length and time are the song's. */
+  private original: AudioBuffer | null = null;
+  /** What plays: the original, or a slowed copy of it (EDU-122). */
   private buffer: AudioBuffer | null = null;
+  /** Song seconds per audio second of `buffer`. */
+  private rate = 1;
   private ctx: AudioContext | null = null;
   private source: AudioBufferSourceNode | null = null;
   private gain: GainNode | null = null;
@@ -140,16 +156,42 @@ export class SongPlayer {
     return this.state.startedAt !== null;
   }
 
+  /** The song's length in seconds (of the song, whatever the speed). */
   get duration(): number {
-    return this.buffer?.duration ?? 0;
+    return this.original?.duration ?? 0;
   }
 
-  /** Replaces the song; playback stops and returns to the start, with no loop. */
+  /** The playback speed: 1, or e.g. 0.7 while a slowed copy plays. */
+  get speed(): number {
+    return this.rate;
+  }
+
+  /** Replaces the song; playback stops and returns to the start, at full speed, with no loop. */
   load(buffer: AudioBuffer | null): void {
     this.stop();
+    this.original = buffer;
     this.buffer = buffer;
+    this.rate = 1;
     this.loopState = null;
     this.state = { offset: 0, startedAt: null };
+  }
+
+  /**
+   * Plays at `speed` from now on (EDU-122): `slowed` is the song stretched to
+   * that speed (its length is the song's divided by `speed`); full speed goes
+   * back to the original. Carries on from the same song position, starting a
+   * new run, so everything scheduled plans again.
+   */
+  setSpeed(speed: number, slowed: AudioBuffer | null, volume: number): void {
+    if (!this.original) return;
+    if (speed === 1 || !slowed) {
+      this.buffer = this.original;
+      this.rate = 1;
+    } else {
+      this.buffer = slowed;
+      this.rate = speed;
+    }
+    this.seek(this.position(), volume);
   }
 
   /**
@@ -211,8 +253,9 @@ export class SongPlayer {
     // The audio itself repeats the section, sample-accurately, with no timer involved.
     if (this.loopState) {
       source.loop = true;
-      source.loopStart = this.loopState.start;
-      source.loopEnd = this.loopState.end;
+      // In the playing buffer's own time: a slowed copy is longer by 1 / rate.
+      source.loopStart = this.loopState.start / this.rate;
+      source.loopEnd = this.loopState.end / this.rate;
     }
     source.connect(this.gain);
     source.addEventListener(
@@ -227,10 +270,10 @@ export class SongPlayer {
       { once: true },
     );
     const when = Math.max(at, ctx.currentTime);
-    source.start(when, from);
+    source.start(when, from / this.rate);
     this.source = source;
     this.runs += 1;
-    this.state = { offset: from, startedAt: when };
+    this.state = { offset: from, startedAt: when, rate: this.rate };
   }
 
   /** Pauses, keeping the position. */

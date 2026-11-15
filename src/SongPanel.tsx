@@ -24,9 +24,14 @@ export interface OpenSong {
   found: BeatGrid | null;
   /** The section set to repeat (EDU-121), or null. */
   loop: SongLoop | null;
+  /** The playback speed (EDU-122): 1, or e.g. 0.7 from a slowed copy with the same pitch. */
+  speed: number;
   /** Set when this is a drum tab practiced on its own, with no song: its beats are the file's. */
   tab?: { name: string; part: MidiDrumPart; tab: DrumTab; speed: number };
 }
+
+/** Speeds a song can be played at (EDU-122); 50% for learning a part from scratch. */
+const SONG_SPEEDS = [1, 0.85, 0.7, 0.5] as const;
 
 /** Beat lines for the waveform, in its 0..peaks coordinates: every beat, with each beat 1 separately. */
 function beatLines(grid: BeatGrid, duration: number, width: number): { beats: string; downbeats: string } {
@@ -70,6 +75,8 @@ export function SongPanel({
   analyzing,
   onGridChange,
   onLoopChange,
+  slowing,
+  onSpeedChange,
   getReadySec,
   onGetReadyChange,
   onTabSpeed,
@@ -84,6 +91,10 @@ export function SongPanel({
   onGridChange: (grid: BeatGrid) => void;
   /** The drummer set or cleared the section that repeats. */
   onLoopChange: (loop: SongLoop | null) => void;
+  /** Making a slowed copy: the speed it's for and how far along (0 to 1), or null. */
+  slowing: { speed: number; done: number } | null;
+  /** The drummer picked a playback speed. */
+  onSpeedChange: (speed: number) => void;
   /** Seconds of get-ready countdown before playing along; 0 for none. */
   getReadySec: number;
   onGetReadyChange: (seconds: number) => void;
@@ -188,13 +199,37 @@ export function SongPanel({
                 </option>
               ))}
             </select>
+            {!tabOnly && (
+              <select
+                aria-label="Speed"
+                title="Slow the song down to learn it: the pitch stays the same"
+                // While a slowed copy is being made, show the speed it's for.
+                value={slowing?.speed ?? song.speed}
+                onChange={(e) => {
+                  e.currentTarget.blur();
+                  onSpeedChange(Number(e.target.value));
+                }}
+              >
+                {SONG_SPEEDS.map((speed) => (
+                  <option key={speed} value={speed}>
+                    {speed === 1 ? "Full speed" : `${Math.round(speed * 100)}% speed`}
+                  </option>
+                ))}
+              </select>
+            )}
             <button className="secondary" onClick={releasing(onClose)}>
               {tabOnly ? "Close tab" : "Close song"}
             </button>
           </>
         )}
         <span className="song-tempo">
-          {song.grid ? `≈ ${Math.round(song.grid.bpm)} BPM` : analyzing !== null ? `Finding the beats… ${Math.floor(analyzing * 100)}%` : ""}
+          {slowing !== null
+            ? `Slowing down to ${Math.round(slowing.speed * 100)}%: ${Math.floor(slowing.done * 100)}% done`
+            : song.grid
+              ? `≈ ${Math.round(song.grid.bpm * song.speed)} BPM${song.speed !== 1 ? ` (${Math.round(song.speed * 100)}%)` : ""}`
+              : analyzing !== null
+                ? `Finding the beats… ${Math.floor(analyzing * 100)}%`
+                : ""}
         </span>
         <span ref={timeRef} className="song-time">
           0:00 / {formatDuration(song.duration)}

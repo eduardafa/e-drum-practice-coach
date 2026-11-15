@@ -13,6 +13,7 @@ import { MidiError, readMidiDrums } from "./songs/midiFile";
 import { SONG_VOLUME } from "./live/coach";
 import { tabTimeline } from "./songs/tabSong";
 import type { SongLoop } from "./songs/player";
+import { stretchChannels } from "./songs/stretch";
 import { checkSongFile, MAX_SONG_SECONDS, songFingerprint, songTitle, waveformPeaks } from "./songs/song";
 import { loadSongs, remember, saveSongs, type RememberedSong } from "./songs/songStore";
 import { forgetTab, keepTabsFor } from "./songs/tabStore";
@@ -38,9 +39,28 @@ export function useSong(beforeOpen: () => void) {
   const [analyzing, setAnalyzing] = useState<number | null>(null);
   const [remembered, setRemembered] = useState<RememberedSong[]>(loadSongs);
   const cancelAnalysis = useRef<(() => void) | null>(null);
+  /** Making a slowed copy (EDU-122): the speed it's for and how far along (0 to 1), or null. */
+  const [slowing, setSlowing] = useState<{ speed: number; done: number } | null>(null);
+  /** The open song as decoded, to make slowed copies from. */
+  const songAudio = useRef<AudioBuffer | null>(null);
+  /** The last slowed copy, kept while the song is open (a whole song's worth of audio, so only one). */
+  const slowedCopy = useRef<{ speed: number; buffer: AudioBuffer } | null>(null);
+  const slowingAbort = useRef<AbortController | null>(null);
+  const resetSpeed = () => {
+    slowingAbort.current?.abort();
+    slowingAbort.current = null;
+    slowedCopy.current = null;
+    setSlowing(null);
+  };
 
-  // Stop a running analysis if the page goes away.
-  useEffect(() => () => cancelAnalysis.current?.(), []);
+  // Stop a running analysis, or a slowed copy being made, if the page goes away.
+  useEffect(
+    () => () => {
+      cancelAnalysis.current?.();
+      slowingAbort.current?.abort();
+    },
+    [],
+  );
 
   const store = (next: RememberedSong[]) => {
     setRemembered(next);
@@ -76,6 +96,8 @@ export function useSong(beforeOpen: () => void) {
       cancelAnalysis.current?.();
       beforeOpen();
       coach.endSongPlayAlong();
+      resetSpeed();
+      songAudio.current = buffer;
       coach.song.load(buffer);
       // Its loop comes back too (EDU-121); the player checks it fits.
       if (saved?.loop) coach.song.setLoop(saved.loop, SONG_VOLUME);
@@ -87,6 +109,7 @@ export function useSong(beforeOpen: () => void) {
         grid: saved?.grid ?? null,
         found: saved ? (saved.found ?? saved.grid) : null,
         loop: coach.song.loop,
+        speed: 1,
       });
       const entry = (grid: BeatGrid, found?: BeatGrid): RememberedSong => ({
         fingerprint,
@@ -134,8 +157,50 @@ export function useSong(beforeOpen: () => void) {
     cancelAnalysis.current = null;
     setAnalyzing(null);
     coach.endSongPlayAlong();
+    resetSpeed();
+    songAudio.current = null;
     coach.song.load(null);
     setSong(null);
+  };
+
+  /**
+   * Plays the open song at `speed` (EDU-122), without changing its pitch: a
+   * slowed copy is made the first time (a second or two for a whole song, with
+   * progress), then swapped in where the song is. Full speed goes back to the
+   * original. Picking again while a copy is being made cancels that one.
+   */
+  const setSpeed = async (speed: number) => {
+    const audio = songAudio.current;
+    if (!song || !audio) return;
+    const { fingerprint } = song;
+    const apply = (slowed: AudioBuffer | null) => {
+      coach.song.setSpeed(speed, slowed, SONG_VOLUME);
+      setSong((s) => (s && s.fingerprint === fingerprint ? { ...s, speed: coach.song.speed } : s));
+    };
+    slowingAbort.current?.abort();
+    slowingAbort.current = null;
+    setSlowing(null);
+    if (speed === 1) return apply(null);
+    if (slowedCopy.current?.speed === speed) return apply(slowedCopy.current.buffer);
+    const abort = new AbortController();
+    slowingAbort.current = abort;
+    setSlowing({ speed, done: 0 });
+    try {
+      const channels = Array.from({ length: audio.numberOfChannels }, (_, c) => audio.getChannelData(c));
+      const stretched = await stretchChannels(channels, speed, (done) => setSlowing({ speed, done }), abort.signal);
+      if (abort.signal.aborted || songAudio.current !== audio) return;
+      const slowed = new AudioBuffer({ length: stretched[0].length, numberOfChannels: stretched.length, sampleRate: audio.sampleRate });
+      stretched.forEach((data, c) => slowed.copyToChannel(data, c));
+      slowedCopy.current = { speed, buffer: slowed };
+      apply(slowed);
+    } catch {
+      // Canceled: another speed was picked, or the song closed.
+    } finally {
+      if (slowingAbort.current === abort) {
+        slowingAbort.current = null;
+        setSlowing(null);
+      }
+    }
   };
 
   /**
@@ -203,14 +268,17 @@ export function useSong(beforeOpen: () => void) {
       coach.endSongPlayAlong();
       const name = songTitle(file.name);
       const { grid, duration } = tabTimeline(part, tab, 1);
+      resetSpeed();
+      songAudio.current = null;
       coach.song.load(silence(duration));
       setSong({
         title: name,
         duration,
         peaks: new Float32Array(TAB_PEAKS),
         fingerprint: `tab:${name}:${file.size}:${file.lastModified}`,
-        // A tab on its own has no loop for now: changing its speed reloads its track.
+        // A tab on its own has no loop for now, and its own speed (it changes the tab's timeline).
         loop: null,
+        speed: 1,
         grid,
         found: grid,
         tab: { name, part, tab, speed: 1 },
@@ -238,5 +306,5 @@ export function useSong(beforeOpen: () => void) {
     store(remembered.filter((s) => s.fingerprint !== fingerprint));
   };
 
-  return { song, loading, error, analyzing, remembered, open, openTab, setTabSpeed, close, forget, setGrid, setLoop };
+  return { song, loading, error, analyzing, slowing, remembered, open, openTab, setTabSpeed, close, forget, setGrid, setLoop, setSpeed };
 }

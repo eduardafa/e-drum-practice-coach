@@ -82,6 +82,8 @@ export function tabMark(ids: readonly number[], results: ReadonlyMap<number, Tab
 export class SongTabScoring {
   private readonly matcher: NoteMatcher;
   private readonly windows: number[];
+  /** The skill level's reach in seconds: no window is wider, whatever the speed. */
+  private readonly reachSec: number;
   /** Next note (position in `notes`) to hand to the matcher. */
   private next: number;
   /** The tab note id behind each of the matcher's notes. */
@@ -101,7 +103,8 @@ export class SongTabScoring {
     fromSec: number,
   ) {
     this.matcher = new NoteMatcher([], scoring);
-    this.windows = tabWindows(notes, reachForTolerance(scoring.toleranceMs) / 1000);
+    this.reachSec = reachForTolerance(scoring.toleranceMs) / 1000;
+    this.windows = tabWindows(notes, this.reachSec);
     const first = notes.findIndex((n, i) => n.time + this.windows[i] >= fromSec);
     this.next = first === -1 ? notes.length : first;
   }
@@ -119,9 +122,11 @@ export class SongTabScoring {
   /**
    * Hands the matcher every note up to `untilSec` of song time.
    * `toPerformanceMs` maps song time to performance.now() ms, or null if it
-   * can't yet (the note is then tried again next time).
+   * can't yet (the note is then tried again next time). `rate` is the playback
+   * speed (EDU-122): slowed down, notes are further apart in real time, so
+   * their windows widen with it, still never past the skill level's reach.
    */
-  plan(untilSec: number, toPerformanceMs: (songSec: number) => number | null): void {
+  plan(untilSec: number, toPerformanceMs: (songSec: number) => number | null, rate = 1): void {
     while (this.next < this.notes.length && this.notes[this.next].time <= untilSec) {
       const note = this.notes[this.next];
       const time = toPerformanceMs(note.time);
@@ -135,7 +140,7 @@ export class SongTabScoring {
         open: note.open,
         flam: false,
         dynamic: "normal",
-        windowMs: this.windows[this.next] * 1000,
+        windowMs: Math.min(this.windows[this.next] / rate, this.reachSec) * 1000,
       };
       this.matcher.add(expected);
       this.positionOf.set(note.id, this.tabIds.length);
