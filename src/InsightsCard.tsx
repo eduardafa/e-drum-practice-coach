@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import {
   InsightUnavailable,
+  deleteInsights,
   latestInsight,
   requestInsight,
   saveModel,
   savedModel,
   type AiModelOption,
+  type EarlierInsight,
   type InsightReply,
 } from "./account/insights";
 import { insightSummary } from "./history/insightSummary";
@@ -15,6 +17,8 @@ import { releasing } from "./releasing";
 import { useHandedness } from "./HandednessContext";
 import { SparkleIcon } from "./SparkleIcon";
 import { writtenWhen } from "./history/writtenWhen";
+import { EarlierTips } from "./EarlierTips";
+import { InsightTipList } from "./InsightTipList";
 
 interface Props {
   records: readonly HistoryRecord[];
@@ -22,6 +26,9 @@ interface Props {
 }
 
 const PROVIDER_LABEL = { anthropic: "Claude", openai: "OpenAI" } as const;
+
+/** Shared, so an empty list is the same array on every render. */
+const NO_EARLIER: readonly EarlierInsight[] = [];
 
 /** "about $0.001" below a cent, "about $0.04" above. */
 const cost = (dollars: number) => "about $" + dollars.toFixed(dollars < 0.01 ? 3 : 2);
@@ -40,6 +47,7 @@ export function InsightsCard({ records, accuracyMode }: Props) {
   const [chosen, setChosen] = useState<string | null>(savedModel);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmingClear, setConfirmingClear] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -64,11 +72,34 @@ export function InsightsCard({ records, accuracyMode }: Props) {
     setError(null);
     try {
       if (!model) return;
-      setReply(await requestInsight(insightSummary(records, Temporal.Now.plainDateISO(), accuracyMode, handedness), model.id));
+      const fresh = await requestInsight(insightSummary(records, Temporal.Now.plainDateISO(), accuracyMode, handedness), model.id);
+      // Read the list again so the set that was showing moves into Earlier tips.
+      // If that fails, show the new tips and keep the list as it was.
+      try {
+        setReply(await latestInsight());
+      } catch {
+        setReply((prev) => ({ ...fresh, earlier: prev?.earlier ?? null }));
+      }
     } catch (e) {
       setError(e instanceof InsightUnavailable ? e.message : "Couldn't get tips just now. Check your connection.");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const deleteOne = async (id: number) => {
+    await deleteInsights(id);
+    setReply((prev) => (prev ? { ...prev, earlier: (prev.earlier ?? []).filter((e) => e.id !== id) } : prev));
+  };
+
+  const deleteAll = async () => {
+    setConfirmingClear(false);
+    setError(null);
+    try {
+      await deleteInsights("all");
+      setReply((prev) => (prev ? { ...prev, insight: null, createdAt: null, model: null, earlier: [] } : prev));
+    } catch (e) {
+      setError(e instanceof InsightUnavailable ? e.message : "Couldn't delete the tips just now.");
     }
   };
 
@@ -80,6 +111,8 @@ export function InsightsCard({ records, accuracyMode }: Props) {
     saveModel(id);
   };
   const insight = reply?.insight;
+  const earlier = reply?.earlier ?? NO_EARLIER;
+  const hasTips = Boolean(insight) || earlier.length > 0;
   const left = reply?.remainingToday;
   const when = reply?.createdAt ? writtenWhen(reply.createdAt, Temporal.Now.zonedDateTimeISO()) : null;
   // Who wrote the tips on screen, and when; while busy, who's writing; before any tips, what the card is for.
@@ -134,24 +167,13 @@ export function InsightsCard({ records, accuracyMode }: Props) {
         insight && (
           <div className="insights-body">
             <p className="insights-headline">{insight.headline}</p>
-            {/* One tip per row: a number, its title on its own line, the detail under it. */}
-            <ol className="insights-tips">
-              {insight.tips.map((t, i) => (
-                <li key={t.title}>
-                  <span className="insights-tip-number" aria-hidden="true">
-                    {i + 1}
-                  </span>
-                  <div>
-                    <strong className="insights-tip-title">{t.title}</strong>
-                    <p className="insights-tip-detail">{t.detail}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
+            <InsightTipList tips={insight.tips} />
             <p className="insights-encouragement">{insight.encouragement}</p>
           </div>
         )
       )}
+
+      {!busy && <EarlierTips earlier={earlier} onDelete={deleteOne} />}
 
       {/* Settings and fine print, after the content. */}
       <footer className="insights-foot">
@@ -193,6 +215,25 @@ export function InsightsCard({ records, accuracyMode }: Props) {
           Written by AI from your practice numbers only (no names or raw hits).
           {left !== undefined && ` ${left} of 5 left today.`} <a href="/privacy">Privacy</a>
         </p>
+        {hasTips && !busy && (
+          <div className="insights-delete">
+            {confirmingClear ? (
+              <>
+                <span>Delete all your tips, these and earlier ones? This can't be undone.</span>
+                <button className="primary danger" onClick={releasing(() => void deleteAll())}>
+                  Delete all
+                </button>
+                <button className="secondary" onClick={releasing(() => setConfirmingClear(false))}>
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <button className="secondary" onClick={releasing(() => setConfirmingClear(true))}>
+                Delete all tips
+              </button>
+            )}
+          </div>
+        )}
       </footer>
     </section>
   );
