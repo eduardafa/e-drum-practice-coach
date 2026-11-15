@@ -13,6 +13,7 @@ import type { HistoryRecord } from "./history/record";
 import type { AccuracyMode } from "./playalong/results";
 import { releasing } from "./releasing";
 import { useHandedness } from "./HandednessContext";
+import { SparkleIcon } from "./SparkleIcon";
 
 interface Props {
   records: readonly HistoryRecord[];
@@ -83,8 +84,19 @@ export function InsightsCard({ records, accuracyMode }: Props) {
     <section className="insights" aria-labelledby="insights-title" aria-busy={busy}>
       <div className="insights-head">
         <h3 id="insights-title">Coach's notes</h3>
-        <button className="secondary" disabled={busy || left === 0 || !model} onClick={releasing(() => void ask())}>
-          {busy ? "Thinking" : insight ? "New tips" : "Get coaching tips"}
+        <button
+          className="secondary insights-ask"
+          disabled={busy || left === 0 || !model}
+          onClick={releasing(() => void ask())}
+        >
+          {busy ? (
+            "Thinking"
+          ) : (
+            <>
+              <SparkleIcon />
+              {insight ? "New tips" : "Get coaching tips"}
+            </>
+          )}
         </button>
       </div>
       {model && (
