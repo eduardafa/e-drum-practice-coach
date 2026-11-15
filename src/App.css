@@ -3276,6 +3276,19 @@ button.secondary.danger:hover:not(:disabled) {
   color: var(--accent);
 }
 
+/* "Speed up as I get it" running: where it's at, and how the last pass went. */
+.song-loop-status {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+
+.song-loop-last {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
 .song-wave {
   position: relative;
   height: 96px;

@@ -699,7 +699,7 @@ export default function App() {
               onGridChange={songs.setGrid}
               onLoopChange={songs.setLoop}
               slowing={songs.slowing}
-              onSpeedChange={(speed) => void songs.setSpeed(speed)}
+              onSpeedChange={songs.setSpeed}
               onTabSpeed={songs.setTabSpeed}
               showMetronome={prefs.showMetronome}
               getReadySec={getReadySec}
