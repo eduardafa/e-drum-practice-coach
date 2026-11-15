@@ -1,6 +1,7 @@
 /**
- * How an exercise is improving: accuracy and tempo per calendar day, or per
- * week over longer spans, from the practice history.
+ * How an exercise or a song is improving: accuracy and tempo (or, for a song,
+ * the speed played) per calendar day, or per week over longer spans, from the
+ * practice history.
  *
  * Like streaks, periods are calendar dates where each session was played
  * (see practiceDate), never 24- or 168-hour blocks, so a week with a
@@ -8,7 +9,7 @@
  * get a point: a day off isn't 0% accuracy.
  */
 import type { AccuracyMode } from "../playalong/results";
-import type { HistoryRecord, SessionRecord } from "./record";
+import type { HistoryRecord, SessionRecord, SongRecord } from "./record";
 import { practiceDate } from "./streak";
 
 export type ProgressRange = "7d" | "30d" | "all";
@@ -37,8 +38,10 @@ export interface ProgressPoint {
   end: Temporal.PlainDate;
   /** Accuracy over every note played in the period, 0..1. */
   accuracy: number | null;
-  /** The fastest tempo played in the period. */
+  /** The fastest tempo played in the period (exercises; 0 for a song). */
   bpm: number;
+  /** For a song: the fastest playback speed in the period (0.5 to 1); null for an exercise. */
+  speed: number | null;
   sessions: number;
 }
 
@@ -49,12 +52,23 @@ export interface Progress {
 }
 
 const isSession = (r: HistoryRecord): r is SessionRecord => r.kind === "session";
+const isSong = (r: HistoryRecord): r is SongRecord => r.kind === "song";
+
+/** A song's progress id is its records' exerciseId: "song:" + its fingerprint (EDU-126). */
+export const isSongId = (id: string) => id.startsWith("song:");
 
 /** The exercises with saved sessions, most recently played first. */
 export function practicedExercises(records: readonly HistoryRecord[]): { id: string; name: string }[] {
   const seen = new Map<string, string>();
   // Records come newest first, so the first name seen is the latest one.
   for (const r of records) if (isSession(r) && !seen.has(r.exerciseId)) seen.set(r.exerciseId, r.exerciseName);
+  return [...seen].map(([id, name]) => ({ id, name }));
+}
+
+/** The songs played along to, most recently first, by their latest name. */
+export function practicedSongs(records: readonly HistoryRecord[]): { id: string; name: string }[] {
+  const seen = new Map<string, string>();
+  for (const r of records) if (isSong(r) && !seen.has(r.exerciseId)) seen.set(r.exerciseId, r.exerciseName);
   return [...seen].map(([id, name]) => ({ id, name }));
 }
 
@@ -67,8 +81,10 @@ export function weekStart(date: Temporal.PlainDate, firstDay = 1): Temporal.Plai
 }
 
 /**
- * Accuracy and tempo for one exercise over a range ending `today`. Trainer
- * rounds count: they are sessions played like any other.
+ * Accuracy and tempo for one exercise over a range ending `today`, or for a
+ * song (an id from practicedSongs): its share of hits on the beat, weighted
+ * by hits played, and the fastest speed it was played at. Trainer rounds and
+ * loop-trainer passes count: they are sessions or play-alongs like any other.
  */
 export function progress(
   records: readonly HistoryRecord[],
@@ -79,8 +95,9 @@ export function progress(
   firstDay = 1,
 ): Progress {
   const from = rangeStart(range, today);
+  const song = isSongId(exerciseId);
   const sessions = records
-    .filter(isSession)
+    .filter((r): r is SessionRecord | SongRecord => (song ? isSong(r) : isSession(r)))
     .filter((r) => r.exerciseId === exerciseId)
     .map((r) => ({ record: r, date: practiceDate(r) }))
     .filter(({ date }) => from === null || Temporal.PlainDate.compare(date, from) >= 0);
@@ -92,7 +109,7 @@ export function progress(
   const grouping: Grouping =
     range === "all" && oldest !== null && oldest.until(today).days >= DAILY_LIMIT_DAYS ? "week" : "day";
 
-  const periods = new Map<string, { start: Temporal.PlainDate; records: SessionRecord[] }>();
+  const periods = new Map<string, { start: Temporal.PlainDate; records: (SessionRecord | SongRecord)[] }>();
   for (const { record, date } of sessions) {
     const start = grouping === "week" ? weekStart(date, firstDay) : date;
     const key = start.toString();
@@ -104,20 +121,30 @@ export function progress(
   const points = [...periods.values()]
     .toSorted((a, b) => Temporal.PlainDate.compare(a.start, b.start))
     .map(({ start, records: rs }): ProgressPoint => {
-      // Weighted by notes, so a 16-loop session counts more than a 2-loop one.
+      // Weighted by notes (exercises) or hits (songs), so a 16-loop session counts more than a 2-loop one.
       let weighted = 0;
-      let notes = 0;
+      let weight = 0;
+      let bpm = 0;
+      let speed: number | null = null;
       for (const r of rs) {
+        if (r.kind === "song") {
+          weighted += r.onTime;
+          weight += r.scored;
+          speed = Math.max(speed ?? 0, r.speed);
+          continue;
+        }
+        bpm = Math.max(bpm, r.bpm);
         const a = r.accuracy[mode];
         if (a === null) continue;
         weighted += a * r.counts.notes;
-        notes += r.counts.notes;
+        weight += r.counts.notes;
       }
       return {
         start,
         end: grouping === "week" ? start.add({ days: 6 }) : start,
-        accuracy: notes > 0 ? weighted / notes : null,
-        bpm: Math.max(...rs.map((r) => r.bpm)),
+        accuracy: weight > 0 ? weighted / weight : null,
+        bpm,
+        speed,
         sessions: rs.length,
       };
     });
@@ -129,6 +156,12 @@ export function progress(
 export const formatPercent = (value: number) => `${Math.floor(value * 100 + 1e-9)}%`;
 
 const accuracyText = (p: ProgressPoint) => (p.accuracy === null ? "no score" : formatPercent(p.accuracy));
+
+/** "70% speed", or "full speed". */
+export const speedText = (speed: number) => (speed >= 1 ? "full speed" : `${Math.round(speed * 100)}% speed`);
+
+/** How fast a period was played: "84 BPM" for an exercise, "70% speed" for a song. */
+const pace = (p: ProgressPoint) => (p.speed === null ? `${p.bpm} BPM` : speedText(p.speed));
 
 /** "over 5 days", "over 3 weeks". */
 function spanLabel(first: Temporal.PlainDate, last: Temporal.PlainDate): string {
@@ -146,10 +179,16 @@ export function progressSummary(name: string, { points }: Progress): string {
   const last = points.at(-1);
   if (!first || !last) return `${name}: no sessions in this range.`;
   const sessions = points.reduce((n, p) => n + p.sessions, 0);
-  const plural = sessions === 1 ? "session" : "sessions";
+  const song = last.speed !== null;
+  const plural = song ? (sessions === 1 ? "play-along" : "play-alongs") : sessions === 1 ? "session" : "sessions";
   if (points.length === 1) {
-    return `${name}: ${accuracyText(last)} at up to ${last.bpm} BPM, ${sessions} ${plural}.`;
+    return `${name}: ${accuracyText(last)} at up to ${pace(last)}, ${sessions} ${plural}.`;
   }
-  const tempo = first.bpm === last.bpm ? `steady at ${last.bpm} BPM` : `${first.bpm} → ${last.bpm} BPM`;
+  const tempo =
+    pace(first) === pace(last)
+      ? `steady at ${pace(last)}`
+      : song
+        ? `${pace(first)} → ${pace(last)}`
+        : `${first.bpm} → ${last.bpm} BPM`;
   return `${name}: ${accuracyText(first)} → ${accuracyText(last)} ${spanLabel(first.start, last.end)}, ${tempo}, ${sessions} ${plural}.`;
 }

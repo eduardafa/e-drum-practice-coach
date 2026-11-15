@@ -3,7 +3,7 @@ import { songBars, type HistoryRecord, type SessionRecord, type SongRecord, type
 import { formatPracticeTime, practiceDate, practiceTimeOn, streak } from "./history/streak";
 import type { AccuracyMode } from "./playalong/results";
 import { tabId, tabPanelId, Tabs } from "./Tabs";
-import { PROGRESS_RANGES, practicedExercises, rangeStart, type ProgressRange } from "./history/progress";
+import { PROGRESS_RANGES, practicedExercises, practicedSongs, rangeStart, type ProgressRange } from "./history/progress";
 import { ProgressSection } from "./ProgressSection";
 import { TimingSection } from "./TimingSection";
 import { PadHeatmap } from "./PadHeatmap";
@@ -145,7 +145,7 @@ export function HistoryPage({ records, status, accuracyMode, selectedExerciseId,
 
             <FirstStepsSection records={records} accuracyMode={accuracyMode} />
 
-            {practicedExercises(records).length > 0 && (
+            {(practicedExercises(records).length > 0 || practicedSongs(records).length > 0) && (
               <>
                 <h3>Progress</h3>
                 {/* One range for everything below it, so the charts and timing agree. */}

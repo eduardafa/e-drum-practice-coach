@@ -1,7 +1,8 @@
 import { useId, useMemo, useState, type PointerEvent } from "react";
 import { formatPercent, type Grouping, type ProgressPoint } from "./history/progress";
 
-export type Measure = "accuracy" | "bpm";
+/** What a chart plots: accuracy, an exercise's tempo, or a song's playback speed (EDU-126). */
+export type Measure = "accuracy" | "bpm" | "speed";
 
 interface Props {
   title: string;
@@ -24,7 +25,7 @@ const EPOCH = Temporal.PlainDate.from("1970-01-01");
 const epochDay = (d: Temporal.PlainDate) => EPOCH.until(d).days;
 const shortDate = (d: Temporal.PlainDate) => d.toLocaleString(undefined, { day: "numeric", month: "short" });
 
-const valueOf = (p: ProgressPoint, measure: Measure) => (measure === "bpm" ? p.bpm : p.accuracy);
+const valueOf = (p: ProgressPoint, measure: Measure) => (measure === "bpm" ? p.bpm : measure === "speed" ? p.speed : p.accuracy);
 const format = (value: number, measure: Measure) => (measure === "bpm" ? String(value) : formatPercent(value));
 
 export function periodLabel(p: ProgressPoint, grouping: Grouping): string {
@@ -66,7 +67,8 @@ export function ProgressChart({ title, measure, points: all, grouping, from, to 
   const span = Math.max(1, epochDay(to) - x0);
   const x = (d: Temporal.PlainDate) => PAD.left + ((epochDay(d) - x0) / span) * PLOT_W;
 
-  const ticks = measure === "accuracy" ? [0, 0.5, 1] : fittedTicks(points.map((p) => p.value));
+  // Speeds run from half to full, so that's the scale: the climb to full speed fills the chart.
+  const ticks = measure === "accuracy" ? [0, 0.5, 1] : measure === "speed" ? [0.5, 0.75, 1] : fittedTicks(points.map((p) => p.value));
   const yMin = ticks[0] ?? 0;
   const yMax = ticks.at(-1) ?? 1;
   const y = (v: number) => PAD.top + (1 - (v - yMin) / (yMax - yMin || 1)) * PLOT_H;
@@ -136,7 +138,7 @@ export function ProgressChart({ title, measure, points: all, grouping, from, to 
           <ChartTip
             x={tipX}
             y={tipY}
-            value={`${format(shown.value, measure)}${measure === "bpm" ? " BPM" : ""}`}
+            value={`${format(shown.value, measure)}${measure === "bpm" ? " BPM" : measure === "speed" ? " speed" : ""}`}
             label={periodLabel(shown.point, grouping)}
           />
         )}
