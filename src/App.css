@@ -2528,9 +2528,11 @@ button.secondary.danger:hover:not(:disabled) {
 
 /* ---- Coach's notes (AI insights, EDU-53) ---- */
 
+/* The card (redesigned in EDU-119): a header with who wrote the tips and
+   when, the tips as numbered rows, then settings and fine print in a footer. */
 .insights {
   margin: 18px 0 4px;
-  padding: 14px 16px;
+  padding: 16px 18px 12px;
   border: 1px solid var(--border);
   border-left: 3px solid var(--accent);
   border-radius: 10px;
@@ -2538,14 +2540,35 @@ button.secondary.danger:hover:not(:disabled) {
 }
 
 .insights-head {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
+}
+
+/* The sparkle in a soft accent disc: the card's mark. */
+.insights-badge {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.insights-title {
+  min-width: 0;
 }
 
 .history-page .insights h3 {
   margin: 0;
+}
+
+.insights-byline {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--muted);
 }
 
 /* The ask button: an AI sparkle before the label (EDU-110). */
@@ -2675,31 +2698,84 @@ button.secondary.danger:hover:not(:disabled) {
   }
 }
 
+.insights-body {
+  margin-top: 14px;
+}
+
 .insights-headline {
-  margin: 10px 0 6px;
-  font-size: 15px;
-  font-weight: 600;
+  margin: 0 0 12px;
+  font-size: 17px;
+  font-weight: 650;
+  line-height: 1.35;
+  text-wrap: pretty;
 }
 
 .insights-tips {
+  display: grid;
+  gap: 8px;
+  list-style: none;
   margin: 0;
-  padding-left: 20px;
+  padding: 0;
 }
 
 .insights-tips li {
-  margin: 6px 0;
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.insights-tip-number {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.insights-tip-title {
+  display: block;
+  line-height: 26px;
+}
+
+.insights-tip-detail {
+  margin: 2px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--muted);
 }
 
 .insights-encouragement {
-  margin: 8px 0 0;
-  color: var(--muted);
+  margin: 12px 0 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  font-size: 14px;
+}
+
+.insights-foot {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.insights-foot .hint {
+  margin: 6px 0 0;
+  font-size: 12px;
 }
 
 .insights-model {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 20px;
-  margin-top: 8px;
 }
 
 .insights-model .field {
@@ -2713,6 +2789,19 @@ button.secondary.danger:hover:not(:disabled) {
 
 .insights .hint a {
   color: var(--accent);
+}
+
+/* Narrow screens: the button drops under the title. */
+@media (max-width: 480px) {
+  .insights-head {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .insights-ask,
+  .insights-thinking {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
 }
 
 /* History: the First steps path, one row per step. */
