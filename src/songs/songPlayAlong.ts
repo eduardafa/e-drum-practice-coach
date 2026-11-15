@@ -88,12 +88,13 @@ export class SongPlayAlong {
       const until = windowUntil(w, horizon);
       for (const step of takeSongSteps(this.grid, this.subdivision, this.cursor, Math.min(until, w.to))) {
         const time = this.clock.toPerformanceMs(windowAudioTime(w, step.time));
-        timing.add({ time, intervalMs: step.intervalSec * 1000, beat: step.beat, downbeat: step.downbeat });
+        // The gap in real time: longer when slowed down (EDU-122).
+        timing.add({ time, intervalMs: (step.intervalSec * 1000) / w.rate, beat: step.beat, downbeat: step.downbeat });
         live.addCount({ time, index: step.index, label: step.label, bar: step.bar });
         if (step.beat) live.addBeat({ time, downbeat: step.downbeat });
       }
       // Up to, not including, the loop's end: a note there is the next pass's first.
-      this.tabScoring?.plan(Math.min(until, w.to - 1e-6), (sec) => this.clock.toPerformanceMs(windowAudioTime(w, sec)));
+      this.tabScoring?.plan(Math.min(until, w.to - 1e-6), (sec) => this.clock.toPerformanceMs(windowAudioTime(w, sec)), w.rate);
     }
     this.tabScoring?.tick(performance.now());
   }

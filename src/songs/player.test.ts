@@ -51,7 +51,7 @@ describe("positionAt with a loop", () => {
 
 describe("songWindows", () => {
   it("is one window to the end of the song without a loop, and none while paused", () => {
-    expect(songWindows({ offset: 30, startedAt: 100 }, null, 180, 101, 0.5)).toEqual([{ pass: 0, from: 30, to: 180, audioStart: 100 }]);
+    expect(songWindows({ offset: 30, startedAt: 100 }, null, 180, 101, 0.5)).toEqual([{ pass: 0, from: 30, to: 180, audioStart: 100, rate: 1 }]);
     expect(songWindows({ offset: 30, startedAt: null }, null, 180, 101, 0.5)).toEqual([]);
   });
 
@@ -59,14 +59,14 @@ describe("songWindows", () => {
     const loop = { start: 10, end: 18 };
     const state = { offset: 12, startedAt: 100 };
     // The first pass ends at 106: far off at 101, so one window.
-    expect(songWindows(state, loop, 180, 101, 0.5)).toEqual([{ pass: 0, from: 12, to: 18, audioStart: 100 }]);
+    expect(songWindows(state, loop, 180, 101, 0.5)).toEqual([{ pass: 0, from: 12, to: 18, audioStart: 100, rate: 1 }]);
     // Half a second before it ends, the next pass is in reach too.
     expect(songWindows(state, loop, 180, 105.7, 0.5)).toEqual([
-      { pass: 0, from: 12, to: 18, audioStart: 100 },
-      { pass: 1, from: 10, to: 18, audioStart: 106 },
+      { pass: 0, from: 12, to: 18, audioStart: 100, rate: 1 },
+      { pass: 1, from: 10, to: 18, audioStart: 106, rate: 1 },
     ]);
     // Well into the third pass: only it (and later ones once in reach).
-    expect(songWindows(state, loop, 180, 115, 0.5)).toEqual([{ pass: 2, from: 10, to: 18, audioStart: 114 }]);
+    expect(songWindows(state, loop, 180, 115, 0.5)).toEqual([{ pass: 2, from: 10, to: 18, audioStart: 114, rate: 1 }]);
   });
 
   it("maps each window's song time to its own audio time, so a pass's first beat lands on the jump", () => {
@@ -75,11 +75,11 @@ describe("songWindows", () => {
     expect(second && windowAudioTime(second, 10.5)).toBe(106.5);
     // Plan no further than the audio horizon, nor past the window's end.
     expect(second && windowUntil(second, 106.2)).toBeCloseTo(10.2);
-    expect(windowUntil({ pass: 0, from: 12, to: 18, audioStart: 100 }, 200)).toBe(18);
+    expect(windowUntil({ pass: 0, from: 12, to: 18, audioStart: 100, rate: 1 }, 200)).toBe(18);
   });
 
   it("keeps a delayed start (the get-ready countdown) in the first window", () => {
-    expect(songWindows({ offset: 0, startedAt: 105 }, null, 60, 100, 0.5)).toEqual([{ pass: 0, from: 0, to: 60, audioStart: 105 }]);
+    expect(songWindows({ offset: 0, startedAt: 105 }, null, 60, 100, 0.5)).toEqual([{ pass: 0, from: 0, to: 60, audioStart: 105, rate: 1 }]);
   });
 });
 
@@ -115,5 +115,23 @@ describe("planWindows", () => {
     const cursor = { pass: -1, next: 0 };
     const all = [...plan(cursor, 100, 0.3), ...plan(cursor, 100.1, 0.3), ...plan(cursor, 100.3, 0.3), ...plan(cursor, 100.6, 0.6)];
     expect(all.map(([, at]) => at)).toEqual([100, 100.5, 101]);
+  });
+});
+
+describe("playing slowed down (EDU-122)", () => {
+  it("moves through the song at the rate, and maps song time to stretched audio time", () => {
+    const state = { offset: 10, startedAt: 100, rate: 0.7 };
+    expect(positionAt(state, 110, 180)).toBeCloseTo(17);
+    expect(audioTimeAt(state, 17)).toBeCloseTo(110);
+  });
+
+  it("stretches the windows and the loop's passes by 1 / rate", () => {
+    const loop = { start: 10, end: 17 };
+    // At 70%, 7 song seconds of loop take 10 audio seconds.
+    const [first, second] = songWindows({ offset: 10, startedAt: 100, rate: 0.7 }, loop, 180, 109.8, 0.5);
+    expect(first).toEqual({ pass: 0, from: 10, to: 17, audioStart: 100, rate: 0.7 });
+    expect(second).toEqual({ pass: 1, from: 10, to: 17, audioStart: 110, rate: 0.7 });
+    expect(second && windowAudioTime(second, 13.5)).toBeCloseTo(115);
+    expect(second && windowUntil(second, 115)).toBeCloseTo(13.5);
   });
 });
