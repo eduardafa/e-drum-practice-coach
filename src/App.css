@@ -2548,6 +2548,17 @@ button.secondary.danger:hover:not(:disabled) {
   margin: 0;
 }
 
+/* The ask button: an AI sparkle before the label (EDU-110). */
+.insights-ask {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sparkle-icon {
+  flex: none;
+}
+
 .insights-headline {
   margin: 10px 0 6px;
   font-size: 15px;
