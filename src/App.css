@@ -1223,7 +1223,8 @@ fieldset.group.play {
   overflow-y: auto;
 }
 
-.results .results-score {
+.results .results-score,
+.session-dialog .results-score {
   font-size: 44px;
   font-weight: 700;
   text-align: center;
@@ -1231,7 +1232,8 @@ fieldset.group.play {
   margin: 4px 0 0;
 }
 
-.results .calibration-meta {
+.results .calibration-meta,
+.session-dialog .calibration-meta {
   text-align: center;
 }
 
@@ -1867,6 +1869,147 @@ fieldset.group.play {
 
 .history-time {
   white-space: nowrap;
+}
+
+/* A session row is a button that opens its stats (EDU-115): the whole row,
+   laid out like the other rows, with a hover tint and a chevron. */
+.history-list li:has(> .history-open) {
+  display: block;
+  padding: 0;
+}
+
+.history-open {
+  display: grid;
+  grid-template-columns: max-content 1fr auto auto;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 6px 4px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.history-open::after {
+  content: "›";
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.history-open:hover {
+  background: var(--raised);
+}
+
+.history-open:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* One saved session's stats, as a modal dialog over History. */
+.session-dialog {
+  width: min(880px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: 0 20px 60px rgb(0 0 0 / 0.35);
+}
+
+.session-dialog::backdrop {
+  background: rgb(0 0 0 / 0.5);
+}
+
+.session-dialog-body {
+  padding: 18px 20px 20px;
+}
+
+.session-dialog-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.session-dialog-head h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.session-dialog-meta {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.session-dialog-score {
+  margin: 8px 0 14px;
+}
+
+/* On time / early / late / missed / extra, each in its result color. */
+.session-counts {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0 0 18px;
+}
+
+.session-count {
+  padding: 8px 6px;
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--tone, var(--border));
+  border-radius: 8px;
+  background: var(--bg);
+  text-align: center;
+}
+
+.session-count dt {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.session-count dd {
+  margin: 2px 0 0;
+  font-size: 20px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.session-count.on-time {
+  --tone: var(--on-time);
+}
+
+.session-count.early {
+  --tone: var(--early);
+}
+
+.session-count.late {
+  --tone: var(--late);
+}
+
+.session-count.missed {
+  --tone: var(--missed);
+}
+
+.session-count.extra {
+  --tone: var(--wrong-drum);
+}
+
+@media (max-width: 480px) {
+  .session-counts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .session-dialog-body {
+    padding: 14px;
+  }
 }
 
 .history-time,
