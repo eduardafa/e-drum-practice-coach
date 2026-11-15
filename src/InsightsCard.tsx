@@ -84,20 +84,27 @@ export function InsightsCard({ records, accuracyMode }: Props) {
     <section className="insights" aria-labelledby="insights-title" aria-busy={busy}>
       <div className="insights-head">
         <h3 id="insights-title">Coach's notes</h3>
-        <button
-          className="secondary insights-ask"
-          disabled={busy || left === 0 || !model}
-          onClick={releasing(() => void ask())}
-        >
-          {busy ? (
-            "Thinking"
-          ) : (
-            <>
-              <SparkleIcon />
-              {insight ? "New tips" : "Get coaching tips"}
-            </>
-          )}
-        </button>
+        {busy ? (
+          // Not a button while busy: a status line (<output> is announced, like role=status), with dots that pulse.
+          <output className="insights-thinking">
+            <SparkleIcon />
+            Thinking
+            <span className="thinking-dots" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </span>
+          </output>
+        ) : (
+          <button
+            className="secondary insights-ask"
+            disabled={left === 0 || !model}
+            onClick={releasing(() => void ask())}
+          >
+            <SparkleIcon />
+            {insight ? "New tips" : "Get coaching tips"}
+          </button>
+        )}
       </div>
       {model && (
         <div className="insights-model">
@@ -137,9 +144,17 @@ export function InsightsCard({ records, accuracyMode }: Props) {
       {!insight && !busy && !error && (
         <p className="hint">Tips on what to practice next, written from your last 30 days of practice.</p>
       )}
-      {insight && (
-        <>
-          <p className="insights-headline">{insight.headline}</p>
+      {busy ? (
+        // Where the tips will appear: a headline and two tips, as shimmering lines.
+        <div className="insights-placeholder" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </div>
+      ) : (
+        insight && (
+          <>
+            <p className="insights-headline">{insight.headline}</p>
           <ol className="insights-tips">
             {insight.tips.map((t) => (
               <li key={t.title}>
@@ -147,8 +162,9 @@ export function InsightsCard({ records, accuracyMode }: Props) {
               </li>
             ))}
           </ol>
-          <p className="insights-encouragement">{insight.encouragement}</p>
-        </>
+            <p className="insights-encouragement">{insight.encouragement}</p>
+          </>
+        )
       )}
       <p className="hint">
         {insight && reply?.model ? `Written by ${reply.model}` : "Written by AI"} from your practice numbers only (no names
