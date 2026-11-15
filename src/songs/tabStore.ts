@@ -19,9 +19,11 @@ export const MAX_TAB_NOTES = 10_000;
 export interface RememberedTab {
   fingerprint: string;
   name: string;
-  /** Song beats the tab is moved by (tab beat b lands on song beat b + shift). */
+  /** Song beats the tab is moved by (tab beat b lands on song beat b + shift); for a groove, counted from the song's first beat 1. */
   shift: number;
   tab: DrumTab;
+  /** Set when the tab is a groove from the library (EDU-89): its id. */
+  groove?: string;
 }
 
 /** How a note is written down: [beat, pad, 1 if an open hi-hat]. */
@@ -35,6 +37,7 @@ interface StoredTab {
   skipped: number;
   firstNoteSeconds: number;
   notes: StoredNote[];
+  groove?: string;
 }
 
 /** The part of Storage this needs, so tests can stand in a full one. */
@@ -54,7 +57,7 @@ function parseNote(x: unknown): TabNote | null {
 
 function parseTab(x: unknown): RememberedTab | null {
   if (!isRecord(x)) return null;
-  const { fingerprint, name, shift, beatsPerBar, skipped, firstNoteSeconds, notes } = x;
+  const { fingerprint, name, shift, beatsPerBar, skipped, firstNoteSeconds, notes, groove } = x;
   if (typeof fingerprint !== "string" || fingerprint.length === 0 || fingerprint.length > 40) return null;
   if (typeof name !== "string" || name.length > 300) return null;
   if (!finite(shift) || !Number.isInteger(shift) || Math.abs(shift) > 10_000) return null;
@@ -69,7 +72,9 @@ function parseTab(x: unknown): RememberedTab | null {
     if (!note) return null;
     parsed.push(note);
   }
-  return { fingerprint, name, shift, tab: { notes: parsed, beatsPerBar, skipped, firstNoteSeconds } };
+  // An unreadable groove id only loses the "it's a groove" mark.
+  const grooveId = typeof groove === "string" && groove.length > 0 && groove.length <= 60 ? groove : undefined;
+  return { fingerprint, name, shift, tab: { notes: parsed, beatsPerBar, skipped, firstNoteSeconds }, ...(grooveId && { groove: grooveId }) };
 }
 
 /** The saved tabs, newest first; malformed entries are dropped. */
@@ -78,8 +83,9 @@ export function parseTabs(raw: unknown): RememberedTab[] {
   return raw.flatMap((x) => parseTab(x) ?? []);
 }
 
-function encode({ fingerprint, name, shift, tab }: RememberedTab): StoredTab {
+function encode({ fingerprint, name, shift, tab, groove }: RememberedTab): StoredTab {
   return {
+    ...(groove && { groove }),
     fingerprint,
     name,
     shift,
