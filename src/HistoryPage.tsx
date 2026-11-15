@@ -11,6 +11,7 @@ import { heatmap } from "./history/heatmap";
 import { releasing } from "./releasing";
 import { InsightsCard } from "./InsightsCard";
 import { FirstStepsSection } from "./FirstStepsSection";
+import { SessionDialog } from "./SessionDialog";
 
 export type HistoryStatus = "loading" | "ready" | "off";
 
@@ -72,6 +73,9 @@ export function HistoryPage({ records, status, accuracyMode, selectedExerciseId,
   // Arriving on the page, start reading at its title.
   useEffect(() => headingRef.current?.focus(), []);
   const [confirming, setConfirming] = useState(false);
+  // The session whose stats are open, by id, so a sync that reloads the list keeps it open.
+  const [openId, setOpenId] = useState<string | null>(null);
+  const openRecord = records.find((r): r is SessionRecord => r.id === openId && r.kind === "session") ?? null;
   const [alsoAccount, setAlsoAccount] = useState(false);
   const [clearFailed, setClearFailed] = useState(false);
   const [range, setRange] = useState<ProgressRange>("30d");
@@ -171,11 +175,18 @@ export function HistoryPage({ records, status, accuracyMode, selectedExerciseId,
                 <ul className="history-list">
                   {g.items.map((r) => (
                     <li key={r.id}>
-                      <span className="history-time">{timeLabel(r)}</span>
                       {r.kind === "session" ? (
-                        <SessionEntry record={r} mode={accuracyMode} />
+                        // A session opens its own stats (EDU-115). No releasing(): History has no
+                        // drum keys, and the dialog returns focus to this row when it closes.
+                        <button className="history-open" aria-haspopup="dialog" onClick={() => setOpenId(r.id)}>
+                          <span className="history-time">{timeLabel(r)}</span>
+                          <SessionEntry record={r} mode={accuracyMode} />
+                        </button>
                       ) : (
-                        <TrainerEntry record={r} />
+                        <>
+                          <span className="history-time">{timeLabel(r)}</span>
+                          <TrainerEntry record={r} />
+                        </>
                       )}
                     </li>
                   ))}
@@ -233,6 +244,7 @@ export function HistoryPage({ records, status, accuracyMode, selectedExerciseId,
           </div>
         </div>
       )}
+      {openRecord && <SessionDialog record={openRecord} mode={accuracyMode} onClose={() => setOpenId(null)} />}
     </section>
   );
 }

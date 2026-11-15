@@ -441,8 +441,9 @@ export default function App() {
         return;
       }
       // On the History page, Esc goes back like its button; no drum or metronome keys there.
+      // With a modal dialog open (a session's stats), Esc is the dialog's: it closes that instead.
       if (view === "history") {
-        if (e.code === "Escape") backToPractice();
+        if (e.code === "Escape" && !document.querySelector("dialog:modal")) backToPractice();
         return;
       }
       // While browsing, keys move around the library: Space and Enter press its buttons, not the drums.
