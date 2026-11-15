@@ -14,6 +14,7 @@ import { SONG_VOLUME } from "./live/coach";
 import { tabTimeline } from "./songs/tabSong";
 import { checkSongFile, MAX_SONG_SECONDS, songFingerprint, songTitle, waveformPeaks } from "./songs/song";
 import { loadSongs, remember, saveSongs, type RememberedSong } from "./songs/songStore";
+import { forgetTab, keepTabsFor } from "./songs/tabStore";
 
 /** A MIDI file bigger than this isn't a drum part. */
 const MAX_TAB_FILE_BYTES = 4 * 1024 * 1024;
@@ -43,6 +44,8 @@ export function useSong(beforeOpen: () => void) {
   const store = (next: RememberedSong[]) => {
     setRemembered(next);
     saveSongs(next);
+    // A song that drops off the list takes its remembered tab with it.
+    keepTabsFor(next.map((s) => s.fingerprint));
   };
 
   const open = async (file: File) => {
@@ -202,8 +205,11 @@ export function useSong(beforeOpen: () => void) {
     setSong({ ...song, duration, grid, found: grid, tab: { ...current, speed } });
   };
 
-  /** Removes a song (and its saved beats) from this browser. */
-  const forget = (fingerprint: string) => store(remembered.filter((s) => s.fingerprint !== fingerprint));
+  /** Removes a song (its saved beats, and its tab) from this browser. */
+  const forget = (fingerprint: string) => {
+    forgetTab(fingerprint);
+    store(remembered.filter((s) => s.fingerprint !== fingerprint));
+  };
 
   return { song, loading, error, analyzing, remembered, open, openTab, setTabSpeed, close, forget, setGrid };
 }

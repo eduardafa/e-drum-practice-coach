@@ -7,6 +7,7 @@ import type { BeatGrid } from "./songs/beats";
 import { drumTabFrom, guessShift, placeTab, type DrumTab, type PlacedNote } from "./songs/drumTab";
 import { MidiError, readMidiDrums } from "./songs/midiFile";
 import { TAB_SPEEDS } from "./songs/tabSong";
+import { forgetTab, loadTab, saveTab, type SaveResult } from "./songs/tabStore";
 import type { TabNoteResult, TabScore } from "./songs/tabScoring";
 import { Segmented } from "./Segmented";
 import { SmallMetronome } from "./SmallMetronome";
@@ -64,9 +65,16 @@ export function DrumTabPanel({
   grid,
   fixed,
   showMetronome,
+  songFingerprint,
 }: {
   coach: Coach;
   grid: BeatGrid | null;
+  /**
+   * The open song's fingerprint: its tab is remembered in this browser under
+   * it and comes back, lined up, when the song is opened again (EDU-99).
+   * Absent for a tab practiced on its own, which isn't remembered.
+   */
+  songFingerprint?: string;
   /** Show the small metronome beside the tab, opposite the view choice (Settings). */
   showMetronome: boolean;
   /**
@@ -75,9 +83,29 @@ export function DrumTabPanel({
    */
   fixed?: OpenTab & { speed: number; onSpeed: (speed: number) => void };
 }) {
-  const [picked, setOpen] = useState<OpenTab | null>(null);
+  // The song's remembered tab, read once when the panel opens (it's keyed on the song).
+  const [remembered] = useState(() => (songFingerprint ? loadTab(songFingerprint) : null));
+  const [picked, setOpen] = useState<OpenTab | null>(() => (remembered ? { name: remembered.name, tab: remembered.tab } : null));
   const open = fixed ?? picked;
-  const [shift, setShift] = useState(0);
+  const [shift, setShift] = useState(remembered?.shift ?? 0);
+  // Whether the tab on screen could be remembered; only "too-long" and "full" are shown.
+  const [saved, setSaved] = useState<SaveResult>("saved");
+
+  // Remember the tab with its song whenever it's opened or moved; forget it when removed.
+  const persist = (tab: OpenTab | null, nextShift: number) => {
+    if (!songFingerprint) return;
+    if (!tab) {
+      forgetTab(songFingerprint);
+      setSaved("saved");
+      return;
+    }
+    setSaved(saveTab({ fingerprint: songFingerprint, name: tab.name, shift: nextShift, tab: tab.tab }));
+  };
+  const move = (beats: number) => {
+    const next = shift + beats;
+    setShift(next);
+    persist(picked, next);
+  };
   const [error, setError] = useState<string | null>(null);
   const [hear, setHear] = useState(fixed !== undefined);
   const [click, setClick] = useState(false);
@@ -120,8 +148,11 @@ export function DrumTabPanel({
         setError(`"${file.name}" has drums, but none on the kit's pads.`);
         return;
       }
-      setOpen({ name: file.name.replace(/\.[^.]+$/, ""), tab });
-      if (grid) setShift(guessShift(tab, grid));
+      const next = { name: file.name.replace(/\.[^.]+$/, ""), tab };
+      const nextShift = grid ? guessShift(tab, grid) : shift;
+      setOpen(next);
+      setShift(nextShift);
+      persist(next, nextShift);
     } catch (e) {
       setError(e instanceof MidiError ? `"${file.name}": ${e.message}` : `"${file.name}" couldn't be read.`);
     }
@@ -184,16 +215,16 @@ export function DrumTabPanel({
         ) : (
         <fieldset className="drum-tab-moves">
             <legend className="visually-hidden">Line the tab up with the song</legend>
-            <button className="secondary" onClick={releasing(() => setShift((s) => s - 4))} title="Move the tab a bar earlier">
+            <button className="secondary" onClick={releasing(() => move(-4))} title="Move the tab a bar earlier">
               Bar earlier
             </button>
-            <button className="secondary" onClick={releasing(() => setShift((s) => s - 1))} title="Move the tab a beat earlier">
+            <button className="secondary" onClick={releasing(() => move(-1))} title="Move the tab a beat earlier">
               Beat earlier
             </button>
-            <button className="secondary" onClick={releasing(() => setShift((s) => s + 1))} title="Move the tab a beat later">
+            <button className="secondary" onClick={releasing(() => move(1))} title="Move the tab a beat later">
               Beat later
             </button>
-            <button className="secondary" onClick={releasing(() => setShift((s) => s + 4))} title="Move the tab a bar later">
+            <button className="secondary" onClick={releasing(() => move(4))} title="Move the tab a bar later">
               Bar later
             </button>
           </fieldset>
@@ -209,13 +240,26 @@ export function DrumTabPanel({
         ) : (
           <>
             {picker("Another tab", "plain drum-tab-open")}
-            <button className="secondary" onClick={releasing(() => setOpen(null))}>
+            <button
+              className="secondary"
+              onClick={releasing(() => {
+                setOpen(null);
+                persist(null, 0);
+              })}
+            >
               Remove tab
             </button>
           </>
         )}
       </div>
       {error && <p className="hint warn-note">{error}</p>}
+      {songFingerprint && saved !== "saved" && (
+        <p className="hint">
+          {saved === "too-long"
+            ? "This tab is too long to remember: open it again next time you open the song."
+            : "Your browser's storage is full, so this tab won't be remembered: open it again next time you open the song."}
+        </p>
+      )}
       {placed && grid ? (
         <>
           <div className="drum-tab-view-row">

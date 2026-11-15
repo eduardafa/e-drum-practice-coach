@@ -234,13 +234,14 @@ export function SongPanel({
           onInput={(e) => coach.song.seek(Number(e.currentTarget.value), SONG_VOLUME)}
         />
       </div>
-      {/* A new song starts with no tab: the file belongs to the song it was opened with. */}
+      {/* Each song has its own tab: the one remembered with it, if any (EDU-99). */}
       <DrumTabPanel
         key={song.fingerprint}
         coach={coach}
         grid={song.grid}
         fixed={fixedTab}
         showMetronome={showMetronome}
+        songFingerprint={fixedTab ? undefined : song.fingerprint}
       />
       {song.grid && !along && !tabOnly && (
         <BeatGridTools
