@@ -3276,6 +3276,99 @@ button.secondary.danger:hover:not(:disabled) {
   color: var(--accent);
 }
 
+/* Song results (EDU-124): the drift timeline, a bar per bar of the song played. */
+.song-results-tab {
+  margin: 6px 0 0;
+  text-align: center;
+  font-size: 14px;
+}
+
+.song-drift h3 {
+  margin: 8px 0 2px;
+  font-size: 15px;
+}
+
+.song-drift-bars {
+  position: relative;
+  display: flex;
+  gap: 2px;
+  height: 96px;
+  margin-top: 8px;
+  padding: 0 2px;
+  overflow-x: auto;
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+/* The beat: the middle line. */
+.song-drift-bars::before {
+  content: "";
+  position: absolute;
+  inset: 50% 0 auto;
+  height: 1px;
+  background: var(--border);
+  pointer-events: none;
+}
+
+.song-drift-bar {
+  position: relative;
+  flex: 1 0 8px;
+  min-width: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: none;
+  cursor: pointer;
+}
+
+.song-drift-bar:hover,
+.song-drift-bar:focus-visible {
+  background: var(--raised);
+}
+
+.song-drift-bar:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.song-drift-fill {
+  position: absolute;
+  left: 15%;
+  right: 15%;
+  border-radius: 2px;
+  background: var(--muted);
+}
+
+.song-drift-bar.close .song-drift-fill {
+  background: var(--on-time);
+}
+
+.song-drift-bar.early .song-drift-fill {
+  background: var(--early);
+}
+
+.song-drift-bar.late .song-drift-fill {
+  background: var(--late);
+}
+
+.song-drift-bar.few .song-drift-fill {
+  opacity: 0.4;
+}
+
+/* The bar "Loop the hardest part" would pick. */
+.song-drift-bar.hardest {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.song-drift-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
 /* "Speed up as I get it" running: where it's at, and how the last pass went. */
 .song-loop-status {
   display: inline-flex;

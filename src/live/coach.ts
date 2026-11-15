@@ -13,6 +13,7 @@ import { SongPlayAlong } from "../songs/songPlayAlong";
 import type { SongTabScoring } from "../songs/tabScoring";
 import { SongTabSound } from "../songs/songTabSound";
 import { SONG_BEATS_PER_BAR } from "../songs/songSteps";
+import { MIN_RESULT_HITS, type SongHit, type SongRun } from "../songs/songResults";
 import { previewPlan, type PreviewPlan } from "../exercises/preview";
 import { subdivisionFor } from "../exercises/practice";
 import type { Exercise } from "../exercises/types";
@@ -104,6 +105,11 @@ export class Coach {
   private readonly songClick = new SongClick();
   /** Drumming along to the song, scored against its beats; null otherwise. */
   private songAlong: SongPlayAlong | null = null;
+  /** Each scored hit of the current song play-along, with where in the song it was (EDU-124). */
+  private songHits: SongHit[] = [];
+  /** The last play-along worth a results screen, numbered so the screen can tell a new one. */
+  private lastSongRun: { id: number; run: Omit<SongRun, "title"> } | null = null;
+  private songRuns = 0;
   /** The tab's scoring from the last play-along, kept on screen after it stops. */
   private lastSongTabScore: SongTabScoring | null = null;
   private songAlongTimer: ReturnType<typeof setInterval> | null = null;
@@ -306,11 +312,25 @@ export class Coach {
     this.songCountdownEndMs = countdownSec > 0 ? performance.now() + (startAt - ctx.currentTime) * 1000 : 0;
     this.song.play(ctx, SONG_VOLUME, startAt);
     this.lastSongTabScore = null;
+    this.songHits = [];
     this.songAlong = new SongPlayAlong(grid, this.metronome.currentSettings.subdivision, this.scoring, this.songTab);
     this.song.onEnded = () => this.endSongPlayAlong();
     const tick = () => this.songAlong?.tick(ctx, this.song, this.grid, this.live);
     this.songAlongTimer = setInterval(tick, SONG_ALONG_TICK_MS);
     tick();
+  }
+
+  /** The last song play-along with enough hits for a results screen (EDU-124), or null. */
+  get songRun(): { id: number; run: Omit<SongRun, "title"> } | null {
+    return this.lastSongRun;
+  }
+
+  /** Where in the song a hit at performance time `time` (ms) landed: now's position, wound back, into the loop if it wrapped. */
+  private songTimeOf(time: number): number {
+    let at = this.song.position() - ((performance.now() - time) / 1000) * this.song.speed;
+    const loop = this.song.loop;
+    if (loop && at < loop.start) at += loop.end - loop.start;
+    return Math.max(0, at);
   }
 
   /** Whether the drummer is playing along to the song (countdown included). */
@@ -333,6 +353,22 @@ export class Coach {
     this.songCountdownEndMs = 0;
     if (!this.songAlong) return;
     this.lastSongTabScore = this.songAlong.tabScore;
+    // Enough played to be worth a results screen: keep a snapshot of the run.
+    if (this.songHits.length >= MIN_RESULT_HITS) {
+      this.lastSongRun = {
+        id: ++this.songRuns,
+        run: {
+          speed: this.song.speed,
+          hits: this.songHits,
+          scored: this.live.scoredHits,
+          onTimeHits: this.live.onTimeHits,
+          meanMs: this.live.scoredHits > 0 ? this.live.sumDeltaMs / this.live.scoredHits : null,
+          spreadMs: this.live.spreadMs,
+          tab: this.songAlong.tabScore?.score() ?? null,
+        },
+      };
+    }
+    this.songHits = [];
     this.songAlong = null;
     this.song.onEnded = null;
     this.song.pause();
@@ -565,13 +601,18 @@ export class Coach {
     }
     // While calibrating, show raw timing: the offset being measured isn't applied.
     const scoring = this.calibration ? { ...this.scoring, latencyOffsetMs: 0 } : this.scoring;
+    const score = this.counting ? scoreHit(this.grid, time, scoring) : null;
     this.live.addHit({
       pad: mapping?.pad ?? null,
       zone: mapping?.zone ?? null,
       note: event.note,
       velocity: event.velocity,
       time,
-      score: this.counting ? scoreHit(this.grid, time, scoring) : null,
+      score,
     });
+    // Playing along to a song: remember where in it each scored hit was, for the drift timeline.
+    if (this.songAlong && score) {
+      this.songHits.push({ at: this.songTimeOf(time), deltaMs: score.deltaMs, onTime: score.verdict === "onTime" });
+    }
   }
 }
