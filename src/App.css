@@ -2420,8 +2420,22 @@ button.primary.danger {
   align-items: start;
 }
 
+/* The streak, today and longest tiles: a centered group in the main column,
+   each tile's content centered both ways (a wrapped note can make one taller),
+   with the line under them centered to match. */
 .history-page .tiles {
   max-width: 520px;
+  margin-inline: auto;
+}
+
+.history-page .tiles > div {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.history-streak-hint {
+  text-align: center;
 }
 
 @media (max-width: 900px) {
