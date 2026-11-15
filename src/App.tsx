@@ -35,7 +35,7 @@ import { useSync } from "./history/useSync";
 import { localLedger } from "./history/sync";
 import { deleteAccount, deleteSyncedHistory } from "./account/account";
 import { AccountMenu } from "./AccountMenu";
-import { sessionRecord, trainerRecord, type HistoryRecord, type SessionRecord } from "./history/record";
+import { sessionRecord, songRecord, trainerRecord, type HistoryRecord, type SessionRecord } from "./history/record";
 import { formatPracticeTime, practiceTimeOn, streak } from "./history/streak";
 import {
   DEFAULT_SKILL_LEVEL,
@@ -316,6 +316,40 @@ export default function App() {
     setRunning(false);
     closeLibrary();
   });
+
+  // Every song play-along that ends with enough played is saved too (EDU-125), loop-trainer passes included.
+  // A tab practiced on its own isn't a song, so it isn't saved.
+  const openSongRef = useRef(songs.song);
+  useEffect(() => {
+    openSongRef.current = songs.song;
+  });
+  useEffect(
+    () =>
+      coach.onSongRunEnd((end) => {
+        const song = openSongRef.current;
+        if (!song || song.tab) return;
+        saveRecordRef.current(
+          songRecord(
+            { id: crypto.randomUUID(), start: end.start, durationMs: end.durationMs, timeZone: end.timeZone },
+            {
+              title: song.title,
+              fingerprint: song.fingerprint,
+              speed: end.run.speed,
+              section: end.section,
+              scoring: end.scoring,
+              scored: end.run.scored,
+              onTime: end.run.onTimeHits,
+              meanMs: end.run.meanMs,
+              spreadMs: end.run.spreadMs,
+              tab: end.run.tab,
+              bars: end.run.bars,
+              loopRunId: end.loopRunId,
+            },
+          ),
+        );
+      }),
+    [],
+  );
   const kit = useKitMapping(midi, () => {
     setSettingsOpen(false);
     closeLibrary();

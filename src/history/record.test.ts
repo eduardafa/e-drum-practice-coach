@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { findExercise } from "../exercises/library";
 import type { Exercise } from "../exercises/types";
 import { PlayAlongSession } from "../playalong/session";
-import { parseRecord, sessionRecord, trainerRecord, type RecordMeta } from "./record";
+import { parseRecord, sessionRecord, songBars, songRecord, trainerRecord, type RecordMeta } from "./record";
 
 const SCORING = { toleranceMs: 20, latencyOffsetMs: 0 };
 
@@ -114,5 +114,55 @@ describe("parseRecord", () => {
     expect(parseRecord({ ...s, bpm: "fast" })).toBeNull();
     expect(parseRecord({ ...s, notes: [[1, 0, 3]] })).toBeNull();
     expect(parseRecord({ ...s, kind: "concert" })).toBeNull();
+  });
+});
+
+describe("song records (EDU-125)", () => {
+  const input = {
+    title: "Ghosts I",
+    fingerprint: "8c-197gw",
+    speed: 0.7,
+    section: { start: 4.5046712, end: 12.5039456 },
+    scoring: SCORING,
+    scored: 41,
+    onTime: 30,
+    meanMs: 14.123,
+    spreadMs: 29.456,
+    tab: null,
+    bars: [
+      { bar: 6, start: 11.0047, end: 13.004, hits: 4, meanMs: 34.21, onTime: 0.5 },
+      { bar: 7, start: 13.004, end: 15.0039, hits: 0, meanMs: null, onTime: null },
+    ],
+    loopRunId: "loop-1-abcd",
+  };
+
+  it("names the song by title and fingerprint, compacts the bars, and reads back after a JSON round trip", () => {
+    const r = songRecord(META, input);
+    expect(r).toMatchObject({ kind: "song", exerciseId: "song:8c-197gw", exerciseName: "Ghosts I", speed: 0.7, section: [4.505, 12.504] });
+    expect(r.bars).toEqual([
+      [6, 11.005, 13.004, 4, 34.2, 0.5],
+      [7, 13.004, 15.004, 0, null, null],
+    ]);
+    expect(parseRecord(JSON.parse(JSON.stringify(r)))).toEqual(r);
+    expect(songBars(r)[0]).toEqual({ bar: 6, start: 11.005, end: 13.004, hits: 4, meanMs: 34.2, onTime: 0.5 });
+  });
+
+  it("keeps a drum tab's score, and no audio at all", () => {
+    const tab = { played: 20, hit: 18, onTime: 15, early: 2, late: 1, missed: 2, wrongDrum: 1, extra: 3 };
+    const r = songRecord(META, { ...input, tab, section: null, loopRunId: null });
+    expect(parseRecord(JSON.parse(JSON.stringify(r)))).toMatchObject({ tab, section: null, loopRunId: null });
+    expect(Object.keys(r)).not.toContain("audio");
+  });
+
+  it("rejects a malformed song record instead of breaking the history", () => {
+    const r = songRecord(META, input);
+    expect(parseRecord({ ...r, speed: 2 })).toBeNull();
+    expect(parseRecord({ ...r, bars: [[1, 0, 2, 3]] })).toBeNull();
+    expect(parseRecord({ ...r, tab: { played: 1 } })).toBeNull();
+    expect(parseRecord({ ...r, fingerprint: "" })).toBeNull();
+  });
+
+  it("is skipped by a kind this build doesn't know, as older builds skip song records", () => {
+    expect(parseRecord({ ...songRecord(META, input), kind: "lesson" })).toBeNull();
   });
 });

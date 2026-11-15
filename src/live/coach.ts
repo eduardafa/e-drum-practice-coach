@@ -13,7 +13,7 @@ import { SongPlayAlong } from "../songs/songPlayAlong";
 import type { SongTabScoring } from "../songs/tabScoring";
 import { SongTabSound } from "../songs/songTabSound";
 import { SONG_BEATS_PER_BAR } from "../songs/songSteps";
-import { MIN_RESULT_HITS, type SongHit, type SongRun } from "../songs/songResults";
+import { MIN_RESULT_HITS, driftByBar, type SongHit, type SongRun } from "../songs/songResults";
 import { previewPlan, type PreviewPlan } from "../exercises/preview";
 import { subdivisionFor } from "../exercises/practice";
 import type { Exercise } from "../exercises/types";
@@ -91,6 +91,21 @@ export function songTabCues(tab: readonly PlacedNote[], position: number, loop: 
   return cuesAt(near, position * 1000, TAB_CUE_LEAD_SEC * 1000);
 }
 
+/** A finished song play-along: what the results screen shows, and what History keeps about it. */
+export interface SongRunEnd {
+  /** Numbered, so the results screen opens once per run. */
+  id: number;
+  run: Omit<SongRun, "title">;
+  /** When the song started (after any countdown), how long it went on, and where. */
+  start: Temporal.Instant;
+  durationMs: number;
+  timeZone: string;
+  /** The loop played, or null. */
+  section: SongLoop | null;
+  loopRunId: string | null;
+  scoring: { toleranceMs: number; latencyOffsetMs: number };
+}
+
 export class Coach {
   readonly midi = new MidiConnection();
   readonly grid = new TimingGrid();
@@ -108,8 +123,11 @@ export class Coach {
   /** Each scored hit of the current song play-along, with where in the song it was (EDU-124). */
   private songHits: SongHit[] = [];
   /** The last play-along worth a results screen, numbered so the screen can tell a new one. */
-  private lastSongRun: { id: number; run: Omit<SongRun, "title"> } | null = null;
+  private lastSongRun: SongRunEnd | null = null;
   private songRuns = 0;
+  /** When the current song play-along started (wall clock once, then performance.now()), and its loop-trainer run, if any. */
+  private songAlongStart: { at: Temporal.Instant; perfMs: number; timeZone: string; loopRunId: string | null } | null = null;
+  private readonly songRunListeners = new Set<(end: SongRunEnd) => void>();
   /** The tab's scoring from the last play-along, kept on screen after it stops. */
   private lastSongTabScore: SongTabScoring | null = null;
   private songAlongTimer: ReturnType<typeof setInterval> | null = null;
@@ -294,7 +312,7 @@ export class Coach {
    * subdivision setting). An optional get-ready countdown of `countdownSec`
    * seconds comes first. Call from a user gesture.
    */
-  async startSongPlayAlong(grid: BeatGrid, countdownSec = 0): Promise<void> {
+  async startSongPlayAlong(grid: BeatGrid, countdownSec = 0, loopRunId: string | null = null): Promise<void> {
     if (this.calibrating || !this.song.loaded) return;
     this.endMapping();
     this.endLearn();
@@ -313,6 +331,13 @@ export class Coach {
     this.song.play(ctx, SONG_VOLUME, startAt);
     this.lastSongTabScore = null;
     this.songHits = [];
+    // The record's start is when the song itself starts, after any countdown.
+    this.songAlongStart = {
+      at: Temporal.Now.instant().add({ milliseconds: Math.round((startAt - ctx.currentTime) * 1000) }),
+      perfMs: performance.now() + (startAt - ctx.currentTime) * 1000,
+      timeZone: Temporal.Now.timeZoneId(),
+      loopRunId,
+    };
     this.songAlong = new SongPlayAlong(grid, this.metronome.currentSettings.subdivision, this.scoring, this.songTab);
     this.song.onEnded = () => this.endSongPlayAlong();
     const tick = () => this.songAlong?.tick(ctx, this.song, this.grid, this.live);
@@ -321,8 +346,14 @@ export class Coach {
   }
 
   /** The last song play-along with enough hits for a results screen (EDU-124), or null. */
-  get songRun(): { id: number; run: Omit<SongRun, "title"> } | null {
+  get songRun(): SongRunEnd | null {
     return this.lastSongRun;
+  }
+
+  /** Calls `listener` each time a song play-along ends with enough played to keep (EDU-125: saved to History). */
+  onSongRunEnd(listener: (end: SongRunEnd) => void): () => void {
+    this.songRunListeners.add(listener);
+    return () => this.songRunListeners.delete(listener);
   }
 
   /** Where in the song a hit at performance time `time` (ms) landed: now's position, wound back, into the loop if it wrapped. */
@@ -354,21 +385,31 @@ export class Coach {
     if (!this.songAlong) return;
     this.lastSongTabScore = this.songAlong.tabScore;
     // Enough played to be worth a results screen: keep a snapshot of the run.
-    if (this.songHits.length >= MIN_RESULT_HITS) {
-      this.lastSongRun = {
+    const start = this.songAlongStart;
+    if (this.songHits.length >= MIN_RESULT_HITS && start) {
+      const end: SongRunEnd = {
         id: ++this.songRuns,
         run: {
           speed: this.song.speed,
-          hits: this.songHits,
+          bars: driftByBar(this.songAlong.grid, this.songHits, this.song.duration),
           scored: this.live.scoredHits,
           onTimeHits: this.live.onTimeHits,
           meanMs: this.live.scoredHits > 0 ? this.live.sumDeltaMs / this.live.scoredHits : null,
           spreadMs: this.live.spreadMs,
           tab: this.songAlong.tabScore?.score() ?? null,
         },
+        start: start.at,
+        durationMs: Math.max(0, performance.now() - start.perfMs),
+        timeZone: start.timeZone,
+        section: this.song.loop,
+        loopRunId: start.loopRunId,
+        scoring: { toleranceMs: this.scoring.toleranceMs, latencyOffsetMs: this.scoring.latencyOffsetMs },
       };
+      this.lastSongRun = end;
+      for (const listener of this.songRunListeners) listener(end);
     }
     this.songHits = [];
+    this.songAlongStart = null;
     this.songAlong = null;
     this.song.onEnded = null;
     this.song.pause();

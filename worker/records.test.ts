@@ -101,6 +101,14 @@ describe("records sync", () => {
     expect(page2.body.more).toBe(false);
   });
 
+  it("keeps song play-alongs (EDU-125) like any other record, and still rejects unknown kinds", async () => {
+    const { env, cookieFor } = await setup();
+    const me = await cookieFor("1");
+    const song = record("s", { kind: "song", fingerprint: "abc", bars: [[1, 0, 2, 4, 3.5, 0.75]] });
+    expect(await (await push(env, me, [song, record("x", { kind: "lesson" })])).json()).toEqual({ stored: 1, known: 0, rejected: ["x"] });
+    expect((await pull(env, me)).body.records).toEqual([song]);
+  });
+
   it("rejects malformed or oversized records by ID, keeping the rest", async () => {
     const { env, cookieFor } = await setup();
     const me = await cookieFor("1");

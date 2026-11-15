@@ -350,8 +350,6 @@ export function SongPanel({
       {results && song.grid && (
         <SongResultsDialog
           run={results}
-          grid={song.grid}
-          duration={song.duration}
           toleranceMs={coach.scoring.toleranceMs}
           onLoopFrom={(seconds) => {
             const grid = song.grid;

@@ -1,6 +1,6 @@
 /**
- * Practice history records: one per finished play-along session and one per
- * tempo-trainer run. Plain, versioned JSON, so they can be stored in
+ * Practice history records: one per finished play-along session, one per
+ * tempo-trainer run, and one per song play-along (EDU-125). Plain, versioned JSON, so they can be stored in
  * IndexedDB now and uploaded unchanged to a backend later.
  *
  * Dates are Temporal strings: the start as an Instant (an exact moment) and
@@ -18,6 +18,8 @@ import type { PadId } from "../kit/nitroMax";
 import type { NoteResult, PlayedHit } from "../playalong/matcher";
 import type { AccuracyMode, SessionResults } from "../playalong/results";
 import type { ExpectedNote } from "../playalong/timeline";
+import type { BarDrift } from "../songs/songResults";
+import type { TabScore } from "../songs/tabScoring";
 import type { RoundRecord, TrainerConfig } from "../playalong/trainer";
 
 export const RECORD_VERSION = 1;
@@ -67,7 +69,40 @@ export interface TrainerRecord extends RecordBase {
   reason: "target" | "stopped";
 }
 
-export type HistoryRecord = SessionRecord | TrainerRecord;
+/** A bar of a song's drift timeline: [bar, start s, end s, hits, average ms (null: no hits), on-time share (null: no hits)]. */
+export type BarTuple = [bar: number, start: number, end: number, hits: number, meanMs: number | null, onTime: number | null];
+
+/**
+ * A song play-along (EDU-125). The song is named by its title and fingerprint
+ * (`exerciseId` is "song:" + fingerprint, `exerciseName` its title); its audio
+ * is never kept. The drift is kept per bar, which is all the results screen
+ * needs, on any device, without the song's beats.
+ */
+export interface SongRecord extends RecordBase {
+  kind: "song";
+  fingerprint: string;
+  /** Playback speed: 1, or 0.85, 0.7, 0.5 from a slowed copy. */
+  speed: number;
+  /** The loop played, [start, end] in song seconds, or null for the song as it came. */
+  section: [start: number, end: number] | null;
+  toleranceMs: number;
+  latencyOffsetMs: number;
+  /** Scored hits, and how many were on the beat. */
+  scored: number;
+  onTime: number;
+  meanDeltaMs: number | null;
+  spreadMs: number | null;
+  /** With a drum tab open: its note-by-note score. */
+  tab: TabScore | null;
+  bars: BarTuple[];
+  /** Set for a "speed up as I get it" pass: shared by the passes of one run. */
+  loopRunId: string | null;
+}
+
+export type HistoryRecord = SessionRecord | TrainerRecord | SongRecord;
+
+/** Whether a record counts as practice for streaks and practice time: a session or a song play-along. */
+export const isPractice = (r: HistoryRecord): r is SessionRecord | SongRecord => r.kind === "session" || r.kind === "song";
 
 /** When and where a record happened, measured by the caller. */
 export interface RecordMeta {
@@ -217,6 +252,96 @@ function validTrainer(r: Rec): boolean {
   );
 }
 
+const TAB_KEYS = ["played", "hit", "onTime", "early", "late", "missed", "wrongDrum", "extra"] as const;
+
+function validSong(r: Rec): boolean {
+  const { section, tab } = r;
+  return (
+    isStr(r.fingerprint) &&
+    isNum(r.speed) &&
+    r.speed > 0 &&
+    r.speed <= 1 &&
+    (section === null || (Array.isArray(section) && section.length === 2 && isNum(section[0]) && isNum(section[1]))) &&
+    isNum(r.toleranceMs) &&
+    isNum(r.latencyOffsetMs) &&
+    isNum(r.scored) &&
+    isNum(r.onTime) &&
+    isNumOrNull(r.meanDeltaMs) &&
+    isNumOrNull(r.spreadMs) &&
+    (tab === null || (isRec(tab) && TAB_KEYS.every((k) => isNum(tab[k])))) &&
+    Array.isArray(r.bars) &&
+    r.bars.every(
+      (b) =>
+        Array.isArray(b) &&
+        b.length === 6 &&
+        isNum(b[0]) &&
+        isNum(b[1]) &&
+        isNum(b[2]) &&
+        isNum(b[3]) &&
+        isNumOrNull(b[4]) &&
+        isNumOrNull(b[5]),
+    ) &&
+    (r.loopRunId === null || isStr(r.loopRunId))
+  );
+}
+
+/** The input for a song record: what the results screen showed, and about which song. */
+export interface SongInput {
+  title: string;
+  fingerprint: string;
+  speed: number;
+  section: { start: number; end: number } | null;
+  scoring: { toleranceMs: number; latencyOffsetMs: number };
+  scored: number;
+  onTime: number;
+  meanMs: number | null;
+  spreadMs: number | null;
+  tab: TabScore | null;
+  bars: readonly BarDrift[];
+  loopRunId: string | null;
+}
+
+const round3 = (x: number) => Math.round(x * 1000) / 1000;
+
+export function songRecord(meta: RecordMeta, input: SongInput): SongRecord {
+  return {
+    v: RECORD_VERSION,
+    id: meta.id,
+    start: meta.start.toString(),
+    duration: Temporal.Duration.from({ milliseconds: Math.max(0, Math.round(meta.durationMs)) })
+      .round({ largestUnit: "hours", smallestUnit: "milliseconds" })
+      .toString(),
+    timeZone: meta.timeZone,
+    exerciseId: `song:${input.fingerprint}`,
+    exerciseName: input.title,
+    kind: "song",
+    fingerprint: input.fingerprint,
+    speed: input.speed,
+    section: input.section ? [round3(input.section.start), round3(input.section.end)] : null,
+    toleranceMs: input.scoring.toleranceMs,
+    latencyOffsetMs: input.scoring.latencyOffsetMs,
+    scored: input.scored,
+    onTime: input.onTime,
+    meanDeltaMs: input.meanMs === null ? null : round1(input.meanMs),
+    spreadMs: input.spreadMs === null ? null : round1(input.spreadMs),
+    tab: input.tab,
+    bars: input.bars.map((b) => [
+      b.bar,
+      round3(b.start),
+      round3(b.end),
+      b.hits,
+      b.meanMs === null ? null : round1(b.meanMs),
+      b.onTime === null ? null : round3(b.onTime),
+    ]),
+    loopRunId: input.loopRunId,
+  };
+}
+
+/** A song record's bars, back in the results screen's shape. */
+export function songBars(record: SongRecord): BarDrift[] {
+  return record.bars.map(([bar, start, end, hits, meanMs, onTime]) => ({ bar, start, end, hits, meanMs, onTime }));
+}
+
 /**
  * Checks a stored record. Anything malformed, or from a newer version this
  * build doesn't understand, is skipped rather than breaking the history.
@@ -228,5 +353,7 @@ export function parseRecord(raw: unknown): HistoryRecord | null {
   if (raw.kind === "session" && validSession(raw)) return raw as unknown as SessionRecord;
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion
   if (raw.kind === "trainer" && validTrainer(raw)) return raw as unknown as TrainerRecord;
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+  if (raw.kind === "song" && validSong(raw)) return raw as unknown as SongRecord;
   return null;
 }

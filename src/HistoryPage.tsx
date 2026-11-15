@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { HistoryRecord, SessionRecord, TrainerRecord } from "./history/record";
+import { songBars, type HistoryRecord, type SessionRecord, type SongRecord, type TrainerRecord } from "./history/record";
 import { formatPracticeTime, practiceDate, practiceTimeOn, streak } from "./history/streak";
 import type { AccuracyMode } from "./playalong/results";
 import { tabId, tabPanelId, Tabs } from "./Tabs";
@@ -12,6 +12,7 @@ import { releasing } from "./releasing";
 import { InsightsCard } from "./InsightsCard";
 import { FirstStepsSection } from "./FirstStepsSection";
 import { SessionDialog } from "./SessionDialog";
+import { SongResultsDialog } from "./SongResultsDialog";
 
 export type HistoryStatus = "loading" | "ready" | "off";
 
@@ -61,7 +62,7 @@ function timeLabel(record: HistoryRecord): string {
  */
 function entries(records: readonly HistoryRecord[]): HistoryRecord[] {
   const runs = new Set(records.filter((r) => r.kind === "trainer").map((r) => r.id));
-  return records.filter((r) => r.kind === "trainer" || r.trainerRunId === null || !runs.has(r.trainerRunId));
+  return records.filter((r) => r.kind !== "session" || r.trainerRunId === null || !runs.has(r.trainerRunId));
 }
 
 /**
@@ -75,7 +76,7 @@ export function HistoryPage({ records, status, accuracyMode, selectedExerciseId,
   const [confirming, setConfirming] = useState(false);
   // The session whose stats are open, by id, so a sync that reloads the list keeps it open.
   const [openId, setOpenId] = useState<string | null>(null);
-  const openRecord = records.find((r): r is SessionRecord => r.id === openId && r.kind === "session") ?? null;
+  const openRecord = records.find((r): r is SessionRecord | SongRecord => r.id === openId && r.kind !== "trainer") ?? null;
   const [alsoAccount, setAlsoAccount] = useState(false);
   const [clearFailed, setClearFailed] = useState(false);
   const [range, setRange] = useState<ProgressRange>("30d");
@@ -175,12 +176,12 @@ export function HistoryPage({ records, status, accuracyMode, selectedExerciseId,
                 <ul className="history-list">
                   {g.items.map((r) => (
                     <li key={r.id}>
-                      {r.kind === "session" ? (
-                        // A session opens its own stats (EDU-115). No releasing(): History has no
-                        // drum keys, and the dialog returns focus to this row when it closes.
+                      {r.kind !== "trainer" ? (
+                        // A session or song play-along opens its own stats (EDU-115, EDU-125). No releasing():
+                        // History has no drum keys, and the dialog returns focus to this row when it closes.
                         <button className="history-open" aria-haspopup="dialog" onClick={() => setOpenId(r.id)}>
                           <span className="history-time">{timeLabel(r)}</span>
-                          <SessionEntry record={r} mode={accuracyMode} />
+                          {r.kind === "session" ? <SessionEntry record={r} mode={accuracyMode} /> : <SongEntry record={r} />}
                         </button>
                       ) : (
                         <>
@@ -244,7 +245,15 @@ export function HistoryPage({ records, status, accuracyMode, selectedExerciseId,
           </div>
         </div>
       )}
-      {openRecord && <SessionDialog record={openRecord} mode={accuracyMode} onClose={() => setOpenId(null)} />}
+      {openRecord?.kind === "session" && <SessionDialog record={openRecord} mode={accuracyMode} onClose={() => setOpenId(null)} />}
+      {openRecord?.kind === "song" && (
+        <SongResultsDialog
+          run={songRun(openRecord)}
+          toleranceMs={openRecord.toleranceMs}
+          when={playedLabel(openRecord)}
+          onClose={() => setOpenId(null)}
+        />
+      )}
     </section>
   );
 }
@@ -261,6 +270,48 @@ function SessionEntry({ record, mode }: { record: SessionRecord; mode: AccuracyM
       <span className="history-score">{pct(record.accuracy[mode])}</span>
     </>
   );
+}
+
+/** "70% speed · loop 0:12–0:20", "full speed", for a song play-along's row. */
+function songDetail(record: SongRecord): string {
+  const speed = record.speed >= 1 ? "full speed" : `${Math.round(record.speed * 100)}% speed`;
+  const section = record.section ? ` · loop ${clock(record.section[0])}–${clock(record.section[1])}` : "";
+  return `${speed}${section}${record.loopRunId ? " · speeding up" : ""}`;
+}
+
+const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
+
+function SongEntry({ record }: { record: SongRecord }) {
+  return (
+    <>
+      <span className="history-what">
+        Song · {record.exerciseName}
+        <span className="history-detail">{songDetail(record)}</span>
+      </span>
+      <span className="history-score">{record.scored > 0 ? pct(record.onTime / record.scored) : "—"}</span>
+    </>
+  );
+}
+
+/** A saved song play-along, in the results screen's shape. */
+function songRun(record: SongRecord) {
+  return {
+    title: record.exerciseName,
+    speed: record.speed,
+    bars: songBars(record),
+    scored: record.scored,
+    onTimeHits: record.onTime,
+    meanMs: record.meanDeltaMs,
+    spreadMs: record.spreadMs,
+    tab: record.tab,
+  };
+}
+
+/** "Sun, Nov 15, 1:22 PM", where it was played. */
+function playedLabel(record: HistoryRecord): string {
+  return Temporal.Instant.from(record.start)
+    .toZonedDateTimeISO(record.timeZone)
+    .toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
 function TrainerEntry({ record }: { record: TrainerRecord }) {
