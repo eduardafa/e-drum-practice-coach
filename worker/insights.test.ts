@@ -2,7 +2,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { findOrCreateUser } from "./auth/oauth";
 import { createSession } from "./auth/sessions";
 import { handle } from "./index";
-import { DAILY_LIMIT, InsightError, MONTHLY_BUDGET_MICROS, createInsight, parseInsight, type Insight, type WriteInsight } from "./insights";
+import {
+  DAILY_LIMIT,
+  EARLIER_LIMIT,
+  InsightError,
+  MONTHLY_BUDGET_MICROS,
+  createInsight,
+  parseInsight,
+  type Insight,
+  type WriteInsight,
+} from "./insights";
 import type { TestD1 } from "./testing/d1";
 import { ORIGIN, request, testEnv } from "./testing/env";
 
@@ -147,6 +156,106 @@ describe("writing insights", () => {
     await createInsight(post(cookie, { n: 1 }), env, userId, noon, fakeWriter().write);
     db?.query("DELETE FROM users");
     expect(db?.query("SELECT COUNT(*) AS n FROM insights")).toEqual([{ n: 0 }]);
+  });
+});
+
+interface InsightsBody {
+  id: number | null;
+  insight: Insight | null;
+  earlier: { id: number; createdAt: string; model: string; insight: Insight }[];
+  remainingToday: number;
+}
+
+async function getInsights(env: Env, cookie: string): Promise<InsightsBody> {
+  return (await handle(request("/api/insights", { headers: { Cookie: cookie } }), env)).json();
+}
+
+const deleteRequest = (env: Env, cookie: string, query: string, origin = ORIGIN) =>
+  handle(request(`/api/insights?${query}`, { method: "DELETE", headers: { Cookie: cookie, Origin: origin } }), env);
+
+/** n sets of tips, one per hour on the same day, each from different stats. */
+async function writeSets(env: Env, userId: string, cookie: string, n: number, day = "2026-11-13") {
+  const { write } = fakeWriter();
+  for (let i = 0; i < n; i++) {
+    // oxlint-disable-next-line no-await-in-loop -- in order: each set is an hour after the last
+    await createInsight(post(cookie, { n: i }), env, userId, new Date(`${day}T${String(i).padStart(2, "0")}:00:00Z`), write);
+  }
+}
+
+describe("earlier tips and deleting them (EDU-112)", () => {
+  it("lists the sets before the latest, newest first, each with its id, date and model", async () => {
+    const { env, signIn } = await setup();
+    const { userId, cookie } = await signIn("42");
+    await writeSets(env, userId, cookie, 3);
+    const body = await getInsights(env, cookie);
+    expect(body.insight).toEqual(INSIGHT);
+    expect(body.earlier.map((e) => e.createdAt)).toEqual(["2026-11-13T01:00:00.000Z", "2026-11-13T00:00:00.000Z"]);
+    expect(body.earlier[0]).toMatchObject({ model: "Claude Haiku 5.5", insight: INSIGHT });
+    expect(new Set([body.id, ...body.earlier.map((e) => e.id)]).size).toBe(3);
+  });
+
+  it(`keeps at most ${EARLIER_LIMIT} earlier sets and leaves out failed calls`, async () => {
+    const { env, signIn } = await setup();
+    const { userId, cookie } = await signIn("42");
+    // Over several days, to stay under the daily limit.
+    for (let day = 10; day < 10 + Math.ceil((EARLIER_LIMIT + 3) / DAILY_LIMIT); day++) {
+      // oxlint-disable-next-line no-await-in-loop -- in order: later days get later ids
+      await writeSets(env, userId, cookie, DAILY_LIMIT, `2026-10-${day}`);
+    }
+    await createInsight(post(cookie, { failed: true }), env, userId, noon, failing);
+    const body = await getInsights(env, cookie);
+    expect(body.insight).toEqual(INSIGHT);
+    expect(body.earlier).toHaveLength(EARLIER_LIMIT);
+  });
+
+  it("deletes one set: its text is erased, the row and its cost stay, and today's count doesn't go back up", async () => {
+    const { env, signIn } = await setup();
+    const { userId, cookie } = await signIn("42");
+    await writeSets(env, userId, cookie, 2);
+    const before = await getInsights(env, cookie);
+    const target = before.earlier[0]?.id ?? 0;
+    const res = await deleteRequest(env, cookie, `id=${target}`);
+    expect(res.status).toBe(200);
+    expect(db?.query("SELECT body, cost_micros, deleted_at IS NOT NULL AS deleted FROM insights WHERE id = ?", target)).toEqual([
+      { body: "null", cost_micros: 60_000, deleted: 1 },
+    ]);
+    const after = await getInsights(env, cookie);
+    expect(after.earlier).toEqual([]);
+    expect(after.id).toBe(before.id);
+    expect(after.remainingToday).toBe(before.remainingToday);
+  });
+
+  it("deletes every set with ?all=true, and the next ask with the same stats is a new call", async () => {
+    const { env, signIn } = await setup();
+    const { userId, cookie } = await signIn("42");
+    await writeSets(env, userId, cookie, 3);
+    expect(await (await deleteRequest(env, cookie, "all=true")).json()).toEqual({ deleted: 3 });
+    const after = await getInsights(env, cookie);
+    expect(after).toMatchObject({ id: null, insight: null, earlier: [] });
+    expect(db?.query("SELECT COUNT(*) AS n FROM insights WHERE body = 'null'")).toEqual([{ n: 3 }]);
+
+    const { write, calls } = fakeWriter();
+    await createInsight(post(cookie, { n: 0 }), env, userId, new Date("2026-11-13T05:00:00Z"), write);
+    expect(calls).toHaveLength(1);
+  });
+
+  it("can't delete another account's tips, and says so the same way as a missing id", async () => {
+    const { env, signIn } = await setup("github:42,github:7");
+    const owner = await signIn("42");
+    const other = await signIn("7");
+    await writeSets(env, owner.userId, owner.cookie, 1);
+    const id = (await getInsights(env, owner.cookie)).id ?? 0;
+    expect((await deleteRequest(env, other.cookie, `id=${id}`)).status).toBe(404);
+    expect((await deleteRequest(env, owner.cookie, "id=999999")).status).toBe(404);
+    expect((await getInsights(env, owner.cookie)).id).toBe(id);
+  });
+
+  it("needs an id or all=true, and the app's own origin", async () => {
+    const { env, signIn } = await setup();
+    const { cookie } = await signIn("42");
+    expect((await deleteRequest(env, cookie, "")).status).toBe(400);
+    expect((await deleteRequest(env, cookie, "id=abc")).status).toBe(400);
+    expect((await deleteRequest(env, cookie, "all=true", "https://evil.example")).status).toBe(403);
   });
 });
 

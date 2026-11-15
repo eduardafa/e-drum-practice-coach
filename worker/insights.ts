@@ -56,19 +56,64 @@ export async function insightsAllowed(env: Env, userId: string): Promise<boolean
 const modelList = (env: Env) =>
   availableModels(env).map((m) => ({ id: m.id, provider: m.provider, label: m.label, approxCostPerTip: approxCostPerTip(m) }));
 
-/** GET /api/insights: the latest insight, the models on offer and today's remaining count; 404 when not allowed. */
+/** How many sets of tips before the current one the card can show again (EDU-112). */
+export const EARLIER_LIMIT = 30;
+
+interface InsightRow {
+  id: number;
+  body: string;
+  created_at: string;
+  model: string;
+}
+
+const modelLabel = (id: string) => findModel(id)?.label ?? id;
+
+/**
+ * GET /api/insights: the latest insight, up to EARLIER_LIMIT earlier ones
+ * (newest first), the models on offer and today's remaining count; 404 when
+ * not allowed. Failed calls and deleted sets are left out.
+ */
 export async function latestInsight(_request: Request, env: Env, userId: string, now = new Date()): Promise<Response> {
   if (!(await insightsAllowed(env, userId))) return problem(404, "not-found", "No such API route.");
-  const row = await env.DB.prepare("SELECT body, created_at, model FROM insights WHERE user_id = ? AND day != 'failed' ORDER BY id DESC LIMIT 1")
-    .bind(userId)
-    .first<{ body: string; created_at: string; model: string }>();
+  const { results } = await env.DB.prepare(
+    "SELECT id, body, created_at, model FROM insights WHERE user_id = ? AND day != 'failed' AND deleted_at IS NULL ORDER BY id DESC LIMIT ?",
+  )
+    .bind(userId, EARLIER_LIMIT + 1)
+    .all<InsightRow>();
+  const [row, ...rest] = results;
   return json({
+    id: row?.id ?? null,
     insight: row ? parseInsight(row.body) : null,
     createdAt: row?.created_at ?? null,
-    model: row ? (findModel(row.model)?.label ?? row.model) : null,
+    model: row ? modelLabel(row.model) : null,
+    earlier: rest.flatMap((r) => {
+      const insight = parseInsight(r.body);
+      return insight ? [{ id: r.id, createdAt: r.created_at, model: modelLabel(r.model), insight }] : [];
+    }),
     remainingToday: await remainingToday(env, userId, now),
     models: modelList(env),
   });
+}
+
+/**
+ * DELETE /api/insights?id=N deletes one set of tips, ?all=true every set.
+ * The text is erased; the row stays (date, model, cost) so the daily limit
+ * and monthly budget still count it.
+ */
+export async function deleteInsights(request: Request, env: Env, userId: string, now = new Date()): Promise<Response> {
+  if (!(await insightsAllowed(env, userId))) return problem(404, "not-found", "No such API route.");
+  const params = new URL(request.url).searchParams;
+  const erase = "UPDATE insights SET body = 'null', deleted_at = ? WHERE user_id = ? AND deleted_at IS NULL AND day != 'failed'";
+  if (params.get("all") === "true") {
+    const { meta } = await env.DB.prepare(erase).bind(now.toISOString(), userId).run();
+    return json({ deleted: meta.changes });
+  }
+  const id = Number(params.get("id"));
+  if (!Number.isSafeInteger(id) || id <= 0) return problem(400, "bad-request", "Say which tips: ?id=N, or ?all=true.");
+  const { meta } = await env.DB.prepare(`${erase} AND id = ?`).bind(now.toISOString(), userId, id).run();
+  // Someone else's id, or one already deleted: the same answer, so ids reveal nothing.
+  if (meta.changes === 0) return problem(404, "not-found", "No such tips.");
+  return json({ deleted: 1 });
 }
 
 async function remainingToday(env: Env, userId: string, now: Date): Promise<number> {
@@ -114,7 +159,7 @@ export async function createInsight(
 
   // Same stats, same model, same day: no new call.
   const hit = await env.DB.prepare(
-    "SELECT body, created_at FROM insights WHERE user_id = ? AND day = ? AND summary_hash = ? AND model = ? ORDER BY id DESC LIMIT 1",
+    "SELECT body, created_at FROM insights WHERE user_id = ? AND day = ? AND summary_hash = ? AND model = ? AND deleted_at IS NULL ORDER BY id DESC LIMIT 1",
   )
     .bind(userId, day, hash, model.id)
     .first<{ body: string; created_at: string }>();

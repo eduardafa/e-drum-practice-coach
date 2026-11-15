@@ -14,6 +14,14 @@ export interface AiModelOption {
   approxCostPerTip: number;
 }
 
+/** A set of tips written before the current one (EDU-112). */
+export interface EarlierInsight {
+  id: number;
+  createdAt: string;
+  model: string;
+  insight: Insight;
+}
+
 export interface InsightReply {
   insight: Insight | null;
   createdAt: string | null;
@@ -22,6 +30,8 @@ export interface InsightReply {
   remainingToday: number;
   /** Only on GET: the models on offer, cheapest first per provider. */
   models: AiModelOption[] | null;
+  /** Only on GET: earlier sets of tips, newest first. */
+  earlier: EarlierInsight[] | null;
 }
 
 function parseModels(x: unknown): AiModelOption[] | null {
@@ -46,6 +56,15 @@ function parseInsight(x: unknown): Insight | null {
   return { headline: x.headline, tips, encouragement: x.encouragement };
 }
 
+function parseEarlier(x: unknown): EarlierInsight[] | null {
+  if (!Array.isArray(x)) return null;
+  return x.flatMap((e) => {
+    if (!isObject(e) || typeof e.id !== "number" || typeof e.createdAt !== "string" || typeof e.model !== "string") return [];
+    const insight = parseInsight(e.insight);
+    return insight ? [{ id: e.id, createdAt: e.createdAt, model: e.model, insight }] : [];
+  });
+}
+
 function parseReply(x: unknown): InsightReply {
   if (!isObject(x)) throw new Error("Unexpected reply");
   return {
@@ -54,6 +73,7 @@ function parseReply(x: unknown): InsightReply {
     model: typeof x.model === "string" ? x.model : null,
     remainingToday: typeof x.remainingToday === "number" ? x.remainingToday : 0,
     models: parseModels(x.models),
+    earlier: parseEarlier(x.earlier),
   };
 }
 
@@ -82,6 +102,16 @@ export async function requestInsight(summary: object, model: string): Promise<In
       body: JSON.stringify({ model, summary }),
     }),
   );
+}
+
+/** Deletes one earlier set of tips, or every set with "all" (EDU-112). */
+export async function deleteInsights(which: number | "all"): Promise<void> {
+  const query = which === "all" ? "all=true" : `id=${which}`;
+  const res = await fetch(`/api/insights?${query}`, { method: "DELETE", credentials: "same-origin" });
+  if (!res.ok) {
+    const body: unknown = await res.json().catch(() => null);
+    throw new InsightUnavailable(isObject(body) && typeof body.message === "string" ? body.message : "Couldn't delete the tips just now.");
+  }
 }
 
 const MODEL_KEY = "edrum-coach:insights-model";
