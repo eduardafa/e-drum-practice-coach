@@ -1710,7 +1710,14 @@ fieldset.group.play {
   color: var(--muted);
 }
 
+/* One grid for the whole list, shared by every row (subgrid): the value
+   column takes the width of its longest entry ("±12 ms · 1714 hits, 206
+   missed" after a month), so nothing spills into the heatmap beside it, and
+   the tracks still line up from row to row. */
 .timing-rows {
+  display: grid;
+  grid-template-columns: minmax(84px, max-content) minmax(56px, 1fr) auto;
+  column-gap: 10px;
   list-style: none;
   margin: 8px 0 0;
   padding: 0;
@@ -1718,9 +1725,9 @@ fieldset.group.play {
 
 .timing-row {
   display: grid;
-  grid-template-columns: 84px 1fr 118px;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   align-items: center;
-  gap: 10px;
   padding: 5px 0;
   border-bottom: 1px solid var(--border);
 }
@@ -1802,16 +1809,23 @@ fieldset.group.play {
   white-space: nowrap;
 }
 
+/* May wrap when the column is squeezed; the headline value above never does. */
 .timing-detail {
   display: block;
   font-size: 11px;
   color: var(--muted);
+  white-space: normal;
 }
 
 /* Narrow screens: the name and values on one line, the track full width below. */
 @media (max-width: 480px) {
+  .timing-rows {
+    display: block;
+  }
+
   .timing-row {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 10px;
     grid-template-areas:
       "label value"
       "track track";
@@ -2397,10 +2411,11 @@ button.primary.danger {
   border-left: 1px solid var(--border);
 }
 
-/* Timing and the heatmap side by side when there's room. */
+/* Timing and the heatmap side by side when there's room (min() so a phone
+   narrower than 320 px gets one column that fits, not a sideways scroll). */
 .history-pair {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
   gap: 24px;
   align-items: start;
 }
