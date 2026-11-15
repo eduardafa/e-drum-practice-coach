@@ -18,7 +18,7 @@ import type { ScoringOptions } from "../timing/grid";
 import type { TimingGrid } from "../timing/grid";
 import type { BeatGrid } from "./beats";
 import type { PlacedNote } from "./drumTab";
-import type { SongPlayer } from "./player";
+import { windowAudioTime, windowUntil, type SongPlayer } from "./player";
 import { cursorAt, takeSongSteps, type SongCursor } from "./songSteps";
 import { SongTabScoring } from "./tabScoring";
 
@@ -30,6 +30,8 @@ export class SongPlayAlong {
   private cursor: SongCursor | null = null;
   /** The playback run the steps were planned for; a seek starts a new one. */
   private run = -1;
+  /** The loop pass the cursors are in (EDU-121): each new pass plans again from the loop's start. */
+  private pass = -1;
   private tabScoring: SongTabScoring | null = null;
 
   constructor(
@@ -63,6 +65,7 @@ export class SongPlayAlong {
     if (player.run !== this.run || !this.cursor) {
       // Started, or moved to another point: plan again from where the song is.
       this.run = player.run;
+      this.pass = -1;
       this.cursor = cursorAt(this.grid, this.subdivision, player.position());
       timing.clear();
       live.beats.length = 0;
@@ -70,20 +73,28 @@ export class SongPlayAlong {
       this.tabScoring = null;
     }
     if (this.tab && !this.tabScoring) this.tabScoring = new SongTabScoring(this.tab, this.scoring, player.position());
-    for (const step of takeSongSteps(this.grid, this.subdivision, this.cursor, player.position() + LOOKAHEAD_SEC)) {
-      const at = player.audioTimeAt(step.time);
-      if (at === null) continue;
-      const time = this.clock.toPerformanceMs(at);
-      timing.add({ time, intervalMs: step.intervalSec * 1000, beat: step.beat, downbeat: step.downbeat });
-      live.addCount({ time, index: step.index, label: step.label, bar: step.bar });
-      if (step.beat) live.addBeat({ time, downbeat: step.downbeat });
+    const horizon = ctx.currentTime + LOOKAHEAD_SEC;
+    for (const w of player.windows(LOOKAHEAD_SEC)) {
+      if (w.pass < this.pass) continue;
+      if (w.pass > this.pass) {
+        // The first window carries on from the cursors set above; a later pass is the loop
+        // again, so the counts and the tab's notes start over from its start.
+        if (this.pass >= 0) {
+          this.cursor = cursorAt(this.grid, this.subdivision, w.from);
+          this.tabScoring?.rewind(w.from);
+        }
+        this.pass = w.pass;
+      }
+      const until = windowUntil(w, horizon);
+      for (const step of takeSongSteps(this.grid, this.subdivision, this.cursor, Math.min(until, w.to))) {
+        const time = this.clock.toPerformanceMs(windowAudioTime(w, step.time));
+        timing.add({ time, intervalMs: step.intervalSec * 1000, beat: step.beat, downbeat: step.downbeat });
+        live.addCount({ time, index: step.index, label: step.label, bar: step.bar });
+        if (step.beat) live.addBeat({ time, downbeat: step.downbeat });
+      }
+      // Up to, not including, the loop's end: a note there is the next pass's first.
+      this.tabScoring?.plan(Math.min(until, w.to - 1e-6), (sec) => this.clock.toPerformanceMs(windowAudioTime(w, sec)));
     }
-    if (this.tabScoring) {
-      this.tabScoring.plan(player.position() + LOOKAHEAD_SEC, (sec) => {
-        const at = player.audioTimeAt(sec);
-        return at === null ? null : this.clock.toPerformanceMs(at);
-      });
-      this.tabScoring.tick(performance.now());
-    }
+    this.tabScoring?.tick(performance.now());
   }
 }

@@ -7,7 +7,7 @@
  */
 import { playPad } from "../audio/voices";
 import type { PlacedNote } from "./drumTab";
-import type { SongPlayer } from "./player";
+import { planWindows, type PassCursor, type SongPlayer } from "./player";
 
 /** How far ahead sounds are scheduled, in seconds of song. */
 const LOOKAHEAD_SEC = 0.25;
@@ -25,7 +25,8 @@ export function firstNoteFrom(notes: readonly PlacedNote[], seconds: number): nu
 
 export class SongTabSound {
   private out: GainNode | null = null;
-  private next = 0;
+  /** Where planning got to, pass by pass (EDU-121). */
+  private cursor: PassCursor = { pass: -1, next: 0 };
   private plannedFor: { run: number; notes: readonly PlacedNote[] } | null = null;
 
   /** Call every frame while the song is shown; `notes` null (or not playing) silences it. */
@@ -39,15 +40,21 @@ export class SongTabSound {
       this.out = ctx.createGain();
       this.out.connect(ctx.destination);
       this.plannedFor = { run: player.run, notes };
-      this.next = firstNoteFrom(notes, player.position());
+      this.cursor = { pass: -1, next: 0 };
     }
-    this.out.gain.value = volume;
-    const until = player.position() + LOOKAHEAD_SEC;
-    while (this.next < notes.length && notes[this.next].time <= until) {
-      const note = notes[this.next++];
-      const at = player.audioTimeAt(note.time);
-      if (at !== null && at >= ctx.currentTime) playPad(ctx, this.out, note.pad, at, "normal", note.open);
-    }
+    const out = this.out;
+    out.gain.value = volume;
+    planWindows(
+      player.windows(LOOKAHEAD_SEC),
+      ctx.currentTime + LOOKAHEAD_SEC,
+      this.cursor,
+      notes.length,
+      (i) => notes[i].time,
+      (sec) => firstNoteFrom(notes, sec),
+      (i, at) => {
+        if (at >= ctx.currentTime) playPad(ctx, out, notes[i].pad, at, "normal", notes[i].open);
+      },
+    );
   }
 
   cancel(): void {

@@ -6,7 +6,7 @@
  */
 import { playClick } from "../audio/voices";
 import type { BeatGrid } from "./beats";
-import type { SongPlayer } from "./player";
+import { planWindows, type PassCursor, type SongPlayer } from "./player";
 
 /** How far ahead clicks are scheduled, in seconds of song. More than a few frames, so a slow frame doesn't drop one. */
 const LOOKAHEAD_SEC = 0.25;
@@ -41,7 +41,8 @@ export function firstBeatFrom(grid: BeatGrid, seconds: number): number {
 
 export class SongClick {
   private scheduled: OscillatorNode[] = [];
-  private next = 0;
+  /** Where planning got to, pass by pass (EDU-121: a loop's new pass starts again from its start). */
+  private cursor: PassCursor = { pass: -1, next: 0 };
   /** What the scheduled clicks were planned against; any change means replanning. */
   private plannedFor: { run: number; grid: BeatGrid } | null = null;
 
@@ -54,15 +55,21 @@ export class SongClick {
     if (this.plannedFor?.run !== player.run || this.plannedFor.grid !== grid) {
       this.cancel();
       this.plannedFor = { run: player.run, grid };
-      // A beat already under way at the current position is skipped rather than clicked late.
-      this.next = firstBeatFrom(grid, player.position());
+      this.cursor = { pass: -1, next: 0 };
     }
-    for (const beat of beatsUntil(grid, this.next, player.position() + LOOKAHEAD_SEC)) {
-      this.next = beat.index + 1;
-      const at = player.audioTimeAt(beat.time);
-      if (at === null || at < ctx.currentTime) continue;
-      this.scheduled.push(playClick(ctx, out, at, beat.downbeat ? "downbeat" : "beat", volume));
-    }
+    planWindows(
+      player.windows(LOOKAHEAD_SEC),
+      ctx.currentTime + LOOKAHEAD_SEC,
+      this.cursor,
+      grid.beats.length,
+      (i) => grid.beats[i],
+      (sec) => firstBeatFrom(grid, sec),
+      (i, at) => {
+        // A beat already under way is skipped rather than clicked late.
+        if (at < ctx.currentTime) return;
+        this.scheduled.push(playClick(ctx, out, at, isDownbeat(grid, i) ? "downbeat" : "beat", volume));
+      },
+    );
     // Forget the clicks that have played.
     if (this.scheduled.length > 16) this.scheduled = this.scheduled.slice(-8);
   }

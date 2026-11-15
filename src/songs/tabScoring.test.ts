@@ -124,6 +124,26 @@ describe("SongTabScoring", () => {
   });
 });
 
+describe("SongTabScoring over a loop (EDU-121)", () => {
+  it("rewound to the loop's start, scores its notes again as a new pass, and each note shows its latest result", () => {
+    const s = new SongTabScoring(TAB, SCORING, 0);
+    // First pass: song seconds 1..2 heard at 11 000..12 000 ms; everything missed.
+    s.plan(1.99, toMs);
+    s.tick(toMs(2.5));
+    expect(s.score()).toMatchObject({ played: 5, missed: 5 });
+    expect(s.resultOf(0)?.result.status).toBe("missed");
+
+    // The loop goes back to 1 s; this pass is heard 2 s later.
+    const pass2 = (sec: number) => toMs(sec) + 2000;
+    s.rewind(1);
+    s.plan(1.99, pass2);
+    s.hit({ pad: "kick", zone: "head", time: pass2(1) });
+    s.tick(pass2(1.2));
+    expect(s.resultOf(0)?.result).toMatchObject({ status: "hit", verdict: "onTime" });
+    expect(s.score()).toMatchObject({ hit: 1 });
+  });
+});
+
 describe("tabMark", () => {
   const results = new Map<number, TabNoteResult>([
     [0, { result: { status: "hit", deltaMs: 5, verdict: "onTime" }, wrongDrum: false }],

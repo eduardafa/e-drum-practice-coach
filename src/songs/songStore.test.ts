@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseBeatsRequest } from "./beatsMessages";
-import { MAX_REMEMBERED, parseGrid, parseSongs, remember, type RememberedSong } from "./songStore";
+import { MAX_REMEMBERED, parseGrid, parseLoop, parseSongs, remember, type RememberedSong } from "./songStore";
 
 const grid = { beats: [0.5, 1, 1.5, 2], firstDownbeat: 1, bpm: 120 };
 const song = (fingerprint: string, title = fingerprint): RememberedSong => ({
@@ -62,5 +62,21 @@ describe("parseBeatsRequest", () => {
     expect(parseBeatsRequest({ samples: [0, 1], sampleRate: 44100 })).toBeNull();
     expect(parseBeatsRequest({ samples, sampleRate: 5 })).toBeNull();
     expect(parseBeatsRequest(null)).toBeNull();
+  });
+});
+
+describe("a song's loop (EDU-121)", () => {
+  it("is kept when it fits the song, and dropped on its own when it doesn't", () => {
+    expect(parseSongs([{ ...song("a"), loop: { start: 10, end: 18 } }])[0]?.loop).toEqual({ start: 10, end: 18 });
+    const bad = parseSongs([{ ...song("b"), loop: { start: 18, end: 10 } }]);
+    expect(bad).toHaveLength(1);
+    expect(bad[0]?.loop).toBeUndefined();
+  });
+
+  it("must lie within the song", () => {
+    expect(parseLoop({ start: 0, end: 180 }, 180)).toEqual({ start: 0, end: 180 });
+    expect(parseLoop({ start: 170, end: 190 }, 180)).toBeNull();
+    expect(parseLoop({ start: -1, end: 5 }, 180)).toBeNull();
+    expect(parseLoop("loop", 180)).toBeNull();
   });
 });

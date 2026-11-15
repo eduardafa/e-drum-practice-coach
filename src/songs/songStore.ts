@@ -6,6 +6,7 @@
  * found so they can go back to it). Validated on load, like the settings.
  */
 import type { BeatGrid } from "./beats";
+import type { SongLoop } from "./player";
 
 export interface RememberedSong {
   fingerprint: string;
@@ -18,6 +19,8 @@ export interface RememberedSong {
   grid: BeatGrid;
   /** The beats as the app found them, kept only once the drummer has corrected them. */
   found?: BeatGrid;
+  /** The section set to repeat (EDU-121), in seconds. */
+  loop?: SongLoop;
 }
 
 const KEY = "edrum-coach:songs:v1";
@@ -40,6 +43,13 @@ export function parseGrid(value: unknown): BeatGrid | null {
   return { beats, firstDownbeat, bpm };
 }
 
+export function parseLoop(value: unknown, duration: unknown): SongLoop | null {
+  if (!isRecord(value) || typeof duration !== "number") return null;
+  const { start, end } = value;
+  if (typeof start !== "number" || typeof end !== "number" || !Number.isFinite(start) || !Number.isFinite(end)) return null;
+  return start >= 0 && end > start && end <= duration ? { start, end } : null;
+}
+
 function parseSong(value: unknown): RememberedSong | null {
   if (!isRecord(value)) return null;
   const { fingerprint, title, duration, lastOpened } = value;
@@ -48,14 +58,15 @@ function parseSong(value: unknown): RememberedSong | null {
   if (typeof title !== "string" || title.length > 300) return null;
   if (typeof duration !== "number" || !Number.isFinite(duration) || duration <= 0) return null;
   if (typeof lastOpened !== "string" || !grid) return null;
-  // A bad copy of the found beats only loses the way back to them.
+  // A bad copy of the found beats only loses the way back to them; a bad loop, only the loop.
   const found = value.found === undefined ? null : parseGrid(value.found);
+  const loop = value.loop === undefined ? null : parseLoop(value.loop, duration);
   try {
     Temporal.Instant.from(lastOpened);
   } catch {
     return null;
   }
-  return { fingerprint, title, duration, lastOpened, grid, ...(found && { found }) };
+  return { fingerprint, title, duration, lastOpened, grid, ...(found && { found }), ...(loop && { loop }) };
 }
 
 /** The saved list, newest first; malformed entries are dropped. */

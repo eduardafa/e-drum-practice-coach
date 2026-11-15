@@ -6,7 +6,7 @@ import { Metronome } from "../audio/metronome";
 import { GuideTrack } from "../audio/guideTrack";
 import { PreviewPlayer } from "../audio/previewPlayer";
 import type { BeatGrid } from "../songs/beats";
-import { SongPlayer } from "../songs/player";
+import { SongPlayer, type SongLoop } from "../songs/player";
 import { SongClick } from "../songs/songClick";
 import type { PlacedNote } from "../songs/drumTab";
 import { SongPlayAlong } from "../songs/songPlayAlong";
@@ -67,16 +67,26 @@ export type SessionEndListener = (session: PlayAlongSession, timing: SessionTimi
 const TAB_CUE_LEAD_SEC = 0.6;
 
 /** The next pads to light from a song's tab at song position `position` (seconds). */
-export function songTabCues(tab: readonly PlacedNote[], position: number): PadCue[] {
-  // Only the notes near now: the tab is in time order.
-  let lo = 0, hi = tab.length;
-  while (lo < hi) {
-    const mid = (lo + hi) >>> 1;
-    if (tab[mid].time < position - 1) lo = mid + 1;
-    else hi = mid;
-  }
+export function songTabCues(tab: readonly PlacedNote[], position: number, loop: SongLoop | null = null): PadCue[] {
   const near: { time: number; pad: PlacedNote["pad"] }[] = [];
-  for (let i = lo; i < tab.length && tab[i].time <= position + TAB_CUE_LEAD_SEC; i++) near.push({ time: tab[i].time * 1000, pad: tab[i].pad });
+  /** The notes from song time `from` up to `until` (and before a loop's end), heard `offset` seconds later than written. */
+  const collect = (from: number, until: number, offset: number) => {
+    // Only the notes near now: the tab is in time order.
+    let lo = 0, hi = tab.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >>> 1;
+      if (tab[mid].time < from) lo = mid + 1;
+      else hi = mid;
+    }
+    for (let i = lo; i < tab.length && tab[i].time <= until; i++) {
+      if (loop && tab[i].time >= loop.end) break;
+      near.push({ time: (tab[i].time + offset) * 1000, pad: tab[i].pad });
+    }
+  };
+  const until = position + TAB_CUE_LEAD_SEC;
+  collect(position - 1, until, 0);
+  // Near a loop's end, what comes next is its start (EDU-121): those notes lead in as if they followed on.
+  if (loop && until >= loop.end) collect(loop.start, loop.start + (until - loop.end), loop.end - loop.start);
   return cuesAt(near, position * 1000, TAB_CUE_LEAD_SEC * 1000);
 }
 
@@ -417,7 +427,7 @@ export class Coach {
     if (target) return [{ pad: target.pad, strength: 1 }];
     if (this.learning) return this.learning.cues();
     const tab = this.songTab;
-    if (tab && this.song.playing) return songTabCues(tab, this.song.position());
+    if (tab && this.song.playing) return songTabCues(tab, this.song.position(), this.song.loop);
     const session = this.playAlong;
     if (!session || !this.metronome.running) return [];
     return cuesAt(session.upcomingNotes(), now - this.scoring.latencyOffsetMs, this.cueLeadMs);
