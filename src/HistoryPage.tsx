@@ -128,7 +128,7 @@ export function HistoryPage({ records, status, accuracyMode, selectedExerciseId,
                 <dd className="tile-note">{longest === 1 ? "day" : "days"}</dd>
               </div>
             </dl>
-            <p className="hint">
+            <p className="hint history-streak-hint">
               {current > 0 && !practicedToday
                 ? "Play a session today to keep your streak going."
                 : sessions === 0
