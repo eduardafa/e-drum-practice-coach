@@ -12,7 +12,7 @@ import { PROVIDERS, configuredProviders, type ProviderId } from "./auth/provider
 import { endSession, readSession } from "./auth/sessions";
 import { json, problem } from "./http";
 import { deleteRecords, pullRecords, pushRecords } from "./records";
-import { createInsight, insightsAllowed, latestInsight } from "./insights";
+import { createInsight, deleteInsights, insightsAllowed, latestInsight } from "./insights";
 import { SESSION_COOKIE, clearCookie } from "./auth/cookies";
 
 type Handler = (request: Request, env: Env) => Promise<Response>;
@@ -24,7 +24,7 @@ const ROUTES = new Map<string, Partial<Record<string, Handler>>>([
   ["/api/auth/signout", { POST: signOut }],
   ["/api/records", { GET: signedIn(pullRecords), POST: signedIn(pushRecords), DELETE: signedIn(deleteRecords) }],
   ["/api/account", { DELETE: signedIn(deleteAccount) }],
-  ["/api/insights", { GET: signedIn(latestInsight), POST: signedIn(createInsight) }],
+  ["/api/insights", { GET: signedIn(latestInsight), POST: signedIn(createInsight), DELETE: signedIn(deleteInsights) }],
   ...PROVIDERS.flatMap((provider): [string, Partial<Record<string, Handler>>][] => [
     [`/api/auth/${provider}/start`, { GET: (_, env) => startSignIn(env, provider) }],
     [`/api/auth/${provider}/callback`, { GET: (request, env) => finishSignIn(request, env, provider) }],
