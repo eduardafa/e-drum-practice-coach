@@ -11,6 +11,9 @@ import type { SongLoop } from "./songs/player";
 import { SongLoopTools } from "./SongLoopTools";
 import { LOOP_SPEEDS } from "./songs/loopTrainer";
 import { useLoopTrainer } from "./useLoopTrainer";
+import { SongResultsDialog } from "./SongResultsDialog";
+import { loopFrom } from "./songs/songLoop";
+import type { SongRun } from "./songs/songResults";
 import { formatDuration, tabSearchUrl } from "./songs/song";
 
 export interface OpenSong {
@@ -117,6 +120,16 @@ export function SongPanel({
   const [midway, setMidway] = useState(false);
   /** Drumming along, scored (countdown included). */
   const [along, setAlong] = useState(false);
+  /** The results of the last play-along (EDU-124), while its screen is open. */
+  const [results, setResults] = useState<SongRun | null>(null);
+  /** The coach's last run already seen, so each one opens the screen once. */
+  const seenRun = useRef(coach.songRun?.id ?? 0);
+  const trainerRunning = trainer.state !== null;
+  // Read by the frame loop above, which doesn't re-run when the trainer starts or stops.
+  const trainerRunningRef = useRef(trainerRunning);
+  useEffect(() => {
+    trainerRunningRef.current = trainerRunning;
+  }, [trainerRunning]);
   const seekRef = useRef<HTMLInputElement>(null);
   const playedRef = useRef<HTMLDivElement>(null);
   const playedSvgRef = useRef<SVGSVGElement>(null);
@@ -147,6 +160,13 @@ export function SongPanel({
       seek?.setAttribute("aria-valuetext", `${formatDuration(pos)} of ${formatDuration(song.duration)}`);
       setPlaying(coach.song.playing);
       setAlong(coach.playingAlong);
+      // A play-along just ended with enough played: show how it went (not for the loop trainer's
+      // rounds, which report in the loop row).
+      const ended = coach.songRun;
+      if (ended && ended.id !== seenRun.current) {
+        seenRun.current = ended.id;
+        if (!trainerRunningRef.current) setResults({ ...ended.run, title: song.title });
+      }
       setMidway(pos > 0 && pos < song.duration);
       coach.tickSongClick(song.grid);
       coach.tickSongTab();
@@ -327,6 +347,21 @@ export function SongPanel({
               : "The lines are the song's beats; the stronger ones are beat 1. Play along starts from the playhead: click the waveform to choose where."
             : "Finding the song's beats: the lines appear on the waveform when it's done. You can listen to the song meanwhile."}
       </p>
+      {results && song.grid && (
+        <SongResultsDialog
+          run={results}
+          grid={song.grid}
+          duration={song.duration}
+          toleranceMs={coach.scoring.toleranceMs}
+          onLoopFrom={(seconds) => {
+            const grid = song.grid;
+            if (!grid || tabOnly) return coach.song.seek(seconds, 1);
+            onLoopChange(loopFrom(grid, seconds + 0.2, song.duration));
+            coach.song.seek(seconds, 1);
+          }}
+          onClose={() => setResults(null)}
+        />
+      )}
     </section>
   );
 }
