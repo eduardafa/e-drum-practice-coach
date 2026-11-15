@@ -7,6 +7,8 @@ import { SONG_VOLUME, type Coach } from "./live/coach";
 import { GET_READY_OPTIONS } from "./playalong/getReady";
 import { releasing } from "./releasing";
 import type { BeatGrid } from "./songs/beats";
+import type { SongLoop } from "./songs/player";
+import { SongLoopTools } from "./SongLoopTools";
 import { formatDuration, tabSearchUrl } from "./songs/song";
 
 export interface OpenSong {
@@ -20,6 +22,8 @@ export interface OpenSong {
   grid: BeatGrid | null;
   /** The beats as the app found them, to go back to after corrections; null while they're being found. */
   found: BeatGrid | null;
+  /** The section set to repeat (EDU-121), or null. */
+  loop: SongLoop | null;
   /** Set when this is a drum tab practiced on its own, with no song: its beats are the file's. */
   tab?: { name: string; part: MidiDrumPart; tab: DrumTab; speed: number };
 }
@@ -65,6 +69,7 @@ export function SongPanel({
   song,
   analyzing,
   onGridChange,
+  onLoopChange,
   getReadySec,
   onGetReadyChange,
   onTabSpeed,
@@ -77,6 +82,8 @@ export function SongPanel({
   analyzing: number | null;
   /** The drummer corrected the beats. */
   onGridChange: (grid: BeatGrid) => void;
+  /** The drummer set or cleared the section that repeats. */
+  onLoopChange: (loop: SongLoop | null) => void;
   /** Seconds of get-ready countdown before playing along; 0 for none. */
   getReadySec: number;
   onGetReadyChange: (seconds: number) => void;
@@ -209,6 +216,15 @@ export function SongPanel({
           <path d={path} className="song-wave-all" />
           {lines && <path d={lines.beats} className="song-beat" />}
           {lines && <path d={lines.downbeats} className="song-downbeat" />}
+          {song.loop && (
+            <rect
+              className="song-loop-band"
+              x={(song.loop.start / song.duration) * song.peaks.length}
+              y={-1}
+              width={((song.loop.end - song.loop.start) / song.duration) * song.peaks.length}
+              height={2}
+            />
+          )}
         </svg>
         {analyzing !== null && (
           <div className="song-analyzing" aria-hidden>
@@ -234,6 +250,9 @@ export function SongPanel({
           onInput={(e) => coach.song.seek(Number(e.currentTarget.value), SONG_VOLUME)}
         />
       </div>
+      {song.grid && !tabOnly && (
+        <SongLoopTools coach={coach} grid={song.grid} loop={song.loop} duration={song.duration} onChange={onLoopChange} />
+      )}
       {/* Each song has its own tab: the one remembered with it, if any (EDU-99). */}
       <DrumTabPanel
         key={song.fingerprint}

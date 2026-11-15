@@ -3244,6 +3244,38 @@ button.secondary.danger:hover:not(:disabled) {
   color: var(--muted);
 }
 
+/* The section that repeats (EDU-121): a band on the waveform, and its tools under it. */
+.song-loop-band {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+  stroke-width: 0.6;
+  vector-effect: non-scaling-stroke;
+}
+
+.song-loop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 2px 16px 8px;
+}
+
+/* Compact, like the tab's bar below it. */
+.song-loop button.secondary {
+  padding: 4px 12px;
+  font-size: 13px;
+}
+
+.song-loop .hint {
+  margin: 0;
+}
+
+.song-loop-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
 .song-wave {
   position: relative;
   height: 96px;

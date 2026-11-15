@@ -12,6 +12,7 @@ import { drumTabFrom } from "./songs/drumTab";
 import { MidiError, readMidiDrums } from "./songs/midiFile";
 import { SONG_VOLUME } from "./live/coach";
 import { tabTimeline } from "./songs/tabSong";
+import type { SongLoop } from "./songs/player";
 import { checkSongFile, MAX_SONG_SECONDS, songFingerprint, songTitle, waveformPeaks } from "./songs/song";
 import { loadSongs, remember, saveSongs, type RememberedSong } from "./songs/songStore";
 import { forgetTab, keepTabsFor } from "./songs/tabStore";
@@ -76,6 +77,8 @@ export function useSong(beforeOpen: () => void) {
       beforeOpen();
       coach.endSongPlayAlong();
       coach.song.load(buffer);
+      // Its loop comes back too (EDU-121); the player checks it fits.
+      if (saved?.loop) coach.song.setLoop(saved.loop, SONG_VOLUME);
       setSong({
         title,
         duration: buffer.duration,
@@ -83,6 +86,7 @@ export function useSong(beforeOpen: () => void) {
         fingerprint,
         grid: saved?.grid ?? null,
         found: saved ? (saved.found ?? saved.grid) : null,
+        loop: coach.song.loop,
       });
       const entry = (grid: BeatGrid, found?: BeatGrid): RememberedSong => ({
         fingerprint,
@@ -91,6 +95,7 @@ export function useSong(beforeOpen: () => void) {
         lastOpened: Temporal.Now.instant().toString(),
         grid,
         ...(found && { found }),
+        ...(coach.song.loop && { loop: coach.song.loop }),
       });
 
       if (saved) {
@@ -154,6 +159,26 @@ export function useSong(beforeOpen: () => void) {
   };
 
   /**
+   * Sets (or clears, with null) the section of the open song that repeats,
+   * and saves it with the song.
+   */
+  const setLoop = (loop: SongLoop | null) => {
+    if (!song) return;
+    coach.song.setLoop(loop, SONG_VOLUME);
+    const applied = coach.song.loop;
+    const { fingerprint } = song;
+    setSong((s) => (s && s.fingerprint === fingerprint ? { ...s, loop: applied } : s));
+    setRemembered((list) => {
+      const saved = list.find((s) => s.fingerprint === fingerprint);
+      if (!saved) return list;
+      const { loop: _, ...rest } = saved;
+      const next = list.map((s) => (s === saved ? { ...rest, ...(applied && { loop: applied }) } : s));
+      saveSongs(next);
+      return next;
+    });
+  };
+
+  /**
    * Opens a MIDI drum file on its own, to practice without the song: its own
    * beats, at `speed` of its tempo, played on a silent track of the right
    * length so everything a song has works on it. Never stored.
@@ -184,6 +209,8 @@ export function useSong(beforeOpen: () => void) {
         duration,
         peaks: new Float32Array(TAB_PEAKS),
         fingerprint: `tab:${name}:${file.size}:${file.lastModified}`,
+        // A tab on its own has no loop for now: changing its speed reloads its track.
+        loop: null,
         grid,
         found: grid,
         tab: { name, part, tab, speed: 1 },
@@ -211,5 +238,5 @@ export function useSong(beforeOpen: () => void) {
     store(remembered.filter((s) => s.fingerprint !== fingerprint));
   };
 
-  return { song, loading, error, analyzing, remembered, open, openTab, setTabSpeed, close, forget, setGrid };
+  return { song, loading, error, analyzing, remembered, open, openTab, setTabSpeed, close, forget, setGrid, setLoop };
 }
