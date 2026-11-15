@@ -14,6 +14,7 @@ import type { AccuracyMode } from "./playalong/results";
 import { releasing } from "./releasing";
 import { useHandedness } from "./HandednessContext";
 import { SparkleIcon } from "./SparkleIcon";
+import { writtenWhen } from "./history/writtenWhen";
 
 interface Props {
   records: readonly HistoryRecord[];
@@ -80,10 +81,24 @@ export function InsightsCard({ records, accuracyMode }: Props) {
   };
   const insight = reply?.insight;
   const left = reply?.remainingToday;
+  const when = reply?.createdAt ? writtenWhen(reply.createdAt, Temporal.Now.zonedDateTimeISO()) : null;
+  // Who wrote the tips on screen, and when; while busy, who's writing; before any tips, what the card is for.
+  const byline =
+    busy && model
+      ? `Writing new tips with ${model.label}`
+      : insight && reply?.model
+        ? [reply.model, when].filter(Boolean).join(" · ")
+        : "Tips on what to practice next, from your last 30 days";
   return (
     <section className="insights" aria-labelledby="insights-title" aria-busy={busy}>
-      <div className="insights-head">
-        <h3 id="insights-title">Coach's notes</h3>
+      <header className="insights-head">
+        <span className="insights-badge" aria-hidden="true">
+          <SparkleIcon />
+        </span>
+        <div className="insights-title">
+          <h3 id="insights-title">Coach's notes</h3>
+          <p className="insights-byline">{byline}</p>
+        </div>
         {busy ? (
           // Not a button while busy: a status line (<output> is announced, like role=status), with dots that pulse.
           <output className="insights-thinking">
@@ -105,45 +120,9 @@ export function InsightsCard({ records, accuracyMode }: Props) {
             {insight ? "New tips" : "Get coaching tips"}
           </button>
         )}
-      </div>
-      {model && (
-        <div className="insights-model">
-          {providers.length > 1 && (
-            <label className="field">
-              <span>Provider</span>
-              <select
-                value={model.provider}
-                onChange={(e) => {
-                  const first = models.find((m) => m.provider === e.target.value);
-                  if (first) choose(first.id);
-                }}
-              >
-                {providers.map((p) => (
-                  <option key={p} value={p}>
-                    {PROVIDER_LABEL[p]}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-          <label className="field">
-            <span>Model</span>
-            <select value={model.id} onChange={(e) => choose(e.target.value)}>
-              {models
-                .filter((m) => m.provider === model.provider)
-                .map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.label} ({cost(m.approxCostPerTip)} per tip)
-                  </option>
-                ))}
-            </select>
-          </label>
-        </div>
-      )}
+      </header>
+
       {error && <p className="hint warn-note">{error}</p>}
-      {!insight && !busy && !error && (
-        <p className="hint">Tips on what to practice next, written from your last 30 days of practice.</p>
-      )}
       {busy ? (
         // Where the tips will appear: a headline and two tips, as shimmering lines.
         <div className="insights-placeholder" aria-hidden="true">
@@ -153,24 +132,68 @@ export function InsightsCard({ records, accuracyMode }: Props) {
         </div>
       ) : (
         insight && (
-          <>
+          <div className="insights-body">
             <p className="insights-headline">{insight.headline}</p>
-          <ol className="insights-tips">
-            {insight.tips.map((t) => (
-              <li key={t.title}>
-                <strong>{t.title}</strong> {t.detail}
-              </li>
-            ))}
-          </ol>
+            {/* One tip per row: a number, its title on its own line, the detail under it. */}
+            <ol className="insights-tips">
+              {insight.tips.map((t, i) => (
+                <li key={t.title}>
+                  <span className="insights-tip-number" aria-hidden="true">
+                    {i + 1}
+                  </span>
+                  <div>
+                    <strong className="insights-tip-title">{t.title}</strong>
+                    <p className="insights-tip-detail">{t.detail}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
             <p className="insights-encouragement">{insight.encouragement}</p>
-          </>
+          </div>
         )
       )}
-      <p className="hint">
-        {insight && reply?.model ? `Written by ${reply.model}` : "Written by AI"} from your practice numbers only (no names
-        or raw hits).
-        {left !== undefined && ` ${left} of 5 left today.`} <a href="/privacy">Privacy</a>
-      </p>
+
+      {/* Settings and fine print, after the content. */}
+      <footer className="insights-foot">
+        {model && (
+          <div className="insights-model">
+            {providers.length > 1 && (
+              <label className="field">
+                <span>Provider</span>
+                <select
+                  value={model.provider}
+                  onChange={(e) => {
+                    const first = models.find((m) => m.provider === e.target.value);
+                    if (first) choose(first.id);
+                  }}
+                >
+                  {providers.map((p) => (
+                    <option key={p} value={p}>
+                      {PROVIDER_LABEL[p]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <label className="field">
+              <span>Model</span>
+              <select value={model.id} onChange={(e) => choose(e.target.value)}>
+                {models
+                  .filter((m) => m.provider === model.provider)
+                  .map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.label} ({cost(m.approxCostPerTip)} per tip)
+                    </option>
+                  ))}
+              </select>
+            </label>
+          </div>
+        )}
+        <p className="hint">
+          Written by AI from your practice numbers only (no names or raw hits).
+          {left !== undefined && ` ${left} of 5 left today.`} <a href="/privacy">Privacy</a>
+        </p>
+      </footer>
     </section>
   );
 }
