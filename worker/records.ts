@@ -31,7 +31,7 @@ function looksLikeRecord(x: unknown): x is Record<string, unknown> & { id: strin
     typeof x.id === "string" &&
     ID_PATTERN.test(x.id) &&
     typeof x.v === "number" &&
-    (x.kind === "session" || x.kind === "trainer") &&
+    (x.kind === "session" || x.kind === "trainer" || x.kind === "song") &&
     typeof x.start === "string"
   );
 }

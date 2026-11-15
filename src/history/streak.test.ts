@@ -91,3 +91,37 @@ describe("practice time", () => {
     expect(formatPracticeTime(Temporal.Duration.from({ minutes: 65 }))).toBe("1 h 05 min");
   });
 });
+
+/** A minimal song record, like a session's: a song play-along at a local time. */
+const song = (local: string, duration = "PT3M"): HistoryRecord => ({
+  ...session(local, "Europe/Lisbon", duration),
+  id: `song-${local}`,
+  kind: "song",
+  exerciseId: "song:abc",
+  exerciseName: "A song",
+  fingerprint: "abc",
+  speed: 1,
+  section: null,
+  toleranceMs: 35,
+  latencyOffsetMs: 0,
+  scored: 10,
+  onTime: 8,
+  meanDeltaMs: 4,
+  spreadMs: 12,
+  tab: null,
+  bars: [],
+  loopRunId: null,
+});
+
+
+describe("song play-alongs count as practice (EDU-125)", () => {
+  it("keeps a streak going on a day with only a song", () => {
+    const records = [session("2026-11-09T18:00"), song("2026-11-10T18:00"), session("2026-11-11T08:00")];
+    expect(streak(records, day("2026-11-11"))).toMatchObject({ current: 3, practicedToday: true });
+  });
+
+  it("adds a song's length to the day's practice time", () => {
+    const records = [session("2026-11-11T08:00", "Europe/Lisbon", "PT5M"), song("2026-11-11T19:00", "PT3M")];
+    expect(practiceTimeOn(records, day("2026-11-11")).total("minutes")).toBe(8);
+  });
+});
