@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { progress, progressSummary, practicedExercises, weekStart, type Progress } from "./progress";
+import { progress, progressSummary, practicedExercises, practicedSongs, weekStart, type Progress } from "./progress";
 import type { HistoryRecord } from "./record";
 
 interface Opts {
@@ -180,5 +180,54 @@ describe("progressSummary", () => {
     expect(progressSummary("Money beat", progress([], "rock-8ths", "7d", day("2026-11-11"), "partial"))).toBe(
       "Money beat: no sessions in this range.",
     );
+  });
+});
+
+/** A song play-along at a local time: `onTime` of `scored` hits, at `speed`. */
+const play = (local: string, onTime: number, scored: number, speed: number, id = "song:abc", title = "Ghosts I"): HistoryRecord => ({
+  v: 1,
+  id: `${id}-${local}`,
+  kind: "song",
+  start: Temporal.PlainDateTime.from(local).toZonedDateTime("Europe/Lisbon").toInstant().toString(),
+  duration: "PT3M",
+  timeZone: "Europe/Lisbon",
+  exerciseId: id,
+  exerciseName: title,
+  fingerprint: id.slice(5),
+  speed,
+  section: null,
+  toleranceMs: 35,
+  latencyOffsetMs: 0,
+  scored,
+  onTime,
+  meanDeltaMs: 5,
+  spreadMs: 15,
+  tab: null,
+  bars: [],
+  loopRunId: null,
+});
+
+describe("progress for a song (EDU-126)", () => {
+  it("lists the songs played, newest first, apart from the exercises", () => {
+    const records = [play("2026-11-11T10:00", 8, 10, 1, "song:b", "B"), play("2026-11-10T10:00", 8, 10, 1, "song:a", "A"), session("2026-11-11T09:00")];
+    expect(practicedSongs(records)).toEqual([
+      { id: "song:b", name: "B" },
+      { id: "song:a", name: "A" },
+    ]);
+    expect(practicedExercises(records).map((e) => e.id)).toEqual(["rock-8ths"]);
+  });
+
+  it("weights the share on the beat by hits, and takes the day's fastest speed", () => {
+    const records = [play("2026-11-11T10:00", 9, 10, 0.7), play("2026-11-11T11:00", 15, 30, 0.85), play("2026-11-10T10:00", 5, 10, 0.5)];
+    const p = progress(records, "song:abc", "7d", day("2026-11-11"), "partial");
+    expect(p.points).toHaveLength(2);
+    expect(p.points[1]).toMatchObject({ accuracy: 24 / 40, speed: 0.85, sessions: 2, bpm: 0 });
+    expect(progressSummary("Ghosts I", p)).toBe("Ghosts I: 50% → 60% over 2 days, 50% speed → 85% speed, 3 play-alongs.");
+  });
+
+  it("leaves songs out of an exercise's progress, and exercises out of a song's", () => {
+    const records = [play("2026-11-11T10:00", 9, 10, 1), session("2026-11-11T09:00")];
+    expect(progress(records, "rock-8ths", "7d", day("2026-11-11"), "partial").points[0]).toMatchObject({ sessions: 1, speed: null });
+    expect(progress(records, "song:abc", "7d", day("2026-11-11"), "partial").points[0]).toMatchObject({ sessions: 1, speed: 1 });
   });
 });
