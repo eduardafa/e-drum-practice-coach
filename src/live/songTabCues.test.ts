@@ -18,4 +18,13 @@ describe("songTabCues", () => {
     expect(songTabCues(tab, 1.05).map((c) => c.pad)).toContain("kick");
     expect(songTabCues(tab, 3)).toEqual([]);
   });
+
+  it("near a loop's end, leads into the loop's first notes, and leaves out notes past its end", () => {
+    // Loop 1..2 s: the crash at 5 s never plays; at 1.8 s the kick at 1 s comes next (0.2 s away).
+    const loop = { start: 1, end: 2 };
+    const cues = songTabCues(tab, 1.8, loop);
+    expect(cues.map((c) => c.pad)).toContain("kick");
+    expect(songTabCues(tab, 4.7, null).map((c) => c.pad)).toContain("crash");
+    expect(songTabCues(tab, 1.8, { start: 1, end: 5 }).map((c) => c.pad)).not.toContain("kick");
+  });
 });

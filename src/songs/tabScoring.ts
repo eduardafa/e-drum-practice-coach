@@ -107,6 +107,16 @@ export class SongTabScoring {
   }
 
   /**
+   * A loop went back to `fromSec` (EDU-121): the notes from there are handed
+   * to the matcher again, as new notes for this pass. Results so far stay;
+   * each note's mark shows its latest pass.
+   */
+  rewind(fromSec: number): void {
+    const first = this.notes.findIndex((n) => n.time >= fromSec);
+    this.next = first === -1 ? this.notes.length : first;
+  }
+
+  /**
    * Hands the matcher every note up to `untilSec` of song time.
    * `toPerformanceMs` maps song time to performance.now() ms, or null if it
    * can't yet (the note is then tried again next time).
