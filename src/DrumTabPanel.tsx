@@ -8,6 +8,7 @@ import { drumTabFrom, guessShift, placeTab, type DrumTab, type PlacedNote } from
 import { MidiError, readMidiDrums } from "./songs/midiFile";
 import { TAB_SPEEDS } from "./songs/tabSong";
 import { forgetTab, loadTab, saveTab, type SaveResult } from "./songs/tabStore";
+import { GROOVE_CHOICES, NO_GROOVE, findGroove, grooveTab, loadGroovePreference, saveGroovePreference } from "./songs/grooveTab";
 import type { TabNoteResult, TabScore } from "./songs/tabScoring";
 import { Segmented } from "./Segmented";
 import { SmallMetronome } from "./SmallMetronome";
@@ -52,7 +53,12 @@ const NOTE_RADIUS = 9;
 interface OpenTab {
   name: string;
   tab: DrumTab;
+  /** Set when the tab is a groove from the library laid on the song (EDU-89): its id. */
+  groove?: string;
 }
+
+/** How many beats of the song a groove covers: from its first beat 1 to the end. */
+const grooveBeats = (grid: BeatGrid) => Math.max(0, grid.beats.length - grid.firstDownbeat);
 
 /**
  * A drum tab for the open song, from a MIDI file the drummer opens: placed on
@@ -85,9 +91,31 @@ export function DrumTabPanel({
 }) {
   // The song's remembered tab, read once when the panel opens (it's keyed on the song).
   const [remembered] = useState(() => (songFingerprint ? loadTab(songFingerprint) : null));
-  const [picked, setOpen] = useState<OpenTab | null>(() => (remembered ? { name: remembered.name, tab: remembered.tab } : null));
-  const open = fixed ?? picked;
+  const [picked, setOpen] = useState<OpenTab | null>(() =>
+    remembered ? { name: remembered.name, tab: remembered.tab, ...(remembered.groove && { groove: remembered.groove }) } : null,
+  );
+  /** The groove for songs without their own tab (EDU-89): the drummer's last choice, or the simple beat. */
+  const [grooveChoice, setGrooveChoice] = useState(loadGroovePreference);
+  /** This song set to "Just the beat". */
+  const [cleared, setCleared] = useState(false);
+  // The groove on show: one chosen (or remembered) for this song, or the default for a song with no tab of its own.
+  const grooveId = picked
+    ? picked.groove
+    : songFingerprint && !cleared && grooveChoice !== NO_GROOVE
+      ? grooveChoice
+      : undefined;
+  const groove = grooveId ? findGroove(grooveId) : undefined;
+  // Built from the current beats, so it follows corrections ("Twice as fast", "Beat 1 is here"). Memoized:
+  // a new tab object would restart the note-by-note scoring.
+  const grooveOpen = useMemo<OpenTab | null>(
+    () => (groove && grid ? { name: groove.name, tab: grooveTab(groove, grooveBeats(grid)), groove: groove.id } : null),
+    [groove, grid],
+  );
+  const open = fixed ?? (picked && !picked.groove ? picked : grooveOpen);
+  const isGroove = !fixed && open?.groove !== undefined;
+  /** For a groove, beats from the song's first beat 1; for a MIDI tab, from the song's first beat. */
   const [shift, setShift] = useState(remembered?.shift ?? 0);
+  const placeShift = fixed ? 0 : isGroove ? (grid?.firstDownbeat ?? 0) + shift : shift;
   // Whether the tab on screen could be remembered; only "too-long" and "full" are shown.
   const [saved, setSaved] = useState<SaveResult>("saved");
 
@@ -99,12 +127,32 @@ export function DrumTabPanel({
       setSaved("saved");
       return;
     }
-    setSaved(saveTab({ fingerprint: songFingerprint, name: tab.name, shift: nextShift, tab: tab.tab }));
+    setSaved(saveTab({ fingerprint: songFingerprint, name: tab.name, shift: nextShift, tab: tab.tab, ...(tab.groove && { groove: tab.groove }) }));
   };
   const move = (beats: number) => {
     const next = shift + beats;
+    // Moving the default groove makes it this song's own.
+    const current = picked ?? grooveOpen;
+    if (!picked && grooveOpen) setOpen(grooveOpen);
     setShift(next);
-    persist(picked, next);
+    persist(current, next);
+  };
+  /** "What to play": a groove from the library, or just the beat. It becomes the default for songs without a tab. */
+  const chooseGroove = (id: string) => {
+    setGrooveChoice(id);
+    saveGroovePreference(id);
+    setShift(0);
+    const chosen = findGroove(id);
+    if (id === NO_GROOVE || !chosen || !grid) {
+      setOpen(null);
+      setCleared(true);
+      persist(null, 0);
+      return;
+    }
+    const next = { name: chosen.name, tab: grooveTab(chosen, grooveBeats(grid)), groove: chosen.id };
+    setOpen(next);
+    setCleared(false);
+    persist(next, 0);
   };
   const [error, setError] = useState<string | null>(null);
   const [hear, setHear] = useState(fixed !== undefined);
@@ -117,7 +165,7 @@ export function DrumTabPanel({
   // Keyed on the tab itself, not `open`: `fixed` is a new object on every render
   // above, and a new placement would restart the note-by-note scoring.
   const openTab = open?.tab ?? null;
-  const placed = useMemo(() => (openTab && grid ? placeTab(openTab, grid, shift) : null), [openTab, grid, shift]);
+  const placed = useMemo(() => (openTab && grid ? placeTab(openTab, grid, placeShift) : null), [openTab, grid, placeShift]);
 
   // The coach lights the next pads from the placed tab, and plays it when asked.
   useEffect(() => {
@@ -173,10 +221,35 @@ export function DrumTabPanel({
     </label>
   );
 
+  // A song's "What to play" (EDU-89): just the beat, or a groove laid on its beats.
+  const grooveSelect = songFingerprint && grid && (
+    <label className="drum-tab-groove">
+      <span>What to play</span>
+      <select
+        value={isGroove && open ? (open.groove ?? NO_GROOVE) : NO_GROOVE}
+        title="A pattern that fits the song's beat, shown and scored like a tab. Not what the song's drummer plays."
+        onChange={(e) => {
+          e.currentTarget.blur();
+          chooseGroove(e.target.value);
+        }}
+      >
+        <option value={NO_GROOVE}>Just the beat</option>
+        <optgroup label="Grooves">
+          {GROOVE_CHOICES.map((g) => (
+            <option key={g.id} value={g.id}>
+              {g.name}
+            </option>
+          ))}
+        </optgroup>
+      </select>
+    </label>
+  );
+
   if (!open) {
     return (
       <div className="drum-tab">
         <div className="drum-tab-bar">
+          {grooveSelect}
           {picker("Open a drum tab", "secondary drum-tab-open")}
           <span className="drum-tab-note">A MIDI file (.mid) of the song's drums: see what to hit as the song plays.</span>
         </div>
@@ -188,9 +261,13 @@ export function DrumTabPanel({
   return (
     <div className="drum-tab">
       <div className="drum-tab-bar">
-        <span className="drum-tab-name" title={open.name}>
-          Tab: {open.name}
-        </span>
+        {isGroove ? (
+          grooveSelect
+        ) : (
+          <span className="drum-tab-name" title={open.name}>
+            Tab: {open.name}
+          </span>
+        )}
         {open.tab.skipped > 0 && (
           <span className="drum-tab-note" title="Drum notes with no pad on the kit (such as cowbell or tambourine) are left out">
             {open.tab.skipped} left out
@@ -239,16 +316,19 @@ export function DrumTabPanel({
           <Switch checked={click} onChange={setClick} label="Click" title="A click on every beat, higher on beat 1" />
         ) : (
           <>
-            {picker("Another tab", "plain drum-tab-open")}
-            <button
-              className="secondary"
-              onClick={releasing(() => {
-                setOpen(null);
-                persist(null, 0);
-              })}
-            >
-              Remove tab
-            </button>
+            {picker(isGroove ? "Open a drum tab" : "Another tab", "plain drum-tab-open")}
+            {/* A groove is changed or turned off with "What to play"; a MIDI tab is removed here. */}
+            {!isGroove && (
+              <button
+                className="secondary"
+                onClick={releasing(() => {
+                  setOpen(null);
+                  persist(null, 0);
+                })}
+              >
+                Remove tab
+              </button>
+            )}
           </>
         )}
       </div>
@@ -273,7 +353,7 @@ export function DrumTabPanel({
             {showMetronome && <SmallMetronome coach={coach} inline />}
           </div>
           {view === "notation" ? (
-            <TabNotation coach={coach} tab={open.tab} grid={grid} shift={fixed ? 0 : shift} />
+            <TabNotation coach={coach} tab={open.tab} grid={grid} shift={placeShift} />
           ) : (
             <TabStrip coach={coach} notes={placed} grid={grid} />
           )}

@@ -3,10 +3,12 @@ import { findExercise } from "../exercises/library";
 import { validateExercise } from "../exercises/validate";
 import { GROOVE_CHOICES, SIMPLE_BEAT, findGroove, grooveTab } from "./grooveTab";
 
+/** The simple beat's beats (in quarter notes) on one pad. */
+const at = (pad: string) => SIMPLE_BEAT.notes.filter((n) => n.pad === pad).map((n) => n.tick / 48);
+
 describe("SIMPLE_BEAT", () => {
   it("is hi-hat on every beat, kick on 1 and 3, snare on 2 and 4, and a valid exercise", () => {
     expect(validateExercise(SIMPLE_BEAT)).toEqual([]);
-    const at = (pad: string) => SIMPLE_BEAT.notes.filter((n) => n.pad === pad).map((n) => n.tick / 48);
     expect(at("hihat")).toEqual([0, 1, 2, 3]);
     expect(at("kick")).toEqual([0, 2]);
     expect(at("snare")).toEqual([1, 3]);

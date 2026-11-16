@@ -3643,6 +3643,20 @@ span.song-drift-bar {
   gap: 4px;
 }
 
+/* A song's "What to play" (EDU-89): just the beat, or a groove laid on its beats. */
+.drum-tab-groove {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.drum-tab-groove select {
+  max-width: 240px;
+  font-weight: 400;
+}
+
 .drum-tab-name {
   font-weight: 650;
   min-width: 0;
