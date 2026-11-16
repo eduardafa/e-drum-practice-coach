@@ -118,3 +118,13 @@ describe("parseTabs", () => {
     expect(parseTabs("not a list")).toEqual([]);
   });
 });
+
+describe("a groove as a song's tab (EDU-89)", () => {
+  it("keeps the groove's id, and older entries without one still load", () => {
+    const storage = memory();
+    saveTab({ ...entry("g"), groove: "rock-8ths" }, storage);
+    saveTab(entry("m"), storage);
+    expect(loadTab("g", storage)?.groove).toBe("rock-8ths");
+    expect(loadTab("m", storage)?.groove).toBeUndefined();
+  });
+});
