@@ -3256,6 +3256,44 @@ button.secondary.danger:hover:not(:disabled) {
   border-left: 4px solid var(--warn);
 }
 
+/* Meet your kit: the pad's name is the big thing to read, then how it's written. */
+.kit-tour-name {
+  margin: 10px 0 4px;
+  font-size: 20px;
+  font-weight: 650;
+}
+
+.kit-tour-staff {
+  margin: 8px 0 0;
+}
+
+.kit-tour-staff figcaption {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.kit-tour-staff .notation-score {
+  margin: 0;
+}
+
+/* Empty until the first hit; keeps its height so the buttons don't jump. */
+.kit-tour-feedback {
+  display: block;
+  min-height: 1.5em;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+
+.kit-tour-feedback.right {
+  background: var(--accent-soft);
+}
+
+.kit-tour-feedback.wrong {
+  background: var(--tint);
+  border-left: 4px solid var(--warn);
+}
+
 /* An opened song: its waveform, the part already played in the accent color, and a playhead. */
 .song-title {
   font-weight: 650;
