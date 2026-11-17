@@ -7,6 +7,7 @@ import type { AccuracyMode } from "./playalong/results";
 import { NoteToFixSection } from "./NoteToFixSection";
 import { PadHeatmap } from "./PadHeatmap";
 import { TimingSection } from "./TimingSection";
+import { TogetherNote } from "./TogetherNote";
 
 interface Props {
   record: SessionRecord;
@@ -122,6 +123,7 @@ export function SessionDialog({ record, mode, onClose }: Props) {
         </dl>
 
         <DynamicsSummary record={record} />
+        <TogetherNote record={record} />
 
         <div className="history-pair">
           <TimingSection records={records} from={null} />
