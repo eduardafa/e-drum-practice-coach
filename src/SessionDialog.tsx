@@ -122,7 +122,7 @@ export function SessionDialog({ record, mode, onClose }: Props) {
 
         <div className="history-pair">
           <TimingSection records={records} from={null} />
-          <PadHeatmap heat={heat} scope="this session" />
+          <PadHeatmap heat={heat} scope="this session" hideDynamicsNote />
         </div>
       </div>
     </dialog>

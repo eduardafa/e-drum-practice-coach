@@ -115,7 +115,7 @@ export function ResultsPanel({ exercise, results, mode, bpm, loops, record, onRe
       {record && (
         <details className="results-heatmap">
           <summary>Pad heatmap: how often and how hard</summary>
-          <PadHeatmap heat={heatmap([record])} scope="this session" />
+          <PadHeatmap heat={heatmap([record])} scope="this session" hideDynamicsNote />
         </details>
       )}
 

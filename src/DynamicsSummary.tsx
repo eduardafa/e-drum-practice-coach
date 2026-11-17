@@ -27,8 +27,13 @@ export function DynamicsSummary({ record }: Props) {
       {!result.sameStrength && parts.length > 0 && <p className="dynamics-counts">{parts.join(" · ")}</p>}
       <p className="dynamics-tip">{dynamicsTip(result)}</p>
       <p className="hint">
-        Accents (marked &gt;) should be clearly louder than your other notes, and ghost notes (in brackets) clearly
-        softer. Timing accuracy doesn't change with how hard you hit.
+        {[
+          result.accents && "Accents (marked >) should be clearly louder than your other notes.",
+          result.ghosts && "Ghost notes (in brackets) should be clearly softer.",
+          "How hard you hit doesn't change your timing score.",
+        ]
+          .filter(Boolean)
+          .join(" ")}
       </p>
     </section>
   );
