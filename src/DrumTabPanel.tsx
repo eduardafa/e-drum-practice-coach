@@ -5,7 +5,8 @@ import { releasing } from "./releasing";
 import { Switch } from "./Switch";
 import type { BeatGrid } from "./songs/beats";
 import { drumTabFrom, guessShift, placeTab, type DrumTab, type PlacedNote } from "./songs/drumTab";
-import { MidiError, readMidiDrums } from "./songs/midiFile";
+import { MidiError } from "./songs/midiFile";
+import { TAB_FILE_ACCEPT, readTabFile } from "./songs/tabFile";
 import { TAB_SPEEDS } from "./songs/tabSong";
 import { forgetTab, loadTab, saveTab, type SaveResult } from "./songs/tabStore";
 import { GROOVE_CHOICES, NO_GROOVE, findGroove, grooveTab, loadGroovePreference, saveGroovePreference } from "./songs/grooveTab";
@@ -191,7 +192,7 @@ export function DrumTabPanel({
       return;
     }
     try {
-      const tab = drumTabFrom(readMidiDrums(new Uint8Array(await file.arrayBuffer())));
+      const tab = drumTabFrom(await readTabFile(new Uint8Array(await file.arrayBuffer())));
       if (tab.notes.length === 0) {
         setError(`"${file.name}" has drums, but none on the kit's pads.`);
         return;
@@ -211,7 +212,7 @@ export function DrumTabPanel({
       {label}
       <input
         type="file"
-        accept=".mid,.midi,audio/midi,audio/x-midi"
+        accept={TAB_FILE_ACCEPT}
         onChange={(e) => {
           const file = e.target.files?.[0];
           e.target.value = "";
@@ -251,7 +252,7 @@ export function DrumTabPanel({
         <div className="drum-tab-bar">
           {grooveSelect}
           {picker("Open a drum tab", "secondary drum-tab-open")}
-          <span className="drum-tab-note">A MIDI file (.mid) of the song's drums: see what to hit as the song plays.</span>
+          <span className="drum-tab-note">A MIDI (.mid) or Guitar Pro (.gp, .gp5) file of the song's drums: see what to hit as the song plays.</span>
         </div>
         {error && <p className="hint warn-note">{error}</p>}
       </div>
