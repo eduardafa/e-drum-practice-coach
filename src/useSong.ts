@@ -9,7 +9,8 @@ import type { OpenSong } from "./SongPanel";
 import { analyzeSong } from "./songs/analyzeSong";
 import type { BeatGrid } from "./songs/beats";
 import { drumTabFrom } from "./songs/drumTab";
-import { MidiError, readMidiDrums } from "./songs/midiFile";
+import { MidiError } from "./songs/midiFile";
+import { readTabFile } from "./songs/tabFile";
 import { SONG_VOLUME } from "./live/coach";
 import { tabTimeline } from "./songs/tabSong";
 import type { SongLoop } from "./songs/player";
@@ -244,9 +245,10 @@ export function useSong(beforeOpen: () => void) {
   };
 
   /**
-   * Opens a MIDI drum file on its own, to practice without the song: its own
-   * beats, at `speed` of its tempo, played on a silent track of the right
-   * length so everything a song has works on it. Never stored.
+   * Opens a drum tab file (MIDI or Guitar Pro) on its own, to practice
+   * without the song: its own beats, at `speed` of its tempo, played on a
+   * silent track of the right length so everything a song has works on it.
+   * Never stored.
    */
   const openTab = async (file: File) => {
     setError(null);
@@ -255,7 +257,7 @@ export function useSong(beforeOpen: () => void) {
       return;
     }
     try {
-      const part = readMidiDrums(new Uint8Array(await file.arrayBuffer()));
+      const part = await readTabFile(new Uint8Array(await file.arrayBuffer()));
       const tab = drumTabFrom(part);
       if (tab.notes.length === 0) {
         setError(`"${file.name}" has drums, but none on the kit's pads.`);

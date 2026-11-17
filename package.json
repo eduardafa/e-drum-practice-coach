@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.7.0",
+    "@coderline/alphatab": "1.9.0",
     "@vexflow-fonts/academico": "1.0.1",
     "@vexflow-fonts/bravura": "1.0.2",
     "openai": "^7.54.0",

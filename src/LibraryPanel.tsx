@@ -8,6 +8,7 @@ import { displayedExercise } from "./handedness";
 import { useHandedness } from "./HandednessContext";
 import { formatDuration, SONG_EXTENSIONS } from "./songs/song";
 import type { RememberedSong } from "./songs/songStore";
+import { TAB_FILE_ACCEPT } from "./songs/tabFile";
 import { tabId, tabPanelId, Tabs } from "./Tabs";
 
 /** An exercise category, everything, or the songs opener. */
@@ -292,7 +293,8 @@ function SongOpener({
     <div className="song-opener">
       <p>
         Open a song you own from your computer and play along to it. MP3, M4A, WAV, OGG and FLAC files work. No song
-        file? Open a drum tab, a MIDI file (.mid), to practice the drum part on its own, at its own tempo or slower.
+        file? Open a drum tab, a MIDI (.mid) or Guitar Pro (.gp, .gp5) file, to practice the drum part on its own, at
+        its own tempo or slower.
       </p>
       <div className="song-open-row">
         <label className={`song-open-button ${loading ? "busy" : ""}`}>
@@ -311,7 +313,7 @@ function SongOpener({
           Open a drum tab
           <input
             type="file"
-            accept=".mid,.midi,audio/midi,audio/x-midi"
+            accept={TAB_FILE_ACCEPT}
             onChange={(e) => {
               const file = e.target.files?.[0];
               e.target.value = "";
