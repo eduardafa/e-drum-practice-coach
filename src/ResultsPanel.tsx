@@ -1,3 +1,4 @@
+import { DynamicsSummary } from "./DynamicsSummary";
 import { heatmap } from "./history/heatmap";
 import type { SessionRecord } from "./history/record";
 import { NITRO_MAX_PADS } from "./kit/nitroMax";
@@ -109,10 +110,12 @@ export function ResultsPanel({ exercise, results, mode, bpm, loops, record, onRe
         </tbody>
       </table>
 
+      {record && <DynamicsSummary record={record} />}
+
       {record && (
         <details className="results-heatmap">
           <summary>Pad heatmap: how often and how hard</summary>
-          <PadHeatmap heat={heatmap([record])} scope="this session" />
+          <PadHeatmap heat={heatmap([record])} scope="this session" hideDynamicsNote />
         </details>
       )}
 

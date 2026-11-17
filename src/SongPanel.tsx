@@ -31,6 +31,8 @@ export interface OpenSong {
   loop: SongLoop | null;
   /** The playback speed (EDU-122): 1, or e.g. 0.7 from a slowed copy with the same pitch. */
   speed: number;
+  /** Seconds between its hi-hat notes, when found clearly (EDU-130), to suggest a groove; else null. */
+  hihatStep: number | null;
   /** Set when this is a drum tab practiced on its own, with no song: its beats are the file's. */
   tab?: { name: string; part: MidiDrumPart; tab: DrumTab; speed: number };
 }
@@ -326,6 +328,7 @@ export function SongPanel({
         fixed={fixedTab}
         showMetronome={showMetronome}
         songFingerprint={fixedTab ? undefined : song.fingerprint}
+        hihatStep={song.hihatStep}
       />
       {song.grid && !along && !tabOnly && (
         <BeatGridTools
