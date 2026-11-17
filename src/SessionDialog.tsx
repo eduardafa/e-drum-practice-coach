@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
+import { DynamicsSummary } from "./DynamicsSummary";
 import { heatmap } from "./history/heatmap";
 import { formatLean } from "./history/limbs";
 import type { SessionRecord } from "./history/record";
@@ -116,6 +117,8 @@ export function SessionDialog({ record, mode, onClose }: Props) {
             </div>
           ))}
         </dl>
+
+        <DynamicsSummary record={record} />
 
         <div className="history-pair">
           <TimingSection records={records} from={null} />
