@@ -82,7 +82,13 @@ function toStaveNote(event: SpelledEvent, voice: StaffVoice, twoVoices: boolean)
   if (notes.some((n) => n.dynamic === "accent")) {
     note.addModifier(new Articulation("a>").setPosition(voice === "hands" ? ModifierPosition.ABOVE : ModifierPosition.BELOW));
   }
-  if (notes.some((n) => n.dynamic === "ghost")) Parenthesis.buildAndAttach([note]);
+  // Bracket only the ghost notes: one on the same stem as the hi-hat mustn't make the hi-hat look ghosted too.
+  // Modifier indexes follow `keys`, which are in the same order as `notes`.
+  notes.forEach((n, i) => {
+    if (n.dynamic !== "ghost") return;
+    note.addModifier(new Parenthesis(ModifierPosition.LEFT), i);
+    note.addModifier(new Parenthesis(ModifierPosition.RIGHT), i);
+  });
   if (notes.some((n) => n.open)) {
     note.addModifier(new Annotation("o").setVerticalJustification(AnnotationVerticalJustify.TOP));
   }
