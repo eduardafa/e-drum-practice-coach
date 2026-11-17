@@ -1276,19 +1276,22 @@ fieldset.group.play {
 }
 
 /* Loud and soft: accents and ghost notes (EDU-127), on the results screen and a saved session. */
-.dynamics-summary {
+.dynamics-summary,
+.together-note {
   margin: 12px 0 0;
   padding: 10px 12px;
   border-radius: 8px;
   background: var(--tint);
 }
 
-.dynamics-summary h3 {
+.dynamics-summary h3,
+.together-note h3 {
   margin: 0 0 4px;
   font-size: 0.95rem;
 }
 
-.dynamics-summary p {
+.dynamics-summary p,
+.together-note p {
   margin: 4px 0 0;
 }
 
@@ -1297,7 +1300,8 @@ fieldset.group.play {
   font-variant-numeric: tabular-nums;
 }
 
-.dynamics-summary .hint {
+.dynamics-summary .hint,
+.together-note .hint {
   color: var(--muted);
   font-size: 0.85rem;
 }
