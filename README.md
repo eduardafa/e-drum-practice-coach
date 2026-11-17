@@ -43,6 +43,11 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
   missed, extra hits, timing, consistency and a per-pad breakdown, with retry and 5 BPM slower/faster.
   Accuracy is partial credit by default (full credit inside the on-time window, less the further off a hit is)
   or strict (only on-time notes count), chosen in Settings; extra hits count against both.
+- What to work on: when the same note went wrong the same way in at least half the loops (late, early or missed), and
+  clearly more often than the rest of the pattern, the results screen and the session opened from History name it
+  ("The snare on beat 3 was late 6 of 8 times."), give one tip, and ring it on a small copy of the notation. The same drum
+  with the same problem is named together ("the kick on beats 1 and 3"). When the whole session drifted, or nothing
+  stands out, it says nothing.
 - Tempo trainer: practice an exercise in rounds that speed up as you play cleanly. After each round the tempo
   goes up a step (default 4 BPM) at 90% or more, down a step below 70%, and otherwise stays, until you pass a
   round at your target tempo. A short pause and a count-in at the new tempo separate the rounds, and a chart
