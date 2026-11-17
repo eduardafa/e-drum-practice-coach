@@ -72,6 +72,10 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
   opened from History) counts how many accents were clearly louder and ghost notes clearly softer than your own
   normal notes in that session, with one tip. It's reported next to the timing score, never mixed into it.
   "Accents on 1 and 3" in the rudiments practices it.
+- Hits that should land together: when two drums written on the same beat (like the hi-hat and kick on 1) keep landing
+  apart, the results screen and the session opened from History say which one comes late and by about how much, with a
+  tip. It needs at least 4 pairs, a median gap of 20 ms or more, and 3 in 4 gaps leaning the same way; otherwise it says
+  nothing. Like loud and soft, it doesn't change the score.
 - Pad heatmap: the kit drawn from above with each pad colored by how often or how hard it was hit, for a range
   of history or the session just played, with a legend, a table, and a note on whether accents and ghost notes
   sound different enough.
