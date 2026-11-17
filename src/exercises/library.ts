@@ -185,6 +185,83 @@ export const FIRST_STEPS_2: readonly Exercise[] = [
   }),
 ];
 
+/**
+ * First steps, part 3: after the sixteenth-note groove, how a beat is played
+ * rather than which drums: loud and soft notes on the hi-hat, a ghost note on
+ * the snare, a fill around the toms into a crash, and the open hi-hat. It
+ * leads to the open hi-hat groove, which adds closing the hi-hat with the
+ * foot. Back at part 1's tempos: each step is a new kind of movement.
+ */
+export const FIRST_STEPS_3: readonly Exercise[] = [
+  fromGrid({
+    id: "first3-hihat-accents",
+    name: "Part 3, step 1: Loud and soft on the hi-hat",
+    category: "first-steps",
+    description:
+      "The Money beat, with the hi-hat loud on the counts (1, 2, 3, 4) and soft on every \"&\". Lift the stick high for the loud ones and keep it low for the soft ones.",
+    timeSignature: FOUR_FOUR,
+    bars: 1,
+    tempo: FIRST_STEPS_TEMPO,
+    stepsPerBar: 8,
+    lanes: {
+      hihat: "X x X x  X x X x",
+      snare: "- - x -  - - x -",
+      kick: "x - - -  x - - -",
+    },
+  }),
+  fromGrid({
+    id: "first3-ghost-note",
+    name: "Part 3, step 2: One ghost note",
+    category: "first-steps",
+    description:
+      "The Money beat with one very quiet snare note, a ghost note, on the \"&\" of 4, just before beat 1. Barely touch the pad: you should feel it more than hear it.",
+    timeSignature: FOUR_FOUR,
+    bars: 1,
+    tempo: FIRST_STEPS_TEMPO,
+    stepsPerBar: 8,
+    lanes: {
+      hihat: "x x x x  x x x x",
+      snare: "- - x -  - - x g",
+      kick: "x - - -  x - - -",
+    },
+  }),
+  fromGrid({
+    id: "first3-tom-fill",
+    name: "Part 3, step 3: A fill on the toms",
+    category: "first-steps",
+    description:
+      "One bar of the Money beat, then a bar that ends with a fill on the toms: two hits on tom 1, then two on tom 2, on 3 & 4 &. Then a crash with the kick on beat 1, and back to the hi-hat.",
+    timeSignature: FOUR_FOUR,
+    bars: 2,
+    tempo: FIRST_STEPS_TEMPO,
+    stepsPerBar: 8,
+    lanes: {
+      crash: "x - - -  - - - -  - - - -  - - - -",
+      hihat: "- x x x  x x x x  x x x x  - - - -",
+      snare: "- - x -  - - x -  - - x -  - - - -",
+      tom1: "- - - -  - - - -  - - - -  x x - -",
+      tom2: "- - - -  - - - -  - - - -  - - x x",
+      kick: "x - - -  x - - -  x - - -  - - - -",
+    },
+  }),
+  fromGrid({
+    id: "first3-open-hihat",
+    name: "Part 3, step 4: Open the hi-hat on the \"&\" of 4",
+    category: "first-steps",
+    description:
+      "The Money beat, but on the last \"&\" lift your left foot so the hi-hat rings open. Press it down again on beat 1. Only the hands are scored, so take your time with the foot.",
+    timeSignature: FOUR_FOUR,
+    bars: 1,
+    tempo: FIRST_STEPS_TEMPO,
+    stepsPerBar: 8,
+    lanes: {
+      hihat: "x x x x  x x x o",
+      snare: "- - x -  - - x -",
+      kick: "x - - -  x - - -",
+    },
+  }),
+];
+
 export const GROOVES: readonly Exercise[] = [
   fromGrid({
     id: "rock-8ths",
@@ -463,7 +540,7 @@ export const RUDIMENTS: readonly Exercise[] = [
   }),
 ];
 
-export const EXERCISES: readonly Exercise[] = [...FIRST_STEPS, ...FIRST_STEPS_2, ...GROOVES, ...FILLS, ...RUDIMENTS];
+export const EXERCISES: readonly Exercise[] = [...FIRST_STEPS, ...FIRST_STEPS_2, ...FIRST_STEPS_3, ...GROOVES, ...FILLS, ...RUDIMENTS];
 
 export function findExercise(id: string): Exercise | undefined {
   return EXERCISES.find((e) => e.id === id);

@@ -23,6 +23,11 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
 - Latency calibration: play along to the click and the app measures your setup's delay and sets the
   offset. It adapts to your skill level (Beginner, Intermediate, Advanced) and keeps listening until the
   measurement is precise, so steadier playing finishes sooner.
+- First steps, in three parts, for someone who has never played: part 1 builds the Money beat one limb at a time,
+  part 2 moves the kick and the right hand and adds a first fill, and part 3 is about how a beat is played: loud and
+  soft on the hi-hat, a ghost note, a fill on the toms into a crash, and the open hi-hat, leading to the open hi-hat
+  groove. After a session, the results screen offers the next step once you reach 90%, and History shows each part's
+  progress.
 - Exercise library: browse the grooves and rudiments, each with its time signature, tempo range and a drum-tab
   preview (with the sticking for rudiments). Listen plays one loop with synthesized drum sounds and a click on
   every beat. Choosing an exercise sets the metronome to fit it, at your last tempo for that exercise or its

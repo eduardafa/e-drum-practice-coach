@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FIRST_STEPS, FIRST_STEPS_2 } from "../exercises/library";
+import { FIRST_STEPS, FIRST_STEPS_2, FIRST_STEPS_3 } from "../exercises/library";
 import { PATH_GOAL_ID, PATHS } from "../exercises/path";
 import { practicePlan } from "./plan";
 import type { HistoryRecord, SessionRecord } from "./record";
@@ -34,6 +34,9 @@ function session(exerciseId: string, accuracy: number): SessionRecord {
 
 const summary = (records: HistoryRecord[]) =>
   practicePlan(records, "partial", PASS).map((b) => `${b.kind}:${b.exercise.id}:${b.mode}:${b.minutes}`);
+
+/** A passing session on every step and goal of these paths. */
+const passAll = (paths: typeof PATHS) => paths.flatMap((path) => path.steps.map((e) => session(e.id, 0.95)).concat(session(path.goalId, 0.95)));
 
 describe("practicePlan", () => {
   it("starts a first-timer by learning step 1 without the click, then playing it, then the goal", () => {
@@ -77,15 +80,18 @@ describe("practicePlan", () => {
   });
 
   it("keeps working on the last goal once everything has passed", () => {
-    const records = [
-      ...FIRST_STEPS.map((e) => session(e.id, 0.95)),
-      session(PATH_GOAL_ID, 0.95),
-      ...FIRST_STEPS_2.map((e) => session(e.id, 0.95)),
-      session(PATHS[1].goalId, 0.95),
-    ];
+    const records = passAll(PATHS);
+    const last = PATHS.at(-1);
+    if (!last) throw new Error("no paths");
+    expect(summary(records)).toEqual([`warmup:${last.steps.at(-1)?.id}:play:3`, `focus:${last.goalId}:play:10`]);
+  });
+
+  it("moves on to part 3 once part 2's goal passes", () => {
+    const records = passAll(PATHS.slice(0, 2));
     expect(summary(records)).toEqual([
-      `warmup:${FIRST_STEPS_2.at(-1)?.id}:play:3`,
-      `focus:${PATHS[1].goalId}:play:10`,
+      `warmup:${PATHS[1].goalId}:play:3`,
+      `focus:${FIRST_STEPS_3[0].id}:learn:10`,
+      `finish:${PATHS[2].goalId}:play:2`,
     ]);
   });
 });
