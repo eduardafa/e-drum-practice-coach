@@ -9,5 +9,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    // The browser tests in e2e/ run with Playwright (pnpm test:e2e), not Vitest.
+    include: ["src/**/*.test.ts", "worker/**/*.test.ts"],
   },
 });

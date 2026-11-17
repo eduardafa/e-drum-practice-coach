@@ -6,3 +6,6 @@ dist
 docs/decisions/
 docs/code-explained/
 .dev.vars*
+# Browser test output (pnpm test:e2e)
+test-results/
+playwright-report/
