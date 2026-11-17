@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { findExercise } from "../exercises/library";
 import { validateExercise } from "../exercises/validate";
-import { GROOVE_CHOICES, SIMPLE_BEAT, findGroove, grooveTab } from "./grooveTab";
+import { GROOVE_CHOICES, SIMPLE_BEAT, findGroove, grooveTab, suggestedGroove } from "./grooveTab";
 
 /** The simple beat's beats (in quarter notes) on one pad. */
 const at = (pad: string) => SIMPLE_BEAT.notes.filter((n) => n.pad === pad).map((n) => n.tick / 48);
@@ -48,5 +48,23 @@ describe("grooveTab", () => {
     expect(twoBars.filter((s) => Number(s.split(":")[0]) >= 8).map((s) => `${Number(s.split(":")[0]) - 8}:${s.split(":")[1]}`)).toEqual(
       twoBars.filter((s) => Number(s.split(":")[0]) < 8),
     );
+  });
+});
+
+describe("suggestedGroove", () => {
+  it("suggests the groove whose hi-hat moves like the song's", () => {
+    const eighthsAt100 = 60 / 100 / 2;
+    expect(suggestedGroove(eighthsAt100, 100)?.groove.id).toBe("rock-8ths");
+    expect(suggestedGroove(eighthsAt100 / 2, 100)?.groove.id).toBe("rock-16ths");
+    expect(suggestedGroove(eighthsAt100 * 2, 100)?.groove).toBe(SIMPLE_BEAT);
+  });
+
+  it("follows a tempo correction: eighths at the found tempo are one per beat at twice the tempo", () => {
+    expect(suggestedGroove(60 / 100 / 2, 200)).toMatchObject({ feel: 1, groove: SIMPLE_BEAT });
+  });
+
+  it("suggests nothing without a clear hi-hat, or at a tempo it doesn't fit", () => {
+    expect(suggestedGroove(null, 100)).toBeNull();
+    expect(suggestedGroove(60 / 100 / 2, 140)).toBeNull();
   });
 });
