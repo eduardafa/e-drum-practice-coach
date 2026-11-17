@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findExercise, FIRST_STEPS, FIRST_STEPS_2, GROOVES } from "./library";
+import { findExercise, FIRST_STEPS, FIRST_STEPS_2, FIRST_STEPS_3, GROOVES } from "./library";
 import { PATH_GOAL_ID, PATHS, pathAdvice } from "./path";
 
 const PASS = 0.9;
@@ -41,8 +41,22 @@ describe("pathAdvice", () => {
     expect(pathAdvice(last, 1, PASS)?.next.id).toBe(PATHS[1].goalId);
   });
 
+  it("leads from part 2's goal into part 3, through part 3, then to its goal", () => {
+    const part2Goal = findExercise(PATHS[1].goalId);
+    if (!part2Goal) throw new Error("missing goal");
+    expect(pathAdvice(part2Goal, 0.95, PASS)).toEqual({ kind: "ready", next: FIRST_STEPS_3[0] });
+    FIRST_STEPS_3.slice(0, -1).forEach((step, i) => {
+      expect(pathAdvice(step, 1, PASS)?.next).toBe(FIRST_STEPS_3[i + 1]);
+    });
+    expect(pathAdvice(FIRST_STEPS_3[FIRST_STEPS_3.length - 1], 1, PASS)?.next.id).toBe(PATHS[2].goalId);
+  });
+
   it("gives no advice for exercises that lead nowhere on a path, the last goal included", () => {
-    for (const e of GROOVES.filter((g) => g.id !== PATH_GOAL_ID)) expect(pathAdvice(e, 1, PASS)).toBeNull();
+    const leadIns = new Set(PATHS.map((p) => p.afterId));
+    for (const e of GROOVES.filter((g) => !leadIns.has(g.id))) expect(pathAdvice(e, 1, PASS)).toBeNull();
+    const lastGoal = findExercise(PATHS.at(-1)?.goalId ?? "");
+    if (!lastGoal) throw new Error("missing last goal");
+    expect(pathAdvice(lastGoal, 1, PASS)).toBeNull();
   });
 
   it("chains the paths: each starts after the previous one's goal", () => {

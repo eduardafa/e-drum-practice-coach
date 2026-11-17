@@ -1,11 +1,11 @@
 /**
  * The First steps paths: numbered steps that build up to a goal beat, and
- * which exercise comes after each. Part 2 starts after part 1's goal, so
- * passing the Money beat leads straight on. After a session on a path, the
+ * which exercise comes after each. Each part starts after the previous part's
+ * goal, so passing the Money beat (or the sixteenth-note groove) leads straight on. After a session on a path, the
  * results screen offers what's next once the accuracy reaches the pass mark.
  * Pure, so the rules are tested without a results screen.
  */
-import { findExercise, FIRST_STEPS, FIRST_STEPS_2 } from "./library";
+import { findExercise, FIRST_STEPS, FIRST_STEPS_2, FIRST_STEPS_3 } from "./library";
 import type { Exercise } from "./types";
 
 export interface Path {
@@ -21,6 +21,7 @@ export interface Path {
 export const PATHS: readonly Path[] = [
   { id: "first-steps", title: "First steps", steps: FIRST_STEPS, afterId: null, goalId: "rock-8ths" },
   { id: "first-steps-2", title: "First steps, part 2", steps: FIRST_STEPS_2, afterId: "rock-8ths", goalId: "rock-16ths" },
+  { id: "first-steps-3", title: "First steps, part 3", steps: FIRST_STEPS_3, afterId: "rock-16ths", goalId: "open-hihat" },
 ];
 
 /** Part 1's goal, the Money beat. */
