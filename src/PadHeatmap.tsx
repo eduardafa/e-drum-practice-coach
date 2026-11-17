@@ -16,6 +16,12 @@ interface Props {
   heat: Heatmap;
   /** Names the heading's scope, e.g. "this session" or "the last 30 days". */
   scope: string;
+  /**
+   * Leave out the accents-and-ghosts note: for one session, where the loud and
+   * soft section (DynamicsSummary) already counts them note by note, so the
+   * screen never gives two different verdicts.
+   */
+  hideDynamicsNote?: boolean;
 }
 
 // The kit's 1.6:1 layout box (as in the kit view), with room for labels below.
@@ -53,7 +59,7 @@ function describe(pad: PadInfo, p: PadHeat | undefined): string {
  * darker on light), with a legend. The drawing is hidden from screen
  * readers; the caption and the table carry the same values.
  */
-export function PadHeatmap({ heat, scope }: Props) {
+export function PadHeatmap({ heat, scope, hideDynamicsNote = false }: Props) {
   const [measure, setMeasure] = useState<HeatMeasure>("hits");
   // The heatmap shows on History and on the results screen: ids unique to this one.
   const tabsId = `heatmap${useId().replaceAll(":", "")}`;
@@ -76,7 +82,7 @@ export function PadHeatmap({ heat, scope }: Props) {
       ? "No hits yet."
       : `Most hit: ${most.label} (${heat.pads.get(most.id)?.hits}).` +
         (hardest ? ` Hardest: ${hardest.label} (strength ${round(heat.pads.get(hardest.id)?.velocity.mean ?? null)} of 127).` : "");
-  const note = dynamicsNote(heat.dynamics);
+  const note = hideDynamicsNote ? null : dynamicsNote(heat.dynamics);
 
   return (
     <div className="heatmap">

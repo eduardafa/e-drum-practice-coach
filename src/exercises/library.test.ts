@@ -172,3 +172,11 @@ describe("fills", () => {
     }
   });
 });
+
+describe("accents on 1 and 3", () => {
+  it("accents only beats 1 and 3, alternating hands on eighth notes", () => {
+    const exercise = findExercise("accents-1-3");
+    expect(exercise?.notes.filter((n) => n.dynamic === "accent").map((n) => n.tick)).toEqual([0, 96]);
+    expect(exercise?.notes.map((n) => n.hand).join("")).toBe("RLRLRLRL");
+  });
+});

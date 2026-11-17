@@ -1275,6 +1275,33 @@ fieldset.group.play {
   background: var(--tint);
 }
 
+/* Loud and soft: accents and ghost notes (EDU-127), on the results screen and a saved session. */
+.dynamics-summary {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--tint);
+}
+
+.dynamics-summary h3 {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+}
+
+.dynamics-summary p {
+  margin: 4px 0 0;
+}
+
+.dynamics-summary .dynamics-counts {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.dynamics-summary .hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 /* First steps: whether to move on to the next step. */
 .results .path-advice {
   margin: 12px 0 0;
