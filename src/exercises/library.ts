@@ -344,6 +344,19 @@ export const GROOVES: readonly Exercise[] = [
 
 export const RUDIMENTS: readonly Exercise[] = [
   fromGrid({
+    id: "accents-1-3",
+    name: "Accents on 1 and 3",
+    category: "rudiment",
+    description:
+      "Eighth notes on the snare, alternating hands. Hit beats 1 and 3 loud (lift the stick high) and every other note soft (stick low). The results show how many accents stood out.",
+    timeSignature: FOUR_FOUR,
+    bars: 1,
+    tempo: { min: 40, suggested: 60, max: 120 },
+    stepsPerBar: 8,
+    lanes: { snare: "Xx xx Xx xx" },
+    sticking: "RL RL RL RL",
+  }),
+  fromGrid({
     id: "single-strokes",
     name: "Single strokes",
     category: "rudiment",
