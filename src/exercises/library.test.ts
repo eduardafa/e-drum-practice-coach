@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EXERCISES, findExercise, FIRST_STEPS, FIRST_STEPS_2, GROOVES, RUDIMENTS } from "./library";
+import { EXERCISES, findExercise, FIRST_STEPS, FIRST_STEPS_2, FIRST_STEPS_3, GROOVES, RUDIMENTS } from "./library";
 import type { Exercise } from "./types";
 import { validateExercise, validateLibrary } from "./validate";
 
@@ -18,11 +18,11 @@ describe("starter library", () => {
     expect(validateExercise(exercise)).toEqual([]);
   });
 
-  it("has each category in its own list, first steps (both parts) listed first", () => {
-    expect([...FIRST_STEPS, ...FIRST_STEPS_2].every((e) => e.category === "first-steps")).toBe(true);
+  it("has each category in its own list, first steps (every part) listed first", () => {
+    expect([...FIRST_STEPS, ...FIRST_STEPS_2, ...FIRST_STEPS_3].every((e) => e.category === "first-steps")).toBe(true);
     expect(GROOVES.every((e) => e.category === "groove")).toBe(true);
     expect(RUDIMENTS.every((e) => e.category === "rudiment")).toBe(true);
-    expect(EXERCISES).toEqual([...FIRST_STEPS, ...FIRST_STEPS_2, ...GROOVES, ...RUDIMENTS]);
+    expect(EXERCISES).toEqual([...FIRST_STEPS, ...FIRST_STEPS_2, ...FIRST_STEPS_3, ...GROOVES, ...RUDIMENTS]);
   });
 
   it.each(RUDIMENTS.map((e) => [e.id, e] as const))("%s gives every note a hand", (_, exercise) => {
@@ -137,5 +137,40 @@ describe("specific patterns", () => {
     const snare = findExercise("half-time-ghosts")?.notes.filter((n) => n.pad === "snare") ?? [];
     expect(snare.filter((n) => n.dynamic === "accent").map((n) => n.tick)).toEqual([96]);
     expect(snare.filter((n) => n.dynamic === "ghost")).toHaveLength(4);
+  });
+});
+
+describe("first steps, part 3", () => {
+  it("are numbered in order, 4/4 and as slow as part 1", () => {
+    expect(FIRST_STEPS_3.map((e) => e.name.match(/^Part 3, step (\d+):/)?.[1])).toEqual(
+      FIRST_STEPS_3.map((_, i) => String(i + 1)),
+    );
+    for (const e of FIRST_STEPS_3) {
+      expect(e.timeSignature).toEqual({ beats: 4, unit: 4 });
+      expect(e.tempo.min).toBeLessThanOrEqual(40);
+    }
+  });
+
+  it("step 1 is the Money beat with the hi-hat loud on the counts and soft on the '&'", () => {
+    const hihat = findExercise("first3-hihat-accents")?.notes.filter((n) => n.pad === "hihat");
+    expect(hihat?.map((n) => n.tick)).toEqual(ticksOf("rock-8ths", "hihat"));
+    expect(hihat?.map((n) => (n.dynamic === "accent" ? "X" : "x")).join("")).toBe("XxXxXxXx");
+  });
+
+  it("step 2 adds one ghost note, on the snare just before beat 1", () => {
+    const ghosts = findExercise("first3-ghost-note")?.notes.filter((n) => n.dynamic === "ghost");
+    expect(ghosts?.map((n) => [n.pad, n.tick])).toEqual([["snare", 168]]);
+  });
+
+  it("step 3 ends bar 2 with tom 1 then tom 2 on 3 & 4 &, and crashes on 1", () => {
+    expect(ticksOf("first3-tom-fill", "tom1")).toEqual([288, 312]);
+    expect(ticksOf("first3-tom-fill", "tom2")).toEqual([336, 360]);
+    expect(ticksOf("first3-tom-fill", "crash")).toEqual([0]);
+  });
+
+  it("step 4 opens the hi-hat on the last '&' only, without scoring the pedal", () => {
+    const notes = findExercise("first3-open-hihat")?.notes ?? [];
+    expect(notes.filter((n) => n.open).map((n) => n.tick)).toEqual([168]);
+    expect(notes.some((n) => n.pad === "hihatPedal")).toBe(false);
   });
 });
