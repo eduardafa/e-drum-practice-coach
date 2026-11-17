@@ -328,6 +328,7 @@ export function SongPanel({
         fixed={fixedTab}
         showMetronome={showMetronome}
         songFingerprint={fixedTab ? undefined : song.fingerprint}
+        hihatStep={song.hihatStep}
       />
       {song.grid && !along && !tabOnly && (
         <BeatGridTools

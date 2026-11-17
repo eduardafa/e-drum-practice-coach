@@ -3666,6 +3666,23 @@ span.song-drift-bar {
   white-space: nowrap;
 }
 
+/* A groove that moves like the song's hi-hat (EDU-130). */
+.drum-tab-suggestion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--tint);
+  font-size: 0.9rem;
+}
+
+.drum-tab-suggestion span {
+  flex: 1 1 320px;
+}
+
 .drum-tab-note {
   color: var(--muted);
 }
