@@ -1,5 +1,5 @@
 /**
- * Finds a song's beats off the main thread, so the page stays responsive
+ * Finds a song's beats (and how fast its hi-hat moves) off the main thread, so the page stays responsive
  * during the second or so a song takes.
  *
  * This is a dedicated worker: only the page that created it can send it
@@ -9,6 +9,7 @@
  */
 import { findBeats } from "./beats";
 import { parseBeatsRequest, type BeatsReply } from "./beatsMessages";
+import { hihatStep } from "./hihatFeel";
 
 const reply = (message: BeatsReply) => self.postMessage(message);
 
@@ -27,7 +28,8 @@ self.addEventListener("message", (e: MessageEvent<unknown>) => {
         reply({ kind: "progress", done });
       }
     });
-    reply({ kind: "done", grid });
+    // How fast the hi-hat moves, on the beats just found: a fraction of a second more.
+    reply({ kind: "done", grid, hihatStep: hihatStep(request.samples, request.sampleRate, grid.beats) });
   } catch (error) {
     reply({ kind: "error", message: String(error) });
   }

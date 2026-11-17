@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EXERCISES, findExercise, FIRST_STEPS, FIRST_STEPS_2, FIRST_STEPS_3, GROOVES, RUDIMENTS } from "./library";
+import { EXERCISES, FILLS, findExercise, FIRST_STEPS, FIRST_STEPS_2, FIRST_STEPS_3, GROOVES, RUDIMENTS } from "./library";
 import type { Exercise } from "./types";
 import { validateExercise, validateLibrary } from "./validate";
 
@@ -21,8 +21,9 @@ describe("starter library", () => {
   it("has each category in its own list, first steps (every part) listed first", () => {
     expect([...FIRST_STEPS, ...FIRST_STEPS_2, ...FIRST_STEPS_3].every((e) => e.category === "first-steps")).toBe(true);
     expect(GROOVES.every((e) => e.category === "groove")).toBe(true);
+    expect(FILLS.every((e) => e.category === "fill")).toBe(true);
     expect(RUDIMENTS.every((e) => e.category === "rudiment")).toBe(true);
-    expect(EXERCISES).toEqual([...FIRST_STEPS, ...FIRST_STEPS_2, ...FIRST_STEPS_3, ...GROOVES, ...RUDIMENTS]);
+    expect(EXERCISES).toEqual([...FIRST_STEPS, ...FIRST_STEPS_2, ...FIRST_STEPS_3, ...GROOVES, ...FILLS, ...RUDIMENTS]);
   });
 
   it.each(RUDIMENTS.map((e) => [e.id, e] as const))("%s gives every note a hand", (_, exercise) => {
@@ -172,6 +173,38 @@ describe("first steps, part 3", () => {
     const notes = findExercise("first3-open-hihat")?.notes ?? [];
     expect(notes.filter((n) => n.open).map((n) => n.tick)).toEqual([168]);
     expect(notes.some((n) => n.pad === "hihatPedal")).toBe(false);
+  });
+});
+
+describe("fills", () => {
+  const bar = 4 * 48;
+
+  it.each(FILLS.map((e) => [e.id, e] as const))("%s is a groove bar, then a fill bar that ends before the loop", (_, fill) => {
+    expect(fill.bars).toBe(2);
+    // Bar 1 is a groove: hi-hat or crash on beat 1 with the kick.
+    expect(ticksOf(fill.id, "kick")?.[0]).toBe(0);
+    // Only the fill bar has sticking.
+    const sticked = fill.notes.filter((n) => n.hand);
+    expect(sticked.length).toBeGreaterThan(0);
+    expect(sticked.every((n) => n.tick >= bar)).toBe(true);
+  });
+
+  it("lists the fills easiest first: whole-bar fills on the snare before toms and sixteenths", () => {
+    expect(FILLS.map((e) => e.id)).toEqual([
+      "fill-snare-quarters",
+      "fill-snare-eighths",
+      "fill-down-the-toms",
+      "fill-sixteenths-beat-4",
+      "fill-sixteenths-around",
+      "fill-toms-crash",
+    ]);
+  });
+
+  it("alternates hands through every fill", () => {
+    for (const fill of FILLS) {
+      const hands = fill.notes.filter((n) => n.hand).map((n) => n.hand);
+      expect(hands.every((h, i) => i === 0 || h !== hands[i - 1])).toBe(true);
+    }
   });
 });
 

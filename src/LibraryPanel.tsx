@@ -18,6 +18,7 @@ const FILTERS: readonly { id: Filter; label: string }[] = [
   { id: "all", label: "All" },
   { id: "first-steps", label: "First steps" },
   { id: "groove", label: "Grooves" },
+  { id: "fill", label: "Fills" },
   { id: "rudiment", label: "Rudiments" },
   { id: "songs", label: "Songs" },
 ];
@@ -47,7 +48,7 @@ interface Props {
 }
 
 /**
- * Browse the first steps, grooves and rudiments: each with its time signature, tempo range,
+ * Browse the first steps, grooves, fills and rudiments: each with its time signature, tempo range,
  * a drum-tab preview and a button to hear one loop. Drum keys are off while
  * it's open (App), so Tab, Enter and Space move around it as usual.
  */

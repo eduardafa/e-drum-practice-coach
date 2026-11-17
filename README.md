@@ -32,6 +32,9 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
   preview (with the sticking for rudiments). Listen plays one loop with synthesized drum sounds and a click on
   every beat. Choosing an exercise sets the metronome to fit it, at your last tempo for that exercise or its
   suggested tempo. It works with the keyboard: <kbd>Tab</kbd> and <kbd>Enter</kbd>, <kbd>Esc</kbd> to close.
+- Fills: six exercises in their own library tab, each a bar of the Money beat and then a bar of fill, so they
+  practice going into the fill and coming back on beat 1: quarter and eighth notes on the snare, down the toms,
+  sixteenth notes on beat 4 and around the kit, and a fill that ends with a crash on 1. The fill bar shows its sticking.
 - Drum notation: the chosen exercise appears as standard drum notation above the kit view, with a playhead
   that follows the metronome. The notation is engraved with [VexFlow](https://www.vexflow.com/), loaded only
   when an exercise is chosen.
@@ -85,7 +88,15 @@ pnpm test          # unit tests
 pnpm lint          # oxlint, including type-aware rules
 pnpm typecheck     # tsc (TypeScript 7)
 pnpm build         # type-check + production build
+pnpm test:e2e      # browser tests, on the build (run pnpm build first)
 ```
+
+The browser tests (`e2e/`, Playwright) open the production build in Google Chrome, served with the site's real
+headers, and a simulated drummer plays along: it presses the keyboard's drum keys when each click is heard. They
+cover a scored session and its results, the tempo trainer, playing along to a song, looping a section, and MIDI and
+Guitar Pro tabs. The song and tab files are generated in code. Chrome is muted. A test fails if the page logs any
+error, including a Content-Security-Policy violation. CI runs them after the checks, on the same build, and a failed
+run keeps its screenshots and traces as the `playwright-report` artifact.
 
 To run the API locally as well, in Cloudflare's runtime:
 
