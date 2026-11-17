@@ -9,6 +9,7 @@ import { EXERCISES } from "../exercises/library";
 import { fromGrid } from "../exercises/grid";
 import { TICKS_PER_QUARTER, type Exercise } from "../exercises/types";
 import type { DrumTab, TabNote } from "./drumTab";
+import { feelAt, type HihatFeel } from "./hihatFeel";
 
 /**
  * The default for a beginner: hi-hat on every beat, kick on 1 and 3, snare on
@@ -40,6 +41,28 @@ export const GROOVE_CHOICES: readonly Exercise[] = [
 
 export function findGroove(id: string): Exercise | undefined {
   return GROOVE_CHOICES.find((e) => e.id === id);
+}
+
+/** The groove whose hi-hat moves like the song's, by notes per beat. */
+const GROOVE_FOR_FEEL: Record<HihatFeel, string> = { 1: SIMPLE_BEAT.id, 2: "rock-8ths", 4: "rock-16ths" };
+
+/** How a suggestion describes the song's hi-hat, for a beginner. */
+export const FEEL_WORDS: Record<HihatFeel, string> = {
+  1: "one note per beat",
+  2: "eighth notes (two per beat)",
+  4: "sixteenth notes (four per beat)",
+};
+
+/**
+ * The groove to suggest for a song (EDU-130): the one whose hi-hat moves like
+ * the song's at its current tempo, or null when the hi-hat wasn't clear or
+ * the tempo has been changed to one it doesn't fit.
+ */
+export function suggestedGroove(hihatStep: number | null, bpm: number): { groove: Exercise; feel: HihatFeel } | null {
+  if (hihatStep === null) return null;
+  const feel = feelAt(hihatStep, bpm);
+  const groove = feel && findGroove(GROOVE_FOR_FEEL[feel]);
+  return feel && groove ? { groove, feel } : null;
 }
 
 /**
