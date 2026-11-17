@@ -1315,6 +1315,31 @@ fieldset.group.play {
   background: var(--accent-soft);
 }
 
+/* The one note to fix: what went wrong, a tip, and the note ringed on a small staff. */
+.note-to-fix {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--tint);
+}
+
+.note-to-fix h3 {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+}
+
+.note-to-fix p {
+  margin: 4px 0 0;
+}
+
+.note-to-fix .note-to-fix-headline {
+  font-weight: 600;
+}
+
+.note-to-fix-score {
+  margin-top: 8px;
+}
+
 /* Tempo trainer: setup fields and the tempo-per-round chart. */
 .trainer .field > span:first-child {
   flex-basis: 110px;

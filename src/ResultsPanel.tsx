@@ -5,6 +5,7 @@ import { NITRO_MAX_PADS } from "./kit/nitroMax";
 import { PadHeatmap } from "./PadHeatmap";
 import { pathAdvice } from "./exercises/path";
 import { mirrorText } from "./handedness";
+import { NoteToFixSection } from "./NoteToFixSection";
 import { useHandedness } from "./HandednessContext";
 import { hihatTips } from "./playalong/hihatTips";
 import type { Exercise } from "./exercises/types";
@@ -62,6 +63,8 @@ export function ResultsPanel({ exercise, results, mode, bpm, loops, record, onRe
         Accuracy ({MODE_LABEL[mode]}). {MODE_LABEL[other][0].toUpperCase() + MODE_LABEL[other].slice(1)}:{" "}
         {percent(results.accuracy[other])}.
       </p>
+
+      {record && <NoteToFixSection record={record} />}
 
       <dl className="stats">
         <dt>On time</dt>
