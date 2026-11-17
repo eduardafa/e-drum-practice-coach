@@ -27,6 +27,9 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
   preview (with the sticking for rudiments). Listen plays one loop with synthesized drum sounds and a click on
   every beat. Choosing an exercise sets the metronome to fit it, at your last tempo for that exercise or its
   suggested tempo. It works with the keyboard: <kbd>Tab</kbd> and <kbd>Enter</kbd>, <kbd>Esc</kbd> to close.
+- Fills: six exercises in their own library tab, each a bar of the Money beat and then a bar of fill, so they
+  practice going into the fill and coming back on beat 1: quarter and eighth notes on the snare, down the toms,
+  sixteenth notes on beat 4 and around the kit, and a fill that ends with a crash on 1. The fill bar shows its sticking.
 - Drum notation: the chosen exercise appears as standard drum notation above the kit view, with a playhead
   that follows the metronome. The notation is engraved with [VexFlow](https://www.vexflow.com/), loaded only
   when an exercise is chosen.
@@ -60,6 +63,10 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
 - Timing by hand, foot and pad over the same range: each one's average lean (early or late) and how much it
   varies, with the biggest tendency spelled out and a practice tip, e.g. "Your left hand drags: it's 12 ms late
   on average. Try slow single strokes". Rudiments use their sticking; grooves assume a right-handed setup.
+- Loud and soft: after a session on an exercise with accents or ghost notes, the results screen (and the session
+  opened from History) counts how many accents were clearly louder and ghost notes clearly softer than your own
+  normal notes in that session, with one tip. It's reported next to the timing score, never mixed into it.
+  "Accents on 1 and 3" in the rudiments practices it.
 - Pad heatmap: the kit drawn from above with each pad colored by how often or how hard it was hit, for a range
   of history or the session just played, with a legend, a table, and a note on whether accents and ghost notes
   sound different enough.

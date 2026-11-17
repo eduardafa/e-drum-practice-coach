@@ -37,7 +37,7 @@ export interface Exercise {
   /** Stable identifier: lowercase letters, digits and hyphens. Used to save progress. */
   id: string;
   name: string;
-  category: "first-steps" | "groove" | "rudiment";
+  category: "first-steps" | "groove" | "fill" | "rudiment";
   description: string;
   timeSignature: TimeSignature;
   /** Length in bars. The exercise loops. */
