@@ -111,8 +111,9 @@ export function useSong(beforeOpen: () => void) {
         found: saved ? (saved.found ?? saved.grid) : null,
         loop: coach.song.loop,
         speed: 1,
+        hihatStep: saved?.hihatStep ?? null,
       });
-      const entry = (grid: BeatGrid, found?: BeatGrid): RememberedSong => ({
+      const entry = (grid: BeatGrid, found?: BeatGrid, hihatStep?: number | null): RememberedSong => ({
         fingerprint,
         title,
         duration: buffer.duration,
@@ -120,21 +121,22 @@ export function useSong(beforeOpen: () => void) {
         grid,
         ...(found && { found }),
         ...(coach.song.loop && { loop: coach.song.loop }),
+        ...(hihatStep && { hihatStep }),
       });
 
       if (saved) {
         // Opened before: its beats come back at once, corrections included.
-        store(remember(remembered, entry(saved.grid, saved.found)));
+        store(remember(remembered, entry(saved.grid, saved.found, saved.hihatStep)));
         return;
       }
       setAnalyzing(0);
       const run = analyzeSong(mono, buffer.sampleRate, setAnalyzing);
       cancelAnalysis.current = run.cancel;
       try {
-        const grid = await run.result;
-        setSong((s) => (s && s.fingerprint === fingerprint ? { ...s, grid, found: grid } : s));
+        const { grid, hihatStep } = await run.result;
+        setSong((s) => (s && s.fingerprint === fingerprint ? { ...s, grid, found: grid, hihatStep } : s));
         setRemembered((list) => {
-          const next = remember(list, entry(grid));
+          const next = remember(list, entry(grid, undefined, hihatStep));
           saveSongs(next);
           return next;
         });
@@ -283,6 +285,8 @@ export function useSong(beforeOpen: () => void) {
         speed: 1,
         grid,
         found: grid,
+        // Its notes are known exactly: there's no groove to suggest.
+        hihatStep: null,
         tab: { name, part, tab, speed: 1 },
       });
     } catch (e) {

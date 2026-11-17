@@ -80,3 +80,14 @@ describe("a song's loop (EDU-121)", () => {
     expect(parseLoop("loop", 180)).toBeNull();
   });
 });
+
+describe("a song's hi-hat step (EDU-130)", () => {
+  it("is kept when it's a sensible time between notes, and dropped on its own otherwise", () => {
+    expect(parseSongs([{ ...song("a"), hihatStep: 0.25 }])[0]?.hihatStep).toBe(0.25);
+    for (const bad of [0, -1, 5, Number.NaN, "0.25"]) {
+      const parsed = parseSongs([{ ...song("b"), hihatStep: bad }]);
+      expect(parsed).toHaveLength(1);
+      expect(parsed[0]?.hihatStep).toBeUndefined();
+    }
+  });
+});
