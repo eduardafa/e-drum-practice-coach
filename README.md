@@ -76,7 +76,15 @@ pnpm test          # unit tests
 pnpm lint          # oxlint, including type-aware rules
 pnpm typecheck     # tsc (TypeScript 7)
 pnpm build         # type-check + production build
+pnpm test:e2e      # browser tests, on the build (run pnpm build first)
 ```
+
+The browser tests (`e2e/`, Playwright) open the production build in Google Chrome, served with the site's real
+headers, and a simulated drummer plays along: it presses the keyboard's drum keys when each click is heard. They
+cover a scored session and its results, the tempo trainer, playing along to a song, looping a section, and MIDI and
+Guitar Pro tabs. The song and tab files are generated in code. Chrome is muted. A test fails if the page logs any
+error, including a Content-Security-Policy violation. CI runs them after the checks, on the same build, and a failed
+run keeps its screenshots and traces as the `playwright-report` artifact.
 
 To run the API locally as well, in Cloudflare's runtime:
 
