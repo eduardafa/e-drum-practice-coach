@@ -60,6 +60,10 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
 - Timing by hand, foot and pad over the same range: each one's average lean (early or late) and how much it
   varies, with the biggest tendency spelled out and a practice tip, e.g. "Your left hand drags: it's 12 ms late
   on average. Try slow single strokes". Rudiments use their sticking; grooves assume a right-handed setup.
+- Loud and soft: after a session on an exercise with accents or ghost notes, the results screen (and the session
+  opened from History) counts how many accents were clearly louder and ghost notes clearly softer than your own
+  normal notes in that session, with one tip. It's reported next to the timing score, never mixed into it.
+  "Accents on 1 and 3" in the rudiments practices it.
 - Pad heatmap: the kit drawn from above with each pad colored by how often or how hard it was hit, for a range
   of history or the session just played, with a legend, a table, and a note on whether accents and ghost notes
   sound different enough.
