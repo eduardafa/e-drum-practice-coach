@@ -7,43 +7,52 @@ import { test as base, expect, type Page } from "@playwright/test";
 
 declare global {
   interface Window {
-    /** The key the simulated drummer presses on each click, or null when it isn't playing. */
-    drummerKey?: string | null;
+    /** The keys the simulated drummer presses on each click, or null when it isn't playing. */
+    drummerHits?: Hit[] | null;
   }
+}
+
+/** One pad the drummer hits on each click: its keyboard key, and how many ms after the click (0: right on it). */
+export interface Hit {
+  code: string;
+  lateMs: number;
 }
 
 export interface Drummer {
   /**
    * Hits a pad on every click the drummer hears from now on: the click's
    * scheduled time plus the audio output's delay, as a real drummer would.
-   * `code` is the keyboard key of the pad (the app's keyboard fallback).
+   * `code` is the keyboard key of the pad (the app's keyboard fallback), or
+   * several pads, each with its own lateness, to hit them together or apart.
    */
-  play(code: string): Promise<void>;
+  play(code: string | Hit[]): Promise<void>;
   stop(): Promise<void>;
 }
 
 /**
  * Runs in the page before the app: wraps OscillatorNode.start, which every
  * click goes through (metronome, count-in and a song's click alike), and
- * presses the drummer's key at the moment that click will be heard. Beat and
+ * presses the drummer's keys at the moment that click will be heard. Beat and
  * downbeat clicks only (1500 and 2000 Hz), not subdivisions.
  */
 function hookClicks() {
-  window.drummerKey = null;
+  window.drummerHits = null;
   // oxlint-disable-next-line typescript/unbound-method -- wrapped below, and always called with the node as `this`
   const start = OscillatorNode.prototype.start;
   OscillatorNode.prototype.start = function (this: OscillatorNode, when?: number) {
-    const code = window.drummerKey;
+    const hits = window.drummerHits;
     const ctx = this.context;
-    if (code && when && this.frequency.value >= 1500 && ctx instanceof AudioContext) {
+    if (hits && when && this.frequency.value >= 1500 && ctx instanceof AudioContext) {
       const heard = when + (ctx.outputLatency || 0) + (ctx.baseLatency || 0);
-      setTimeout(
-        () => {
-          window.dispatchEvent(new KeyboardEvent("keydown", { code, bubbles: true }));
-          setTimeout(() => window.dispatchEvent(new KeyboardEvent("keyup", { code, bubbles: true })), 30);
-        },
-        Math.max(0, (heard - ctx.currentTime) * 1000),
-      );
+      for (const { code, lateMs } of hits) {
+        setTimeout(
+          () => {
+            window.dispatchEvent(new KeyboardEvent("keydown", { code, bubbles: true }));
+            setTimeout(() => window.dispatchEvent(new KeyboardEvent("keyup", { code, bubbles: true })), 30);
+          },
+          Math.max(0, (heard - ctx.currentTime) * 1000 + lateMs),
+        );
+      }
     }
     start.call(this, when);
   };
@@ -63,10 +72,11 @@ export const test = base.extend<{ drummer: Drummer; clickHook: void; noPageError
   drummer: async ({ page }, provide) => {
     await provide({
       play: async (code) => {
-        await page.evaluate((c) => (window.drummerKey = c), code);
+        const hits = typeof code === "string" ? [{ code, lateMs: 0 }] : code;
+        await page.evaluate((h) => (window.drummerHits = h), hits);
       },
       stop: async () => {
-        await page.evaluate(() => (window.drummerKey = null));
+        await page.evaluate(() => (window.drummerHits = null));
       },
     });
   },
