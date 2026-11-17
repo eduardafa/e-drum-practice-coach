@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { FIRST_STEPS } from "../exercises/library";
 import { PATH_GOAL_ID, PATHS } from "../exercises/path";
-import { firstStepsProgress } from "./firstSteps";
+import { firstStepsProgress, meetKitDone } from "./firstSteps";
 import type { HistoryRecord, SessionRecord } from "./record";
 
 const PASS = 0.9;
@@ -111,5 +111,14 @@ describe("firstStepsProgress", () => {
   it("unlocks part 1 only once it's started (nothing leads into it)", () => {
     expect(firstStepsProgress([], "partial", PASS).unlocked).toBe(false);
     expect(firstStepsProgress([session(STEP1, 0.2)], "partial", PASS).unlocked).toBe(true);
+  });
+});
+
+describe("meetKitDone", () => {
+  it("is done once the tour is finished, or once any part 1 step was played", () => {
+    expect(meetKitDone([], false)).toBe(false);
+    expect(meetKitDone([], true)).toBe(true);
+    expect(meetKitDone([session(STEP2, 0.2)], false)).toBe(true);
+    expect(meetKitDone([session("rock-16ths", 0.95)], false)).toBe(false);
   });
 });
