@@ -10,7 +10,11 @@ export interface BeatsRequest {
   sampleRate: number;
 }
 
-export type BeatsReply = { kind: "progress"; done: number } | { kind: "done"; grid: BeatGrid } | { kind: "error"; message: string };
+export type BeatsReply =
+  | { kind: "progress"; done: number }
+  /** `hihatStep`: seconds between the song's hi-hat notes, or null when it isn't clear (EDU-130). */
+  | { kind: "done"; grid: BeatGrid; hihatStep: number | null }
+  | { kind: "error"; message: string };
 
 /** The request, or null for anything that isn't a well-formed one. */
 export function parseBeatsRequest(data: unknown): BeatsRequest | null {

@@ -9,7 +9,16 @@ import { MidiError } from "./songs/midiFile";
 import { TAB_FILE_ACCEPT, readTabFile } from "./songs/tabFile";
 import { TAB_SPEEDS } from "./songs/tabSong";
 import { forgetTab, loadTab, saveTab, type SaveResult } from "./songs/tabStore";
-import { GROOVE_CHOICES, NO_GROOVE, findGroove, grooveTab, loadGroovePreference, saveGroovePreference } from "./songs/grooveTab";
+import {
+  FEEL_WORDS,
+  GROOVE_CHOICES,
+  NO_GROOVE,
+  findGroove,
+  grooveTab,
+  loadGroovePreference,
+  saveGroovePreference,
+  suggestedGroove,
+} from "./songs/grooveTab";
 import type { TabNoteResult, TabScore } from "./songs/tabScoring";
 import { Segmented } from "./Segmented";
 import { SmallMetronome } from "./SmallMetronome";
@@ -73,9 +82,12 @@ export function DrumTabPanel({
   fixed,
   showMetronome,
   songFingerprint,
+  hihatStep = null,
 }: {
   coach: Coach;
   grid: BeatGrid | null;
+  /** Seconds between the song's hi-hat notes, when found clearly (EDU-130): suggests a groove that moves like it. */
+  hihatStep?: number | null;
   /**
    * The open song's fingerprint: its tab is remembered in this browser under
    * it and comes back, lined up, when the song is opened again (EDU-99).
@@ -138,10 +150,16 @@ export function DrumTabPanel({
     setShift(next);
     persist(current, next);
   };
-  /** "What to play": a groove from the library, or just the beat. It becomes the default for songs without a tab. */
-  const chooseGroove = (id: string) => {
-    setGrooveChoice(id);
-    saveGroovePreference(id);
+  /**
+   * "What to play": a groove from the library, or just the beat. Picked from the
+   * list, it becomes the default for songs without a tab; taken from a
+   * suggestion, it's for this song only (it still stays with the song).
+   */
+  const chooseGroove = (id: string, asDefault = true) => {
+    if (asDefault) {
+      setGrooveChoice(id);
+      saveGroovePreference(id);
+    }
     setShift(0);
     const chosen = findGroove(id);
     if (id === NO_GROOVE || !chosen || !grid) {
@@ -222,6 +240,20 @@ export function DrumTabPanel({
     </label>
   );
 
+  // A groove whose hi-hat moves like the song's (EDU-130), when it isn't the one on show. Not for a song's own tab.
+  const suggestion = songFingerprint && grid && !(open && !isGroove) ? suggestedGroove(hihatStep, grid.bpm) : null;
+  const shownGroove = isGroove ? open?.groove : undefined;
+  const suggest = suggestion && suggestion.groove.id !== shownGroove && (
+    <p className="drum-tab-suggestion">
+      <span>
+        This song's hi-hat sounds like {FEEL_WORDS[suggestion.feel]}, so the <strong>{suggestion.groove.name}</strong> may fit it
+        better.{suggestion.feel === 4 && " It's harder: slow the song down to start."} A guess from the sound, not the song's real part.
+      </span>
+      <button className="secondary" onClick={releasing(() => chooseGroove(suggestion.groove.id, false))}>
+        Try the {suggestion.groove.name}
+      </button>
+    </p>
+  );
   // A song's "What to play" (EDU-89): just the beat, or a groove laid on its beats.
   const grooveSelect = songFingerprint && grid && (
     <label className="drum-tab-groove">
@@ -254,6 +286,7 @@ export function DrumTabPanel({
           {picker("Open a drum tab", "secondary drum-tab-open")}
           <span className="drum-tab-note">A MIDI (.mid) or Guitar Pro (.gp, .gp5) file of the song's drums: see what to hit as the song plays.</span>
         </div>
+        {suggest}
         {error && <p className="hint warn-note">{error}</p>}
       </div>
     );
@@ -333,6 +366,7 @@ export function DrumTabPanel({
           </>
         )}
       </div>
+      {suggest}
       {error && <p className="hint warn-note">{error}</p>}
       {songFingerprint && saved !== "saved" && (
         <p className="hint">

@@ -21,6 +21,8 @@ export interface RememberedSong {
   found?: BeatGrid;
   /** The section set to repeat (EDU-121), in seconds. */
   loop?: SongLoop;
+  /** Seconds between the song's hi-hat notes, when found clearly (EDU-130): to suggest a groove. */
+  hihatStep?: number;
 }
 
 const KEY = "edrum-coach:songs:v1";
@@ -61,12 +63,15 @@ function parseSong(value: unknown): RememberedSong | null {
   // A bad copy of the found beats only loses the way back to them; a bad loop, only the loop.
   const found = value.found === undefined ? null : parseGrid(value.found);
   const loop = value.loop === undefined ? null : parseLoop(value.loop, duration);
+  // Sixteenths at 240 BPM to one note every two seconds; anything else is dropped, not the song.
+  const { hihatStep } = value;
+  const step = typeof hihatStep === "number" && Number.isFinite(hihatStep) && hihatStep >= 0.05 && hihatStep <= 2 ? hihatStep : null;
   try {
     Temporal.Instant.from(lastOpened);
   } catch {
     return null;
   }
-  return { fingerprint, title, duration, lastOpened, grid, ...(found && { found }), ...(loop && { loop }) };
+  return { fingerprint, title, duration, lastOpened, grid, ...(found && { found }), ...(loop && { loop }), ...(step && { hihatStep: step }) };
 }
 
 /** The saved list, newest first; malformed entries are dropped. */
