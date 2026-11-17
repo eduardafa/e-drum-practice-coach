@@ -11,6 +11,7 @@
  * comes from the exercise's ticks, passed in by the caller.
  */
 import type { PadId } from "../kit/nitroMax";
+import { PAD_SAID } from "../kit/padNames";
 import type { SessionRecord } from "./record";
 
 /** A gap smaller than this (median, in ms) sounds like one hit. */
@@ -97,23 +98,10 @@ export function apartHits(record: Pick<SessionRecord, "voices" | "notes">, ticks
 
 const FEET: ReadonlySet<PadId> = new Set(["kick", "hihatPedal"]);
 
-/** Drum names as said mid-sentence. */
-const SAID: Record<PadId, string> = {
-  crash: "crash",
-  ride: "ride",
-  hihat: "hi-hat",
-  tom1: "tom 1",
-  tom2: "tom 2",
-  tom3: "tom 3",
-  snare: "snare",
-  kick: "kick",
-  hihatPedal: "hi-hat pedal",
-};
-
 /** One plain tip: what lands late, by about how much, and what to think about. */
 export function apartTip(result: ApartResult): string {
   const gap = Math.max(5, Math.round(result.gapMs / 5) * 5);
-  const said = `When they're played together, your ${SAID[result.second]} lands about ${gap} ms after the ${SAID[result.first]}.`;
+  const said = `When they're played together, your ${PAD_SAID[result.second]} lands about ${gap} ms after the ${PAD_SAID[result.first]}.`;
   const firstFoot = FEET.has(result.first);
   if (firstFoot !== FEET.has(result.second)) {
     return `${said} Think of hand and foot as one motion: they come down at the same time.`;
