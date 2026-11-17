@@ -1,5 +1,5 @@
 /**
- * The starter library: a first-steps path, common grooves and rudiments,
+ * The starter library: a first-steps path, common grooves, fills and rudiments,
  * written as drum tab. See grid.ts for the symbols. Every exercise is checked
  * by library.test.ts.
  */
@@ -265,6 +265,128 @@ export const GROOVES: readonly Exercise[] = [
   }),
 ];
 
+/**
+ * Fills: one bar of the Money beat, then a bar with a fill, so each exercise
+ * practices going into the fill and coming back out on beat 1, which is where
+ * beginners get lost. Easiest first. Sticking is written only for the fill;
+ * the groove bar follows the groove convention (hi-hat right hand, snare left).
+ */
+const FILL_TEMPO = { min: 40, suggested: 60, max: 120 } as const;
+
+export const FILLS: readonly Exercise[] = [
+  fromGrid({
+    id: "fill-snare-quarters",
+    name: "Fill 1: Quarter notes on the snare",
+    category: "fill",
+    description:
+      "A bar of the Money beat, then four snare hits, one on each click, alternating hands. Come back to the hi-hat and kick on beat 1.",
+    timeSignature: FOUR_FOUR,
+    bars: 2,
+    tempo: FILL_TEMPO,
+    stepsPerBar: 8,
+    lanes: {
+      hihat: "x x x x  x x x x | - - - -  - - - -",
+      snare: "- - x -  - - x - | x - x -  x - x -",
+      kick: "x - - -  x - - - | - - - -  - - - -",
+    },
+    sticking: "- - - -  - - - - | R - L -  R - L -",
+  }),
+  fromGrid({
+    id: "fill-snare-eighths",
+    name: "Fill 2: Eighth notes on the snare",
+    category: "fill",
+    description:
+      "A bar of the Money beat, then eight snare hits, on every count and every \"&\", alternating hands. Count \"1 & 2 & 3 & 4 &\" out loud.",
+    timeSignature: FOUR_FOUR,
+    bars: 2,
+    tempo: FILL_TEMPO,
+    stepsPerBar: 8,
+    lanes: {
+      hihat: "x x x x  x x x x | - - - -  - - - -",
+      snare: "- - x -  - - x - | x x x x  x x x x",
+      kick: "x - - -  x - - - | - - - -  - - - -",
+    },
+    sticking: "- - - -  - - - - | R L R L  R L R L",
+  }),
+  fromGrid({
+    id: "fill-down-the-toms",
+    name: "Fill 3: Down the toms",
+    category: "fill",
+    description:
+      "Eighth notes moving around the kit, two on each drum: snare, tom 1, tom 2, tom 3. Keep alternating hands as you move, and land back on the hi-hat on 1.",
+    timeSignature: FOUR_FOUR,
+    bars: 2,
+    tempo: FILL_TEMPO,
+    stepsPerBar: 8,
+    lanes: {
+      hihat: "x x x x  x x x x | - - - -  - - - -",
+      snare: "- - x -  - - x - | x x - -  - - - -",
+      tom1: "- - - -  - - - - | - - x x  - - - -",
+      tom2: "- - - -  - - - - | - - - -  x x - -",
+      tom3: "- - - -  - - - - | - - - -  - - x x",
+      kick: "x - - -  x - - - | - - - -  - - - -",
+    },
+    sticking: "- - - -  - - - - | R L R L  R L R L",
+  }),
+  fromGrid({
+    id: "fill-sixteenths-beat-4",
+    name: "Fill 4: Sixteenth notes on beat 4",
+    category: "fill",
+    description:
+      "Keep the beat going for three counts, then four fast snare hits on beat 4 (\"4 e & a\"), alternating hands. A short fill is the easiest way into faster notes.",
+    timeSignature: FOUR_FOUR,
+    bars: 2,
+    tempo: { min: 40, suggested: 55, max: 110 },
+    stepsPerBar: 16,
+    lanes: {
+      hihat: "x-x- x-x- x-x- x-x- | x-x- x-x- x-x- ----",
+      snare: "---- x--- ---- x--- | ---- x--- ---- xxxx",
+      kick: "x--- ---- x--- ---- | x--- ---- x--- ----",
+    },
+    sticking: "---- ---- ---- ---- | ---- ---- ---- RLRL",
+  }),
+  fromGrid({
+    id: "fill-sixteenths-around",
+    name: "Fill 5: Sixteenth notes around the kit",
+    category: "fill",
+    description:
+      "Two counts of the beat, then sixteenth notes on beats 3 and 4: snare, tom 1, tom 2 and tom 3, two hits each. Slow it down until every hit is even.",
+    timeSignature: FOUR_FOUR,
+    bars: 2,
+    tempo: { min: 40, suggested: 50, max: 100 },
+    stepsPerBar: 16,
+    lanes: {
+      hihat: "x-x- x-x- x-x- x-x- | x-x- x-x- ---- ----",
+      snare: "---- x--- ---- x--- | ---- x--- xx-- ----",
+      tom1: "---- ---- ---- ---- | ---- ---- --xx ----",
+      tom2: "---- ---- ---- ---- | ---- ---- ---- xx--",
+      tom3: "---- ---- ---- ---- | ---- ---- ---- --xx",
+      kick: "x--- ---- x--- ---- | x--- ---- ---- ----",
+    },
+    sticking: "---- ---- ---- ---- | ---- ---- RLRL RLRL",
+  }),
+  fromGrid({
+    id: "fill-toms-crash",
+    name: "Fill 6: Toms, then crash on 1",
+    category: "fill",
+    description:
+      "A short fill on beats 3 and 4: snare, snare, tom 1, tom 2. Then a crash with the kick on beat 1, the way a fill ends in a song, and back to the hi-hat.",
+    timeSignature: FOUR_FOUR,
+    bars: 2,
+    tempo: FILL_TEMPO,
+    stepsPerBar: 8,
+    lanes: {
+      crash: "x - - -  - - - - | - - - -  - - - -",
+      hihat: "- x x x  x x x x | x x x x  - - - -",
+      snare: "- - x -  - - x - | - - x -  x x - -",
+      tom1: "- - - -  - - - - | - - - -  - - x -",
+      tom2: "- - - -  - - - - | - - - -  - - - x",
+      kick: "x - - -  x - - - | x - - -  - - - -",
+    },
+    sticking: "- - - -  - - - - | - - - -  R L R L",
+  }),
+];
+
 export const RUDIMENTS: readonly Exercise[] = [
   fromGrid({
     id: "accents-1-3",
@@ -341,7 +463,7 @@ export const RUDIMENTS: readonly Exercise[] = [
   }),
 ];
 
-export const EXERCISES: readonly Exercise[] = [...FIRST_STEPS, ...FIRST_STEPS_2, ...GROOVES, ...RUDIMENTS];
+export const EXERCISES: readonly Exercise[] = [...FIRST_STEPS, ...FIRST_STEPS_2, ...GROOVES, ...FILLS, ...RUDIMENTS];
 
 export function findExercise(id: string): Exercise | undefined {
   return EXERCISES.find((e) => e.id === id);
