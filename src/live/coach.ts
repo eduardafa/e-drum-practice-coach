@@ -22,6 +22,7 @@ import { beepTimes, secondsLeft } from "../playalong/getReady";
 import { playCountdownBeep } from "../audio/voices";
 import { LearnSession } from "../playalong/learn";
 import { PlayAlongSession } from "../playalong/session";
+import { isQuietBar } from "../playalong/quietBars";
 import type { MetronomeSettings } from "../audio/schedule";
 import { KitMapping, type CaptureResult, type KitMap } from "../kit/kitMap";
 import { lookupNote, NITRO_MAX_NOTE_MAP } from "../kit/nitroMax";
@@ -29,7 +30,7 @@ import { MidiConnection, type TimedMidiEvent } from "../midi/connection";
 import { DEFAULT_SCORING, scoreHit, TimingGrid, type ScoringOptions } from "../timing/grid";
 import type { SkillLevel } from "../profiles";
 import { calibrationSetup, CalibrationSession, type CalibrationProgress } from "./calibration";
-import { countAt } from "./counts";
+import { countAt, currentCount } from "./counts";
 import { LiveState } from "./liveState";
 
 /** The song's playback level: a little under full scale, leaving room for the click. */
@@ -176,7 +177,7 @@ export class Coach {
         const { beatsPerBar, subdivision } = this.metronome.currentSettings;
         if (step.beatInBar === 0 && step.subInBeat === 0) this.bar += 1;
         const count = countAt(step, beatsPerBar, subdivision);
-        this.live.addCount({ time: step.performanceTime, ...count, bar: Math.max(0, this.bar) });
+        this.live.addCount({ time: step.performanceTime, ...count, bar: Math.max(0, this.bar), quiet: step.quiet });
         // Bar 0 is the count-in; the exercise starts on the next downbeat, one bar later.
         if (this.bar === 0 && step.beatInBar === 0 && step.subInBeat === 0 && this.playAlong) {
           const beatMs = step.intervalSec * subdivision * 1000;
@@ -223,9 +224,16 @@ export class Coach {
    * Starts a play-along session at `bpm`: an optional get-ready countdown of
    * `countdownSec` seconds, a bar of count-in, then `loops` repetitions. Sets
    * the metronome's beats and subdivision to fit the exercise, and returns the
-   * settings used so the UI can show them. Call from a user gesture.
+   * settings used so the UI can show them. With `quietEvery` (2 or 4), the
+   * click goes quiet for one bar in that many (EDU-145). Call from a user gesture.
    */
-  async startSession(exercise: Exercise, loops: number, bpm: number, countdownSec = 0): Promise<MetronomeSettings> {
+  async startSession(
+    exercise: Exercise,
+    loops: number,
+    bpm: number,
+    countdownSec = 0,
+    quietEvery = 0,
+  ): Promise<MetronomeSettings> {
     this.endMapping();
     this.stopSong();
     this.endLearn();
@@ -238,7 +246,7 @@ export class Coach {
       subdivision: subdivisionFor(exercise),
     };
     this.metronome.setSettings(settings);
-    this.playAlong = new PlayAlongSession(exercise, loops, settings.bpm, this.scoring);
+    this.playAlong = new PlayAlongSession(exercise, loops, settings.bpm, this.scoring, quietEvery);
     this.guide.stop();
     this.guidePlan = previewPlan(exercise, settings.bpm);
     // Read the wall clock once per session, for history only; timing never uses it.
@@ -247,6 +255,8 @@ export class Coach {
     this.bar = -1;
     // Cleared first: the metronome is already running for a moment before start() resolves.
     this.countdownEndMs = 0;
+    // The metronome's bar 0 is the count-in; the exercise's bars start at its bar 1.
+    this.metronome.quietBar = quietEvery ? (bar) => isQuietBar(bar - 1, quietEvery) : null;
     this.countdownEndMs = await this.metronome.start(countdownSec);
     return settings;
   }
@@ -362,6 +372,12 @@ export class Coach {
     const loop = this.song.loop;
     if (loop && at < loop.start) at += loop.end - loop.start;
     return Math.max(0, at);
+  }
+
+  /** Whether the bar being heard at `now` is a quiet bar of a play-along session: no click, keep going. */
+  quietAt(now: number): boolean {
+    if (this.playAlong?.phase !== "playing" || !this.metronome.running) return false;
+    return currentCount(this.live.counts, now)?.quiet === true;
   }
 
   /** Whether the drummer is playing along to the song (countdown included). */
