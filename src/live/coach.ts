@@ -25,6 +25,7 @@ import { KitTour } from "./kitTour";
 import { PlayAlongSession } from "../playalong/session";
 import { isQuietBar } from "../playalong/quietBars";
 import type { MetronomeSettings } from "../audio/schedule";
+import { DEFAULT_SPOKEN_COUNT, spokenCountOn, type SpokenCountSetting } from "../audio/spokenCount";
 import { KitMapping, type CaptureResult, type KitMap } from "../kit/kitMap";
 import { lookupNote, NITRO_MAX_NOTE_MAP } from "../kit/nitroMax";
 import { MidiConnection, type TimedMidiEvent } from "../midi/connection";
@@ -145,6 +146,12 @@ export class Coach {
   scoring: ScoringOptions = { ...DEFAULT_SCORING };
   /** Play the exercise's drum sounds along with the click during a session (Settings). */
   guideEnabled = false;
+  /** When the metronome counts out loud (Settings): applied each time it starts. */
+  spokenCount: SpokenCountSetting = DEFAULT_SPOKEN_COUNT;
+  /** Keep the click while counting out loud (Settings). */
+  countWithClick = true;
+  /** The exercise of the metronome's current (or last) run, null for the plain metronome: decides the spoken count. */
+  private runExercise: Exercise | null = null;
   /** Which note is which pad: the connected kit's recorded map over the standard one (App sets it). */
   noteMap: KitMap = NITRO_MAX_NOTE_MAP;
   /** "Map your kit": while set, notes are recorded for the pad asked for instead of played. */
@@ -210,6 +217,7 @@ export class Coach {
     this.preview.stop();
     this.live.resetSession();
     this.bar = -1;
+    this.countOutLoud(null);
     await this.metronome.start();
   }
 
@@ -261,8 +269,22 @@ export class Coach {
     this.countdownEndMs = 0;
     // The metronome's bar 0 is the count-in; the exercise's bars start at its bar 1.
     this.metronome.quietBar = quietEvery ? (bar) => isQuietBar(bar - 1, quietEvery) : null;
+    this.countOutLoud(exercise);
     this.countdownEndMs = await this.metronome.start(countdownSec);
     return settings;
+  }
+
+  /** Sets the metronome to count out loud or not for a run on `exercise` (null: the plain metronome). */
+  private countOutLoud(exercise: Exercise | null): void {
+    this.runExercise = exercise;
+    this.metronome.spokenCount = { on: spokenCountOn(this.spokenCount, exercise), click: this.countWithClick };
+  }
+
+  /** Applies a change to the spoken count settings at once, to the run in progress too (never to calibration). */
+  setSpokenCount(setting: SpokenCountSetting, withClick: boolean): void {
+    this.spokenCount = setting;
+    this.countWithClick = withClick;
+    if (!this.calibrating) this.countOutLoud(this.runExercise);
   }
 
   /** Starts wait mode on an exercise: no metronome, each step waits until its pads are hit. */
@@ -622,6 +644,8 @@ export class Coach {
     this.metronome.setSettings(setup.metronome);
     this.calibration = new CalibrationSession(setup.plan, setup.options);
     this.live.resetSession();
+    // Calibration listens for hits on plain clicks: no voice.
+    this.metronome.spokenCount = { on: false, click: true };
     await this.metronome.start();
   }
 

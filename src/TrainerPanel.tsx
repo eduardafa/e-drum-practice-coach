@@ -9,6 +9,7 @@ import {
   type TrainerConfig,
 } from "./playalong/trainer";
 import { releasing } from "./releasing";
+import { Term } from "./Term";
 
 /** Where the trainer is: choosing settings, between rounds, or finished. Rounds themselves show no panel. */
 export type TrainerStage =
@@ -61,7 +62,7 @@ export function TrainerPanel({ exercise, stage, config, rounds, onStart, onStop,
             Round {rounds.length}: {pct(last.accuracy)}, {OUTCOME_TEXT[last.outcome]}.
           </p>
           <p>
-            Next round at <strong>{stage.nextBpm} BPM</strong>. Listen to the count-in, then play.
+            Next round at <strong>{stage.nextBpm} BPM</strong>. Listen to the <Term word="count-in" />, then play.
           </p>
           <TempoChart rounds={rounds} config={config} />
           <div className="calibration-actions">

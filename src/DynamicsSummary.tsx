@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { dynamicsTip, sessionDynamics, type DynamicCount } from "./history/dynamics";
 import type { SessionRecord } from "./history/record";
+import { Term } from "./Term";
 
 interface Props {
   record: SessionRecord;
@@ -27,13 +28,17 @@ export function DynamicsSummary({ record }: Props) {
       {!result.sameStrength && parts.length > 0 && <p className="dynamics-counts">{parts.join(" · ")}</p>}
       <p className="dynamics-tip">{dynamicsTip(result)}</p>
       <p className="hint">
-        {[
-          result.accents && "Accents (marked >) should be clearly louder than your other notes.",
-          result.ghosts && "Ghost notes (in brackets) should be clearly softer.",
-          "How hard you hit doesn't change your timing score.",
-        ]
-          .filter(Boolean)
-          .join(" ")}
+        {result.accents && (
+          <>
+            <Term word="accent">Accents</Term> (marked &gt;) should be clearly louder than your other notes.{" "}
+          </>
+        )}
+        {result.ghosts && (
+          <>
+            <Term word="ghost note">Ghost notes</Term> (in brackets) should be clearly softer.{" "}
+          </>
+        )}
+        How hard you hit doesn&apos;t change your timing score.
       </p>
     </section>
   );

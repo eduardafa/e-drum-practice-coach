@@ -18,11 +18,19 @@ import type { TimingGrid } from "../timing/grid";
 import type { TickCommand } from "./tickCommand";
 import { beepTimes } from "../playalong/getReady";
 import { playClick, playCountdownBeep } from "./voices";
+import { CountVoice, syllableSec } from "./countVoice";
+import { spokenStep } from "./spokenCount";
 import { DEFAULT_VOLUME, MAX_VOLUME, softClipCurve } from "./volume";
 
 const TICK_MS = 25;
 const LOOKAHEAD_SEC = 0.12;
 const START_DELAY_SEC = 0.1;
+
+/** Whether the metronome counts out loud, and whether the click plays with the voice. */
+export interface SpokenCountMode {
+  on: boolean;
+  click: boolean;
+}
 
 export interface BeatListener {
   /** `quiet`: the step's click was left out (a quiet bar). */
@@ -40,6 +48,11 @@ export class Metronome {
   private volumeValue = DEFAULT_VOLUME;
   /** Countdown beeps scheduled by start(), silenced if the metronome stops first. */
   private countdownBeeps: OscillatorNode[] = [];
+  private readonly countVoice = new CountVoice();
+  /** Count out loud ("one and two and"), and whether the click plays too. */
+  private spoken: SpokenCountMode = { on: false, click: true };
+  /** Counts start() and stop() calls, so a stop while the voice downloads cancels that start. */
+  private generation = 0;
   /** Bars started since start(), from 0 (the first bar); -1 before the first downbeat. */
   private bar = -1;
   /**
@@ -82,6 +95,16 @@ export class Metronome {
     if (this.bus) this.bus.gain.value = volume / MAX_VOLUME;
   }
 
+  get spokenCount(): SpokenCountMode {
+    return this.spoken;
+  }
+
+  /** Applies from the next scheduled step; the voice starts once its sound is downloaded. */
+  set spokenCount(mode: SpokenCountMode) {
+    this.spoken = mode;
+    if (mode.on && this.ctx) void this.countVoice.load(this.ctx);
+  }
+
   setSettings(settings: MetronomeSettings): void {
     this.settings = settings;
   }
@@ -114,7 +137,11 @@ export class Metronome {
    */
   async start(countdownSec = 0): Promise<number> {
     if (this.running) return performance.now();
+    const generation = ++this.generation;
     const ctx = await this.audioContext();
+    // Downloaded once, on the first counted run; until it's ready (or if it fails) the click plays alone.
+    if (this.spoken.on) await this.countVoice.load(ctx);
+    if (generation !== this.generation || this.running) return performance.now();
 
     this.grid.clear();
     this.clock.reset();
@@ -140,6 +167,7 @@ export class Metronome {
   }
 
   stop(): void {
+    this.generation += 1;
     this.cursor = null;
     this.quietBar = null;
     for (const beep of this.countdownBeeps) {
@@ -150,6 +178,7 @@ export class Metronome {
       }
     }
     this.countdownBeeps = [];
+    this.countVoice.stop();
     this.worker?.postMessage({ cmd: "stop" } satisfies TickCommand);
     this.grid.clear();
   }
@@ -178,12 +207,16 @@ export class Metronome {
     }
 
     const steps = takeStepsUntil(cursor, this.settings, ctx.currentTime + LOOKAHEAD_SEC);
+    const speaking = this.spoken.on && this.countVoice.ready;
     for (const step of steps) {
       // A listener may stop the metronome mid-batch (calibration does after its last click).
       if (!this.cursor) break;
       if (step.beatInBar === 0 && step.subInBeat === 0) this.bar += 1;
+      // A quiet bar leaves out the voice as well as the click.
       const quiet = this.quietBar?.(this.bar) === true;
-      if (!quiet && (step.beat || this.settings.clickSubdivisions)) {
+      const spoken = speaking && !quiet ? spokenStep(step, this.settings, syllableSec) : null;
+      if (spoken) this.countVoice.play(ctx, bus, spoken.syllable, step.time, spoken.durationSec);
+      if (!quiet && (step.beat || this.settings.clickSubdivisions) && (!speaking || this.spoken.click)) {
         playClick(ctx, bus, step.time, step.downbeat ? "downbeat" : step.beat ? "beat" : "sub", 1);
       }
       const performanceTime = this.clock.toPerformanceMs(step.time);

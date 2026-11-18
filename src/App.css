@@ -1553,6 +1553,62 @@ fieldset.group.play {
   font-size: 0.85rem;
 }
 
+/* Drumming words (EDU-143): a word with a dotted underline that shows its one-line definition. */
+.term {
+  position: relative;
+}
+
+.term-word {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline dotted;
+  text-decoration-color: var(--muted);
+  text-underline-offset: 3px;
+  cursor: help;
+}
+
+.term-word:hover {
+  text-decoration-color: currentColor;
+}
+
+.term-definition {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 40;
+  width: max-content;
+  max-width: min(18rem, calc(100vw - 32px));
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: 0 4px 12px var(--shadow);
+  font-size: 0.85rem;
+  font-weight: 400;
+  font-style: normal;
+  line-height: 1.4;
+  text-align: left;
+  text-transform: none;
+  white-space: normal;
+}
+
+.term-definition[hidden] {
+  display: none;
+}
+
+.glossary-list dt {
+  font-weight: 600;
+}
+
+.glossary-list dd {
+  margin: 0 0 6px;
+  color: var(--muted);
+}
+
 /* First steps: whether to move on to the next step. */
 .results .path-advice {
   margin: 12px 0 0;

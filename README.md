@@ -12,6 +12,8 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
 - Live kit view on Canvas 2D at 60fps. Pads flash by how hard they were hit and are colored by
   timing: early is blue, on time is green, late is orange.
 - Lookahead metronome on Web Audio, with tempo, beats per bar, subdivisions and an accented downbeat.
+- A spoken count ("one and two and", "one e and a", "one trip let"): short syllables made with the free Flite
+  synthesizer and scheduled like the click, on by default in First steps, with or without the click.
 - A "How to play with the metronome" guide for new drummers: counting "1 & 2 &", and four steps to the money
   beat, each with a one-tap metronome setup and a live count that lights up in time with the clicks.
 - A "Before you play" card the first time you choose a First steps exercise: five one-line checks the app can't
@@ -77,6 +79,7 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
   browser (IndexedDB) and listed by day, with your streak (days in a row with practice), today's practice time and your longest streak. Signed out, nothing
   leaves the device.
 - Light and dark themes: follows the device's setting, or choose System, Light or Dark in Settings.
+- Drumming words explained: words like BPM, groove, fill, ghost note and on-time window show a one-line, plain-language definition when you focus, hover or tap them, and the metronome guide lists them all.
 - Sign in with GitHub or Google from the account button in the top bar, and history syncs across devices
   automatically: each finished session uploads right away, and other devices' sessions arrive when the app opens
   or you return to it. Offline, it catches up later. The server keeps the provider's account number, your name

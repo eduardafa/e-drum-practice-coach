@@ -1,16 +1,17 @@
 /**
  * The play preferences from Settings: click volume, kit setup (handedness),
- * the next-pad rings, the guide track and the small metronome. Keeps the coach in
- * step with them, gives the kit renderer the getters it reads every frame,
- * and the part of the saved settings they own.
+ * the next-pad rings, the guide track, the small metronome and the spoken
+ * count. Keeps the coach in step with them, gives the kit renderer the
+ * getters it reads every frame, and the part of the saved settings they own.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { coach, saved } from "./appState";
 import { DEFAULT_HANDEDNESS, type Handedness } from "./handedness";
+import { DEFAULT_SPOKEN_COUNT, type SpokenCountSetting } from "./audio/spokenCount";
 import type { RendererOptions } from "./render/kitRenderer";
 import type { SavedSettings } from "./settings";
 
-export type SavedPreferences = Pick<SavedSettings, "volume" | "handedness" | "showNextPad" | "guideTrack" | "showMetronome">;
+export type SavedPreferences = Pick<SavedSettings, "volume" | "handedness" | "showNextPad" | "guideTrack" | "showMetronome" | "spokenCount" | "countWithClick">;
 
 export function usePlayPreferences() {
   const [volume, setVolume] = useState(saved.volume ?? coach.metronome.volume);
@@ -18,6 +19,8 @@ export function usePlayPreferences() {
   const [showNextPad, setShowNextPad] = useState(saved.showNextPad ?? true);
   const [guideTrack, setGuideTrack] = useState(saved.guideTrack === true);
   const [showMetronome, setShowMetronome] = useState(saved.showMetronome ?? true);
+  const [spokenCount, setSpokenCount] = useState<SpokenCountSetting>(saved.spokenCount ?? DEFAULT_SPOKEN_COUNT);
+  const [countWithClick, setCountWithClick] = useState(saved.countWithClick ?? true);
   /** The small metronome while it's shown, so the kit view can leave room for it. */
   const metronomeRef = useRef<HTMLDivElement>(null);
 
@@ -46,9 +49,13 @@ export function usePlayPreferences() {
     coach.guideEnabled = guideTrack;
   }, [guideTrack]);
 
+  useEffect(() => {
+    coach.setSpokenCount(spokenCount, countWithClick);
+  }, [spokenCount, countWithClick]);
+
   const toSave = useMemo<SavedPreferences>(
-    () => ({ volume, handedness, showNextPad, guideTrack: guideTrack || undefined, showMetronome }),
-    [volume, handedness, showNextPad, guideTrack, showMetronome],
+    () => ({ volume, handedness, showNextPad, guideTrack: guideTrack || undefined, showMetronome, spokenCount, countWithClick }),
+    [volume, handedness, showNextPad, guideTrack, showMetronome, spokenCount, countWithClick],
   );
 
   return {
@@ -62,6 +69,10 @@ export function usePlayPreferences() {
     setGuideTrack,
     showMetronome,
     setShowMetronome,
+    spokenCount,
+    setSpokenCount,
+    countWithClick,
+    setCountWithClick,
     metronomeRef,
     renderer,
     toSave,

@@ -7,6 +7,7 @@ import { pathAdvice } from "./exercises/path";
 import { mirrorText } from "./handedness";
 import { NoteToFixSection } from "./NoteToFixSection";
 import { useHandedness } from "./HandednessContext";
+import { Term } from "./Term";
 import { TogetherNote } from "./TogetherNote";
 import { QuietBarsNote } from "./QuietBarsNote";
 import { hihatTips } from "./playalong/hihatTips";
@@ -88,7 +89,9 @@ export function ResultsPanel({ exercise, results, mode, bpm, loops, record, onRe
         <dd>
           {results.meanDeltaMs === null ? "—" : `${formatDelta(results.meanDeltaMs)} (${tendency(results.meanDeltaMs)})`}
         </dd>
-        <dt>Consistency</dt>
+        <dt>
+          <Term word="consistency">Consistency</Term>
+        </dt>
         <dd>{results.spreadMs === null ? "—" : `±${results.spreadMs.toFixed(0)} ms`}</dd>
       </dl>
 
