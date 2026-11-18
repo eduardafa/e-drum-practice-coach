@@ -14,6 +14,9 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
 - Lookahead metronome on Web Audio, with tempo, beats per bar, subdivisions and an accented downbeat.
 - A "How to play with the metronome" guide for new drummers: counting "1 & 2 &", and four steps to the money
   beat, each with a one-tap metronome setup and a live count that lights up in time with the clicks.
+- A "Before you play" card the first time you choose a First steps exercise: five one-line checks the app can't
+  measure (seat height, grip, hi-hat pedal held closed, loose wrists, module volume). "Got it" dismisses it for
+  good; the metronome guide opens it again.
 - Per-hit timing in ms, a per-pad timing strip over the last 5 s, and session stats.
 - A side panel with only what you need while playing, so it fits without scrolling: Start/Stop (<kbd>M</kbd>),
   the live count, tempo − / + buttons (hold Shift for 5 BPM steps), and on-time %, average and consistency.
