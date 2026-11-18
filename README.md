@@ -35,6 +35,11 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
 - Fills: six exercises in their own library tab, each a bar of the Money beat and then a bar of fill, so they
   practice going into the fill and coming back on beat 1: quarter and eighth notes on the snare, down the toms,
   sixteenth notes on beat 4 and around the kit, and a fill that ends with a crash on 1. The fill bar shows its sticking.
+- How to read drum notation: a short guide, opened from the notation strip ("How to read this") or the library's
+  First steps tab, that explains one idea per page: where each drum sits on the staff, cymbals as an x, counting
+  quarter to sixteenth notes and triplets, rests, notes played together, accents and ghost notes, the open hi-hat,
+  flams and R/L sticking. Each page has a small example engraved like the exercises, most with a Listen button,
+  and the last page starts Step 1.
 - Drum notation: the chosen exercise appears as standard drum notation above the kit view, with a playhead
   that follows the metronome. The notation is engraved with [VexFlow](https://www.vexflow.com/), loaded only
   when an exercise is chosen.
