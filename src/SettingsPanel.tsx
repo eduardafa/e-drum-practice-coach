@@ -3,6 +3,8 @@ import { formatVolume, MAX_VOLUME, MIN_VOLUME } from "./audio/volume";
 import { isSubdivision, type MetronomeSettings } from "./audio/schedule";
 import { Tabs } from "./Tabs";
 import { ThemeSetting } from "./ThemeSetting";
+import { SpokenCountField } from "./SpokenCountField";
+import type { SpokenCountSetting } from "./audio/spokenCount";
 import { isHandedness, type Handedness } from "./handedness";
 import { isAccuracyMode, type AccuracyMode } from "./playalong/results";
 import { isSkillLevel, levelForTolerance, SKILL_LEVELS, SKILL_PROFILES, type SkillLevel } from "./profiles";
@@ -29,6 +31,10 @@ interface Props {
   onGuideTrackChange: (on: boolean) => void;
   showMetronome: boolean;
   onShowMetronomeChange: (show: boolean) => void;
+  spokenCount: SpokenCountSetting;
+  onSpokenCountChange: (setting: SpokenCountSetting) => void;
+  countWithClick: boolean;
+  onCountWithClickChange: (on: boolean) => void;
   /** The connected kit's MIDI name, or null when none is connected. */
   kitName: string | null;
   /** How many notes the connected kit's recorded map has (0: the standard map). */
@@ -71,6 +77,10 @@ export function SettingsPanel({
   onGuideTrackChange,
   showMetronome,
   onShowMetronomeChange,
+  spokenCount,
+  onSpokenCountChange,
+  countWithClick,
+  onCountWithClickChange,
   kitName,
   kitMapNotes,
   onMapKit,
@@ -130,6 +140,12 @@ export function SettingsPanel({
             />
             <span>Click on subdivisions</span>
           </label>
+          <SpokenCountField
+            spokenCount={spokenCount}
+            onSpokenCountChange={onSpokenCountChange}
+            countWithClick={countWithClick}
+            onCountWithClickChange={onCountWithClickChange}
+          />
           <label className="field checkbox">
             <input type="checkbox" checked={showMetronome} onChange={(e) => onShowMetronomeChange(e.target.checked)} />
             <span>Small metronome over the kit</span>

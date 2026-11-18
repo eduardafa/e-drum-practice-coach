@@ -96,6 +96,17 @@ describe("parseSettings", () => {
     expect(parseSettings({ metronome: { ...metronome, subdivision: 5 } }).metronome).toBeUndefined();
   });
 
+  it("keeps a known spoken count setting and the click-while-counting choice", () => {
+    expect(parseSettings({ spokenCount: "always", countWithClick: false })).toMatchObject({
+      spokenCount: "always",
+      countWithClick: false,
+    });
+    expect(parseSettings({ spokenCount: "sometimes", countWithClick: "yes" })).toMatchObject({
+      spokenCount: undefined,
+      countWithClick: undefined,
+    });
+  });
+
   it("returns nothing for non-object input", () => {
     expect(parseSettings(null)).toEqual({});
     expect(parseSettings([1, 2])).toEqual({});
