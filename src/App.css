@@ -829,6 +829,61 @@ button:focus-visible {
   margin-bottom: 12px;
 }
 
+/* The guide's way back to the "Before you play" setup checks. */
+.guide-before-you-play {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 12px;
+}
+
+.guide .guide-before-you-play p {
+  margin: 0;
+}
+
+/* "Before you play": the setup checks, as a modal dialog over the kit view. */
+.before-you-play {
+  width: min(480px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: 0 20px 60px rgb(0 0 0 / 0.35);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.before-you-play::backdrop {
+  background: rgb(0 0 0 / 0.5);
+}
+
+.before-you-play h2 {
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+
+.before-you-play p {
+  margin: 0 0 10px;
+}
+
+.before-you-play-checks {
+  margin: 0 0 14px;
+  padding-left: 20px;
+}
+
+.before-you-play-checks li + li {
+  margin-top: 8px;
+}
+
+.before-you-play-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+
 /* Play panel: only what's used while playing. */
 fieldset.group.play {
   display: flex;

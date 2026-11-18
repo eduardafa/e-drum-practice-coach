@@ -26,6 +26,8 @@ export interface SavedSettings {
   sessionLoops?: number;
   /** The last tempo used for each exercise, by exercise id. */
   exerciseTempos?: Record<string, number>;
+  /** The "Before you play" setup card has been dismissed once, so it no longer opens on its own. */
+  beforeYouPlaySeen?: boolean;
   /** Metronome click volume, as a gain (see audio/volume). */
   volume?: number;
   /** Seconds of get-ready countdown before a play-along session; 0 for none. */
@@ -100,6 +102,7 @@ export function parseSettings(raw: unknown): SavedSettings {
     accuracyMode: isAccuracyMode(raw.accuracyMode) ? raw.accuracyMode : undefined,
     sessionLoops: SESSION_LOOPS.find((n) => n === raw.sessionLoops),
     exerciseTempos: parseExerciseTempos(raw.exerciseTempos),
+    beforeYouPlaySeen: raw.beforeYouPlaySeen === true ? true : undefined,
     volume: isVolume(raw.volume) ? raw.volume : undefined,
     getReadySec: isGetReadySec(raw.getReadySec) ? raw.getReadySec : undefined,
     handedness: isHandedness(raw.handedness) ? raw.handedness : undefined,
