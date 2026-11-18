@@ -52,11 +52,11 @@ export const NOTATION_GUIDE: readonly NotationGuidePage[] = [
     text: [
       "Drum music is written on five lines, called the staff. Each drum sits on its own line or in its own space between two lines.",
       "From the bottom: the kick is in the bottom space, tom 3 (the big floor tom) in the second space, the snare in the third space, tom 2 on the fourth line and tom 1 in the top space.",
-      "Notes for the hands have their stems going up. The kick, played with a foot, has its stem going down.",
+      "Here, from left to right: tom 1, tom 2, the snare, then tom 3 with the kick below it. Notes for the hands have their stems going up; the kick, played with a foot, has its stem going down.",
     ],
     example: example("drums", {
-      stepsPerBar: 8,
-      lanes: { tom1: "- x - - - - - -", tom2: "- - - x - - - -", snare: "- - - - - x - -", tom3: "- - - - - - - x", kick: "x - x - x - x -" },
+      stepsPerBar: 4,
+      lanes: { tom1: "x - - -", tom2: "- x - -", snare: "- - x -", tom3: "- - - x", kick: "- - - x" },
     }),
     listen: false,
   },
