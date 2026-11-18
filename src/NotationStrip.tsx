@@ -55,6 +55,10 @@ interface Props {
   learn: LearnView | null;
   /** Set while the tempo trainer runs: shown before the session status, and locks the controls. */
   trainerStatus: string | null;
+  /** Whether the "How to read drum notation" guide is open. */
+  notationGuideOpen: boolean;
+  /** Opens or closes that guide. */
+  onToggleNotationGuide: () => void;
 }
 
 /** CSS class for a note's latest result on the staff. */
@@ -95,6 +99,8 @@ export function NotationStrip({
   onLearn,
   learn,
   trainerStatus,
+  notationGuideOpen,
+  onToggleNotationGuide,
 }: Props) {
   const learning = learn !== null && !learn.done;
   const busy = trainerStatus !== null || (session !== null && session.phase !== "done") || learning;
@@ -285,6 +291,16 @@ export function NotationStrip({
               ? `${shown.description} Suggested ${shown.tempo.suggested} BPM.`
               : "Choose a groove or rudiment to see it as drum notation, hear it, and play along."}
         </p>
+        {exercise && !busy && (
+          <button
+            className={`secondary notation-guide-button ${notationGuideOpen ? "selected" : ""}`}
+            aria-expanded={notationGuideOpen}
+            onClick={releasing(onToggleNotationGuide)}
+            title="What the lines, notes and marks mean"
+          >
+            How to read this
+          </button>
+        )}
       </div>
       <div className="notation-staff" hidden={!exercise}>
         <div className="notation-score" style={scoreStyle}>
