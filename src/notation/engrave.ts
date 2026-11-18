@@ -33,26 +33,9 @@ import {
   Voice,
 } from "vexflow/core";
 import { exerciseLengthTicks, type Exercise } from "../exercises/types";
-import type { PadId } from "../kit/nitroMax";
 import { mergePoints, type NoteMark, type StaffLayout, type StaffPoint } from "./layout";
+import { STAFF_POSITIONS } from "./staffKey";
 import { isCompound, spellBar, type SpelledEvent, type StaffVoice } from "./spelling";
-
-/**
- * Standard drum-kit positions on a five-line percussion staff (written as
- * treble-clef pitches): kick in the bottom space, snare in the third space,
- * toms around it, cymbals as x noteheads above, hi-hat pedal as an x below.
- */
-const STAFF_KEYS: Readonly<Record<PadId, string>> = {
-  crash: "a/5/x",
-  hihat: "g/5/x",
-  ride: "f/5/x",
-  tom1: "e/5",
-  tom2: "d/5",
-  snare: "c/5",
-  tom3: "a/4",
-  kick: "f/4",
-  hihatPedal: "d/4/x",
-};
 
 const STEM: Readonly<Record<StaffVoice, number>> = { hands: 1, feet: -1 };
 
@@ -75,7 +58,7 @@ function restKey(voice: StaffVoice, twoVoices: boolean): string {
 function toStaveNote(event: SpelledEvent, voice: StaffVoice, twoVoices: boolean): StaveNote {
   const stemDirection = STEM[voice];
   const duration = `${event.value}${event.notes.length === 0 ? "r" : ""}`;
-  const keys = event.notes.length === 0 ? [restKey(voice, twoVoices)] : event.notes.map((n) => STAFF_KEYS[n.pad]);
+  const keys = event.notes.length === 0 ? [restKey(voice, twoVoices)] : event.notes.map((n) => STAFF_POSITIONS[n.pad].key);
   const note = new StaveNote({ keys, duration, stemDirection, dots: event.dotted ? 1 : 0 });
   if (event.dotted) Dot.buildAndAttach([note], { all: true });
   const notes = event.notes;
@@ -94,7 +77,7 @@ function toStaveNote(event: SpelledEvent, voice: StaffVoice, twoVoices: boolean)
   }
   const flam = notes.find((n) => n.flam);
   if (flam) {
-    const grace = new GraceNote({ keys: [STAFF_KEYS[flam.pad]], duration: "8", slash: true, stemDirection: 1 });
+    const grace = new GraceNote({ keys: [STAFF_POSITIONS[flam.pad].key], duration: "8", slash: true, stemDirection: 1 });
     note.addModifier(new GraceNoteGroup([grace], true));
   }
   const hand = notes.find((n) => n.hand)?.hand;

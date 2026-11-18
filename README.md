@@ -14,6 +14,9 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
 - Lookahead metronome on Web Audio, with tempo, beats per bar, subdivisions and an accented downbeat.
 - A "How to play with the metronome" guide for new drummers: counting "1 & 2 &", and four steps to the money
   beat, each with a one-tap metronome setup and a live count that lights up in time with the clicks.
+- A "Before you play" card the first time you choose a First steps exercise: five one-line checks the app can't
+  measure (seat height, grip, hi-hat pedal held closed, loose wrists, module volume). "Got it" dismisses it for
+  good; the metronome guide opens it again.
 - Per-hit timing in ms, a per-pad timing strip over the last 5 s, and session stats.
 - A side panel with only what you need while playing, so it fits without scrolling: Start/Stop (<kbd>M</kbd>),
   the live count, tempo − / + buttons (hold Shift for 5 BPM steps), and on-time %, average and consistency.
@@ -23,6 +26,11 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
 - Latency calibration: play along to the click and the app measures your setup's delay and sets the
   offset. It adapts to your skill level (Beginner, Intermediate, Advanced) and keeps listening until the
   measurement is precise, so steadier playing finishes sooner.
+- Step 0, "Meet your kit", before First steps: each pad lights up on the kit view in turn with its name, what it's
+  for and which limb plays it, and how it's written on the staff, and you hit it (pads your kit doesn't have can be
+  skipped). Then a six-question quiz: the app names a drum without lighting it, and a wrong hit lights it as a hint. No
+  click and no timing, and nothing is saved to History; it counts as done once finished on this device, or once any
+  part 1 step has been played. Start it from the prompt beside the kit view or the library's First steps tab.
 - First steps, in three parts, for someone who has never played: part 1 builds the Money beat one limb at a time,
   part 2 moves the kick and the right hand and adds a first fill, and part 3 is about how a beat is played: loud and
   soft on the hi-hat, a ghost note, a fill on the toms into a crash, and the open hi-hat, leading to the open hi-hat
@@ -43,6 +51,10 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
 - Drum notation: the chosen exercise appears as standard drum notation above the kit view, with a playhead
   that follows the metronome. The notation is engraved with [VexFlow](https://www.vexflow.com/), loaded only
   when an exercise is chosen.
+- Tap a note: tapping, hovering or tabbing to a note on the staff says which drum it is and which hand or foot
+  plays it ("Snare, left hand"; notes played together list each drum), using the exercise's sticking or the
+  usual setup, mirrored on a left-handed kit. The arrow keys move between notes. A small key under the staff,
+  which can be closed, shows which line or space is which drum for the drums the exercise uses.
 - Play along: start a session from the notation strip (2 to 16 loops, after a one-bar count-in). Each note is
   ringed with its result as you play, and a results screen shows your accuracy, notes on time, early, late and
   missed, extra hits, timing, consistency and a per-pad breakdown, with retry and 5 BPM slower/faster.
@@ -57,6 +69,10 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
   goes up a step (default 4 BPM) at 90% or more, down a step below 70%, and otherwise stays, until you pass a
   round at your target tempo. A short pause and a count-in at the new tempo separate the rounds, and a chart
   shows each round's tempo and accuracy.
+- Quiet bars: keep time on your own. Next to the session length, the click can go quiet for one bar in four (or
+  two) while the notes are still scored where they're written; the kit view says "Keep going" during a quiet bar.
+  The results, and the session in History, say whether you sped up or slowed down without the click, compared
+  with your timing when it was there. A good run late in First steps suggests trying it.
 - Practice history, on its own page at `/history`: every finished session and tempo-trainer run is saved in your
   browser (IndexedDB) and listed by day, with your streak (days in a row with practice), today's practice time and your longest streak. Signed out, nothing
   leaves the device.

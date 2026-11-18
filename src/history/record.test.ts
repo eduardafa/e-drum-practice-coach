@@ -86,6 +86,22 @@ describe("sessionRecord", () => {
     expect(r.voices.map((v) => v.hand).join("")).toBe("RLRRLRLLRLRRLRLL");
     expect(r.trainerRunId).toBe("run-1");
   });
+
+  it("keeps how often the click went quiet, and leaves it out when it never did (EDU-145)", () => {
+    const session = playedSession();
+    const input = {
+      exercise: session.exercise,
+      bpm: session.bpm,
+      loops: session.loops,
+      scoring: SCORING,
+      results: session.results(),
+      outcomes: session.outcomes(),
+      trainerRunId: null,
+    };
+    expect(sessionRecord(META, { ...input, quietEvery: 4 }).quietEvery).toBe(4);
+    expect(sessionRecord(META, { ...input, quietEvery: 0 })).not.toHaveProperty("quietEvery");
+    expect(record()).not.toHaveProperty("quietEvery");
+  });
 });
 
 describe("parseRecord", () => {
@@ -103,6 +119,8 @@ describe("parseRecord", () => {
       "stopped",
     );
     expect(parseRecord(JSON.parse(JSON.stringify(t)))).toEqual(t);
+    const quiet = { ...s, quietEvery: 4 };
+    expect(parseRecord(JSON.parse(JSON.stringify(quiet)))).toEqual(quiet);
   });
 
   it("skips malformed records and newer versions", () => {
@@ -114,6 +132,7 @@ describe("parseRecord", () => {
     expect(parseRecord({ ...s, bpm: "fast" })).toBeNull();
     expect(parseRecord({ ...s, notes: [[1, 0, 3]] })).toBeNull();
     expect(parseRecord({ ...s, kind: "concert" })).toBeNull();
+    expect(parseRecord({ ...s, quietEvery: "often" })).toBeNull();
   });
 });
 

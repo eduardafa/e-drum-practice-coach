@@ -829,6 +829,61 @@ button:focus-visible {
   margin-bottom: 12px;
 }
 
+/* The guide's way back to the "Before you play" setup checks. */
+.guide-before-you-play {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 12px;
+}
+
+.guide .guide-before-you-play p {
+  margin: 0;
+}
+
+/* "Before you play": the setup checks, as a modal dialog over the kit view. */
+.before-you-play {
+  width: min(480px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: 0 20px 60px rgb(0 0 0 / 0.35);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.before-you-play::backdrop {
+  background: rgb(0 0 0 / 0.5);
+}
+
+.before-you-play h2 {
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+
+.before-you-play p {
+  margin: 0 0 10px;
+}
+
+.before-you-play-checks {
+  margin: 0 0 14px;
+  padding-left: 20px;
+}
+
+.before-you-play-checks li + li {
+  margin-top: 8px;
+}
+
+.before-you-play-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+
 /* Play panel: only what's used while playing. */
 fieldset.group.play {
   display: flex;
@@ -1281,6 +1336,134 @@ fieldset.group.play {
   margin: 0;
 }
 
+/*
+ * Tap a note to see which drum and hand (NoteTargets): invisible buttons over
+ * each note's column, placed in % of the engraved staff by the component, and
+ * the label they open, under the notes. Over the result marks, under nothing.
+ */
+.note-targets {
+  position: absolute;
+  inset: 0;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  pointer-events: none;
+}
+
+.note-target {
+  position: absolute;
+  min-width: 22px;
+  min-height: 28px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  transform: translateX(-50%);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.note-target:hover,
+.note-target.shown {
+  background: var(--accent-soft);
+}
+
+.note-target:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.note-label {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 6px 20px var(--shadow);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+/* Near the ends of the staff the label grows inward, so it stays on screen. */
+.note-label.start {
+  transform: translateX(-12px);
+}
+
+.note-label.end {
+  transform: translateX(calc(-100% + 12px));
+}
+
+.note-label-count {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* The key under the staff: a tiny staff per drum the exercise uses. */
+.staff-key {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.staff-key summary {
+  width: fit-content;
+  cursor: pointer;
+}
+
+.staff-key ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.staff-key li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text);
+}
+
+.staff-key-staff {
+  width: 28px;
+  height: 38px;
+  flex: none;
+  stroke: var(--muted);
+  stroke-width: 0.7;
+}
+
+.staff-key-staff .ledger {
+  stroke: var(--text);
+}
+
+.staff-key-staff .head {
+  fill: var(--text);
+  stroke: none;
+}
+
+.staff-key-staff .head-x {
+  stroke: var(--text);
+  stroke-width: 1.4;
+}
+
+.staff-key-hint {
+  margin: 2px 0 0;
+}
+
 /* End-of-session results, in the calibration panel's place. */
 .calibration.results {
   max-height: calc(100% - 32px);
@@ -1406,6 +1589,48 @@ fieldset.group.play {
 
 .note-to-fix-score {
   margin-top: 8px;
+}
+
+/* Keeping time on your own: the notice during a quiet bar, and how the quiet bars went on the results. */
+.quiet-bar {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: var(--panel);
+  border: 2px solid var(--accent);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.2);
+  text-align: center;
+  pointer-events: none;
+}
+
+.quiet-bar[hidden] {
+  display: none;
+}
+
+.quiet-bar strong {
+  display: block;
+  font-size: clamp(20px, 3vh, 28px);
+  color: var(--accent);
+}
+
+.quiet-bars-note {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--tint);
+}
+
+.quiet-bars-note h3 {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+}
+
+.quiet-bars-note p {
+  margin: 4px 0 0;
 }
 
 /* Tempo trainer: setup fields and the tempo-per-round chart. */
@@ -3345,6 +3570,44 @@ button.secondary.danger:hover:not(:disabled) {
 }
 
 .map-kit-feedback.warn {
+  background: var(--tint);
+  border-left: 4px solid var(--warn);
+}
+
+/* Meet your kit: the pad's name is the big thing to read, then how it's written. */
+.kit-tour-name {
+  margin: 10px 0 4px;
+  font-size: 20px;
+  font-weight: 650;
+}
+
+.kit-tour-staff {
+  margin: 8px 0 0;
+}
+
+.kit-tour-staff figcaption {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.kit-tour-staff .notation-score {
+  margin: 0;
+}
+
+/* Empty until the first hit; keeps its height so the buttons don't jump. */
+.kit-tour-feedback {
+  display: block;
+  min-height: 1.5em;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+
+.kit-tour-feedback.right {
+  background: var(--accent-soft);
+}
+
+.kit-tour-feedback.wrong {
   background: var(--tint);
   border-left: 4px solid var(--warn);
 }

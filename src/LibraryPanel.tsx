@@ -46,6 +46,8 @@ interface Props {
   onForgetSong: (fingerprint: string) => void;
   /** Opens "How to read drum notation". */
   onReadNotation: () => void;
+  /** Starts "Meet your kit", step 0 of First steps. */
+  onMeetKit: () => void;
   onClose: () => void;
 }
 
@@ -69,6 +71,7 @@ export function LibraryPanel({
   recentSongs,
   onForgetSong,
   onReadNotation,
+  onMeetKit,
   onClose,
 }: Props) {
   const [filter, setFilter] = useState<Filter>("all");
@@ -129,6 +132,23 @@ export function LibraryPanel({
               </div>
             )}
             <ul className="library-list">
+              {(filter === "all" || filter === "first-steps") && (
+                <li className="library-card" aria-labelledby="library-meet-kit">
+                  <div className="library-card-head">
+                    <h3 id="library-meet-kit">Step 0: Meet your kit</h3>
+                    <span className="library-meta">No click · about 2 minutes</span>
+                  </div>
+                  <p className="library-description">
+                    Before any rhythm: each pad lights up with its name, what it's for and how it's written, and you hit it.
+                    Then a short quiz: the app names a drum and you find it.
+                  </p>
+                  <div className="calibration-actions">
+                    <button className="primary" onClick={onMeetKit} aria-describedby="library-meet-kit">
+                      Start the tour
+                    </button>
+                  </div>
+                </li>
+              )}
               {shown.map((exercise) => (
                 <ExerciseCard
                   key={exercise.id}

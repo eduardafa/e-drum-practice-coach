@@ -37,6 +37,8 @@ export class PlayAlongSession {
     /** Tempo, counting the exercise's beat unit. */
     readonly bpm: number,
     private readonly scoring: ScoringOptions,
+    /** One bar in this many has no click (EDU-145); 0 for a click on every bar. Scoring is the same either way. */
+    readonly quietEvery = 0,
   ) {
     this.reachMs = reachForTolerance(scoring.toleranceMs);
   }

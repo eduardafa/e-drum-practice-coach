@@ -29,6 +29,8 @@ interface Props {
   signedIn: boolean;
   /** The account may use AI insights. */
   insights: boolean;
+  /** "Meet your kit" was finished on this device. */
+  kitTourDone: boolean;
 }
 
 const SCOPE: Record<ProgressRange, string> = { "7d": "the last 7 days", "30d": "the last 30 days", all: "all sessions" };
@@ -69,7 +71,17 @@ function entries(records: readonly HistoryRecord[]): HistoryRecord[] {
  * The History page (/history): the streak and progress in a wide main
  * column, the saved sessions beside it (one column on phones).
  */
-export function HistoryPage({ records, status, accuracyMode, selectedExerciseId, onClear, onBack, signedIn, insights }: Props) {
+export function HistoryPage({
+  records,
+  status,
+  accuracyMode,
+  selectedExerciseId,
+  onClear,
+  onBack,
+  signedIn,
+  insights,
+  kitTourDone,
+}: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   // Arriving on the page, start reading at its title.
   useEffect(() => headingRef.current?.focus(), []);
@@ -143,7 +155,7 @@ export function HistoryPage({ records, status, accuracyMode, selectedExerciseId,
 
             {insights && sessions > 0 && <InsightsCard records={records} accuracyMode={accuracyMode} />}
 
-            <FirstStepsSection records={records} accuracyMode={accuracyMode} />
+            <FirstStepsSection records={records} accuracyMode={accuracyMode} kitTourDone={kitTourDone} />
 
             {(practicedExercises(records).length > 0 || practicedSongs(records).length > 0) && (
               <>
