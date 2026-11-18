@@ -32,6 +32,12 @@ describe("parseSettings", () => {
     });
   });
 
+  it("keeps how often the click goes quiet, and nothing for a click on every bar (EDU-145)", () => {
+    expect(parseSettings({ quietEvery: 4 }).quietEvery).toBe(4);
+    expect(parseSettings({ quietEvery: 0 }).quietEvery).toBeUndefined();
+    expect(parseSettings({ quietEvery: 3 }).quietEvery).toBeUndefined();
+  });
+
   it("keeps the tempo of each exercise still in the library, within range", () => {
     expect(
       parseSettings({ exerciseTempos: { "rock-8ths": 72, paradiddle: 500, gone: 80, "six-eight": "fast" } }),

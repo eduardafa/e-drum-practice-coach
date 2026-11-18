@@ -8,6 +8,7 @@ import { NoteToFixSection } from "./NoteToFixSection";
 import { PadHeatmap } from "./PadHeatmap";
 import { TimingSection } from "./TimingSection";
 import { TogetherNote } from "./TogetherNote";
+import { QuietBarsNote } from "./QuietBarsNote";
 
 interface Props {
   record: SessionRecord;
@@ -124,6 +125,7 @@ export function SessionDialog({ record, mode, onClose }: Props) {
 
         <DynamicsSummary record={record} />
         <TogetherNote record={record} />
+        <QuietBarsNote record={record} />
 
         <div className="history-pair">
           <TimingSection records={records} from={null} />

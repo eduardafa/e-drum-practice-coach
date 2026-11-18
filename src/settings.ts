@@ -3,6 +3,7 @@ import { isAccuracyMode, type AccuracyMode } from "./playalong/results";
 import { isHandedness, type Handedness } from "./handedness";
 import { isGetReadySec } from "./playalong/getReady";
 import { SESSION_LOOPS } from "./playalong/session";
+import { isQuietEvery, type QuietEvery } from "./playalong/quietBars";
 import { isVolume } from "./audio/volume";
 import { isSubdivision, MAX_BPM, MIN_BPM, type MetronomeSettings } from "./audio/schedule";
 import { isSkillLevel, type SkillLevel } from "./profiles";
@@ -22,6 +23,8 @@ export interface SavedSettings {
   accuracyMode?: AccuracyMode;
   /** How many loops a play-along session lasts. */
   sessionLoops?: number;
+  /** One bar in this many has no click during a play-along session; absent for a click on every bar. */
+  quietEvery?: QuietEvery;
   /** The last tempo used for each exercise, by exercise id. */
   exerciseTempos?: Record<string, number>;
   /** Metronome click volume, as a gain (see audio/volume). */
@@ -96,6 +99,7 @@ export function parseSettings(raw: unknown): SavedSettings {
     exerciseId: typeof raw.exerciseId === "string" && findExercise(raw.exerciseId) ? raw.exerciseId : undefined,
     accuracyMode: isAccuracyMode(raw.accuracyMode) ? raw.accuracyMode : undefined,
     sessionLoops: SESSION_LOOPS.find((n) => n === raw.sessionLoops),
+    quietEvery: isQuietEvery(raw.quietEvery) && raw.quietEvery !== 0 ? raw.quietEvery : undefined,
     exerciseTempos: parseExerciseTempos(raw.exerciseTempos),
     volume: isVolume(raw.volume) ? raw.volume : undefined,
     getReadySec: isGetReadySec(raw.getReadySec) ? raw.getReadySec : undefined,
