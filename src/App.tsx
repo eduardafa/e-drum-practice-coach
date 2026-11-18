@@ -56,6 +56,7 @@ import { SettingsPanel } from "./SettingsPanel";
 import { SmallMetronome } from "./SmallMetronome";
 import type { ScoringOptions } from "./timing/grid";
 import { saveSettings } from "./settings";
+import { Term } from "./Term";
 
 /** Keyboard fallback so the app can be tried without a kit. */
 const KEY_TO_NOTE: Record<string, number> = {
@@ -1050,7 +1051,9 @@ export default function App() {
               >
                 +
               </button>
-              <span className="unit">BPM</span>
+              <span className="unit">
+                <Term word="BPM" />
+              </span>
             </div>
 
             <h2>This session</h2>
