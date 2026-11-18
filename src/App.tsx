@@ -18,6 +18,8 @@ import { MetronomeGuide } from "./MetronomeGuide";
 import { BeforeYouPlayDialog, useBeforeYouPlay } from "./BeforeYouPlay";
 import { NotationStrip, type SessionView } from "./NotationStrip";
 import { LearnSummary } from "./LearnSummary";
+import { KitTourPanel } from "./KitTourPanel";
+import { meetKitDone } from "./history/firstSteps";
 import type { AccuracyMode } from "./playalong/results";
 import { DEFAULT_GET_READY_SEC } from "./playalong/getReady";
 import { GetReady } from "./GetReady";
@@ -120,6 +122,12 @@ export default function App() {
   /** Set by Escape so the blur that follows throws the draft away instead of applying it. */
   const discardTempoDraft = useRef(false);
   const [guideSeen, setGuideSeen] = useState(saved.guideSeen === true);
+  /** "Meet your kit" finished on this device (step 0 of First steps). */
+  const [kitTourDone, setKitTourDone] = useState(saved.kitTourDone === true);
+  /** "Meet your kit" is open. */
+  const [touring, setTouring] = useState(false);
+  // Starting anything else (a session, wait mode, mapping) ends the coach's tour, and the panel with it.
+  const tourOpen = touring && coach.tour !== null;
   /** Whether this opening of the guide is the drummer's first. */
   const [guideFirstOpen, setGuideFirstOpen] = useState(false);
   const [skillLevel, setSkillLevel] = useState<SkillLevel>(saved.skillLevel ?? DEFAULT_SKILL_LEVEL);
@@ -152,6 +160,7 @@ export default function App() {
       scoring,
       skillLevel,
       guideSeen: guideSeen || undefined,
+      kitTourDone: kitTourDone || undefined,
       exerciseId: exerciseId ?? undefined,
       accuracyMode,
       sessionLoops,
@@ -165,6 +174,7 @@ export default function App() {
     scoring,
     skillLevel,
     guideSeen,
+    kitTourDone,
     exerciseId,
     accuracyMode,
     sessionLoops,
@@ -453,6 +463,7 @@ export default function App() {
     if (showResults) return () => coach.endSession();
     if (showLearnSummary) return () => coach.endLearn();
     if (plan.open) return plan.close;
+    if (tourOpen) return endTour;
     if (kit.mapping) return kit.end;
     return null;
   };
@@ -566,6 +577,21 @@ export default function App() {
     setRunning(true);
   };
 
+
+  /** "Meet your kit": each pad lit in turn, then a short quiz. Nothing else runs meanwhile. */
+  const startTour = () => {
+    if (coach.calibrating) return;
+    closePanels();
+    stopPreview();
+    coach.startTour();
+    setRunning(false);
+    setTouring(true);
+  };
+
+  const endTour = () => {
+    coach.endTour();
+    setTouring(false);
+  };
 
   /** Wait mode on the current exercise: no click, the kit view shows the pads to hit and waits for them. */
   const startLearn = () => {
@@ -834,6 +860,7 @@ export default function App() {
               songError={songs.error}
               recentSongs={songs.remembered}
               onForgetSong={songs.forget}
+              onMeetKit={startTour}
               onClose={closeLibrary}
             />
           )}
@@ -864,6 +891,18 @@ export default function App() {
               blocks={plan.blocks()}
               onStart={plan.start}
               onClose={plan.close}
+            />
+          )}
+          {tourOpen && coach.tour && view === "practice" && !calibrating && (
+            <KitTourPanel
+              tour={coach.tour}
+              onFinished={() => setKitTourDone(true)}
+              onNext={(next) => {
+                endTour();
+                selectExercise(next.id);
+              }}
+              onAgain={startTour}
+              onClose={endTour}
             />
           )}
           {showLearnSummary && exercise && coach.learn && (
@@ -909,6 +948,14 @@ export default function App() {
 
         <aside className="controls" hidden={view === "history"}>
           <fieldset className="group play" disabled={calibrating}>
+            {!meetKitDone(history, kitTourDone) && !tourOpen && (
+              <output className="suggestion first-visit">
+                <p>New to drums? Start with step 0: learn each pad's name and how it's written.</p>
+                <button className="primary" onClick={releasing(startTour)}>
+                  Meet your kit
+                </button>
+              </output>
+            )}
             {!guideSeen && (
               <output className="suggestion first-visit">
                 <p>New to playing with a metronome? Learn to count and play along.</p>
@@ -1090,6 +1137,7 @@ export default function App() {
               onBack={backToPractice}
               signedIn={account.status === "signed-in"}
               insights={account.status === "signed-in" && account.insights}
+              kitTourDone={kitTourDone}
             />
           </main>
         )}
