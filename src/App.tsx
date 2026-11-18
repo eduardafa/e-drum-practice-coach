@@ -846,6 +846,10 @@ export default function App() {
               onGuideTrackChange={prefs.setGuideTrack}
               showMetronome={prefs.showMetronome}
               onShowMetronomeChange={prefs.setShowMetronome}
+              spokenCount={prefs.spokenCount}
+              onSpokenCountChange={prefs.setSpokenCount}
+              countWithClick={prefs.countWithClick}
+              onCountWithClickChange={prefs.setCountWithClick}
               kitName={kit.kitName}
               kitMapNotes={kit.kitMapNotes}
               onMapKit={kit.start}

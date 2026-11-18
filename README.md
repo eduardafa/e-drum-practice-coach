@@ -12,6 +12,8 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
 - Live kit view on Canvas 2D at 60fps. Pads flash by how hard they were hit and are colored by
   timing: early is blue, on time is green, late is orange.
 - Lookahead metronome on Web Audio, with tempo, beats per bar, subdivisions and an accented downbeat.
+- A spoken count ("one and two and", "one e and a", "one trip let"): short syllables made with the free Flite
+  synthesizer and scheduled like the click, on by default in First steps, with or without the click.
 - A "How to play with the metronome" guide for new drummers: counting "1 & 2 &", and four steps to the money
   beat, each with a one-tap metronome setup and a live count that lights up in time with the clicks.
 - A "Before you play" card the first time you choose a First steps exercise: five one-line checks the app can't

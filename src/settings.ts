@@ -7,6 +7,7 @@ import { isQuietEvery, type QuietEvery } from "./playalong/quietBars";
 import { isVolume } from "./audio/volume";
 import { isSubdivision, MAX_BPM, MIN_BPM, type MetronomeSettings } from "./audio/schedule";
 import { isSkillLevel, type SkillLevel } from "./profiles";
+import { isSpokenCountSetting, type SpokenCountSetting } from "./audio/spokenCount";
 import type { ScoringOptions } from "./timing/grid";
 
 const KEY = "edrum-coach:settings:v1";
@@ -43,6 +44,10 @@ export interface SavedSettings {
   guideTrack?: boolean;
   /** Show a small metronome over the kit view while the click runs (on unless turned off). */
   showMetronome?: boolean;
+  /** When the metronome counts out loud ("one and two and"). */
+  spokenCount?: SpokenCountSetting;
+  /** Keep the click while counting out loud (on unless turned off). */
+  countWithClick?: boolean;
 }
 
 type UnknownRecord = Record<string, unknown>;
@@ -113,6 +118,8 @@ export function parseSettings(raw: unknown): SavedSettings {
     showNextPad: typeof raw.showNextPad === "boolean" ? raw.showNextPad : undefined,
     guideTrack: raw.guideTrack === true ? true : undefined,
     showMetronome: typeof raw.showMetronome === "boolean" ? raw.showMetronome : undefined,
+    spokenCount: isSpokenCountSetting(raw.spokenCount) ? raw.spokenCount : undefined,
+    countWithClick: typeof raw.countWithClick === "boolean" ? raw.countWithClick : undefined,
   };
 }
 
