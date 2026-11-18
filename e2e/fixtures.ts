@@ -9,6 +9,8 @@ declare global {
   interface Window {
     /** The keys the simulated drummer presses on each click, or null when it isn't playing. */
     drummerHits?: Hit[] | null;
+    /** Set when the drummer keeps playing where a click is left out (a quiet bar): how many ms off the beat (negative: early). */
+    drummerKeepTimeMs?: number | null;
   }
 }
 
@@ -24,8 +26,11 @@ export interface Drummer {
    * scheduled time plus the audio output's delay, as a real drummer would.
    * `code` is the keyboard key of the pad (the app's keyboard fallback), or
    * several pads, each with its own lateness, to hit them together or apart.
+   * With `keepTime`, it also keeps playing at the same beat where a click is
+   * left out (a quiet bar), `keepTime.lateMs` off the beat (negative: early,
+   * no earlier than -60 ms).
    */
-  play(code: string | Hit[]): Promise<void>;
+  play(code: string | Hit[], keepTime?: { lateMs: number }): Promise<void>;
   stop(): Promise<void>;
 }
 
@@ -37,6 +42,43 @@ export interface Drummer {
  */
 function hookClicks() {
   window.drummerHits = null;
+  window.drummerKeepTimeMs = null;
+  /** The last beat the drummer played (audio-clock seconds, as heard), and the gap between beats. */
+  let lastBeat = 0;
+  let beatSec = 0;
+  /** Beats heard as clicks, recent ones only: a beat kept without a click is skipped if a click came for it. */
+  const clicked: number[] = [];
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- the page runs this function's source alone: it can't reach outside it
+  const press = (ctx: AudioContext, hits: Hit[], heard: number, offsetMs: number) => {
+    for (const { code, lateMs } of hits) {
+      setTimeout(
+        () => {
+          window.dispatchEvent(new KeyboardEvent("keydown", { code, bubbles: true }));
+          setTimeout(() => window.dispatchEvent(new KeyboardEvent("keyup", { code, bubbles: true })), 30);
+        },
+        Math.max(0, (heard - ctx.currentTime) * 1000 + lateMs + offsetMs),
+      );
+    }
+  };
+  /**
+   * Keeps the beat going at `beat` (audio seconds) if no click comes for it.
+   * Checked 60 ms before the beat: the metronome schedules clicks about 100 ms
+   * ahead, so a click for it would be known by then. At most 8 beats in a row.
+   */
+  const keepTime = (ctx: AudioContext, beat: number, left: number) => {
+    const offsetMs = window.drummerKeepTimeMs;
+    if (offsetMs === null || offsetMs === undefined || left === 0) return;
+    setTimeout(
+      () => {
+        const hits = window.drummerHits;
+        if (!hits || clicked.some((t) => Math.abs(t - beat) < beatSec / 4)) return;
+        lastBeat = beat;
+        press(ctx, hits, beat, offsetMs);
+        keepTime(ctx, beat + beatSec, left - 1);
+      },
+      Math.max(0, (beat - ctx.currentTime) * 1000 - 60),
+    );
+  };
   // oxlint-disable-next-line typescript/unbound-method -- wrapped below, and always called with the node as `this`
   const start = OscillatorNode.prototype.start;
   OscillatorNode.prototype.start = function (this: OscillatorNode, when?: number) {
@@ -44,15 +86,12 @@ function hookClicks() {
     const ctx = this.context;
     if (hits && when && this.frequency.value >= 1500 && ctx instanceof AudioContext) {
       const heard = when + (ctx.outputLatency || 0) + (ctx.baseLatency || 0);
-      for (const { code, lateMs } of hits) {
-        setTimeout(
-          () => {
-            window.dispatchEvent(new KeyboardEvent("keydown", { code, bubbles: true }));
-            setTimeout(() => window.dispatchEvent(new KeyboardEvent("keyup", { code, bubbles: true })), 30);
-          },
-          Math.max(0, (heard - ctx.currentTime) * 1000 + lateMs),
-        );
-      }
+      if (lastBeat > 0 && heard > lastBeat) beatSec = heard - lastBeat;
+      lastBeat = heard;
+      clicked.push(heard);
+      if (clicked.length > 16) clicked.shift();
+      press(ctx, hits, heard, 0);
+      if (beatSec > 0) keepTime(ctx, heard + beatSec, 8);
     }
     start.call(this, when);
   };
@@ -93,12 +132,21 @@ export const test = base.extend<{
   ],
   drummer: async ({ page }, provide) => {
     await provide({
-      play: async (code) => {
+      play: async (code, keepTime) => {
         const hits = typeof code === "string" ? [{ code, lateMs: 0 }] : code;
-        await page.evaluate((h) => (window.drummerHits = h), hits);
+        await page.evaluate(
+          ([h, k]) => {
+            window.drummerHits = h;
+            window.drummerKeepTimeMs = k;
+          },
+          [hits, keepTime?.lateMs ?? null] as const,
+        );
       },
       stop: async () => {
-        await page.evaluate(() => (window.drummerHits = null));
+        await page.evaluate(() => {
+          window.drummerHits = null;
+          window.drummerKeepTimeMs = null;
+        });
       },
     });
   },

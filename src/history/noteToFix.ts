@@ -45,7 +45,7 @@ const SYLLABLE: Record<string, { name: string; say: string }> = {
   "2/3": { name: '"let"', say: "let" },
 };
 
-interface Position {
+export interface Position {
   bar: number;
   beat: number;
   /** Empty on the beat itself. */
@@ -58,7 +58,7 @@ function gcd(a: number, b: number): number {
 }
 
 /** Where a tick sits in the count, or null for a spot with no common name (a 32nd note). */
-function positionOf(tick: number, exercise: Pick<Exercise, "timeSignature">): Position | null {
+export function positionOf(tick: number, exercise: Pick<Exercise, "timeSignature">): Position | null {
   const barTicks = ticksPerBar(exercise.timeSignature);
   const beatTicks = ticksPerBeat(exercise.timeSignature);
   const inBar = tick % barTicks;

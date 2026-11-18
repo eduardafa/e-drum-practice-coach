@@ -33,7 +33,8 @@ export interface SpokenCountMode {
 }
 
 export interface BeatListener {
-  (step: ScheduledStep & { performanceTime: number }): void;
+  /** `quiet`: the step's click was left out (a quiet bar). */
+  (step: ScheduledStep & { performanceTime: number; quiet: boolean }): void;
 }
 
 export class Metronome {
@@ -52,6 +53,14 @@ export class Metronome {
   private spoken: SpokenCountMode = { on: false, click: true };
   /** Counts start() and stop() calls, so a stop while the voice downloads cancels that start. */
   private generation = 0;
+  /** Bars started since start(), from 0 (the first bar); -1 before the first downbeat. */
+  private bar = -1;
+  /**
+   * Which bars (counted from start(), from 0) have no click, or null for a
+   * click on every bar. Steps are still scheduled and put on the grid: only
+   * the sound is left out. Cleared by stop(), so it lasts one run.
+   */
+  quietBar: ((bar: number) => boolean) | null = null;
 
   constructor(
     private settings: MetronomeSettings,
@@ -136,6 +145,7 @@ export class Metronome {
 
     this.grid.clear();
     this.clock.reset();
+    this.bar = -1;
     const countdownStart = ctx.currentTime + START_DELAY_SEC;
     this.cursor = {
       nextTime: countdownStart + countdownSec,
@@ -159,6 +169,7 @@ export class Metronome {
   stop(): void {
     this.generation += 1;
     this.cursor = null;
+    this.quietBar = null;
     for (const beep of this.countdownBeeps) {
       try {
         beep.stop();
@@ -200,9 +211,12 @@ export class Metronome {
     for (const step of steps) {
       // A listener may stop the metronome mid-batch (calibration does after its last click).
       if (!this.cursor) break;
-      const spoken = speaking ? spokenStep(step, this.settings, syllableSec) : null;
+      if (step.beatInBar === 0 && step.subInBeat === 0) this.bar += 1;
+      // A quiet bar leaves out the voice as well as the click.
+      const quiet = this.quietBar?.(this.bar) === true;
+      const spoken = speaking && !quiet ? spokenStep(step, this.settings, syllableSec) : null;
       if (spoken) this.countVoice.play(ctx, bus, spoken.syllable, step.time, spoken.durationSec);
-      if ((step.beat || this.settings.clickSubdivisions) && (!speaking || this.spoken.click)) {
+      if (!quiet && (step.beat || this.settings.clickSubdivisions) && (!speaking || this.spoken.click)) {
         playClick(ctx, bus, step.time, step.downbeat ? "downbeat" : step.beat ? "beat" : "sub", 1);
       }
       const performanceTime = this.clock.toPerformanceMs(step.time);
@@ -212,7 +226,7 @@ export class Metronome {
         beat: step.beat,
         downbeat: step.downbeat,
       });
-      for (const l of this.listeners) l({ ...step, performanceTime });
+      for (const l of this.listeners) l({ ...step, performanceTime, quiet });
     }
   }
 }

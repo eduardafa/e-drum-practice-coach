@@ -48,6 +48,10 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
 - Drum notation: the chosen exercise appears as standard drum notation above the kit view, with a playhead
   that follows the metronome. The notation is engraved with [VexFlow](https://www.vexflow.com/), loaded only
   when an exercise is chosen.
+- Tap a note: tapping, hovering or tabbing to a note on the staff says which drum it is and which hand or foot
+  plays it ("Snare, left hand"; notes played together list each drum), using the exercise's sticking or the
+  usual setup, mirrored on a left-handed kit. The arrow keys move between notes. A small key under the staff,
+  which can be closed, shows which line or space is which drum for the drums the exercise uses.
 - Play along: start a session from the notation strip (2 to 16 loops, after a one-bar count-in). Each note is
   ringed with its result as you play, and a results screen shows your accuracy, notes on time, early, late and
   missed, extra hits, timing, consistency and a per-pad breakdown, with retry and 5 BPM slower/faster.
@@ -62,6 +66,10 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
   goes up a step (default 4 BPM) at 90% or more, down a step below 70%, and otherwise stays, until you pass a
   round at your target tempo. A short pause and a count-in at the new tempo separate the rounds, and a chart
   shows each round's tempo and accuracy.
+- Quiet bars: keep time on your own. Next to the session length, the click can go quiet for one bar in four (or
+  two) while the notes are still scored where they're written; the kit view says "Keep going" during a quiet bar.
+  The results, and the session in History, say whether you sped up or slowed down without the click, compared
+  with your timing when it was there. A good run late in First steps suggests trying it.
 - Practice history, on its own page at `/history`: every finished session and tempo-trainer run is saved in your
   browser (IndexedDB) and listed by day, with your streak (days in a row with practice), today's practice time and your longest streak. Signed out, nothing
   leaves the device.

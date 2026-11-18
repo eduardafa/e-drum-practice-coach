@@ -23,6 +23,8 @@ import { meetKitDone } from "./history/firstSteps";
 import type { AccuracyMode } from "./playalong/results";
 import { DEFAULT_GET_READY_SEC } from "./playalong/getReady";
 import { GetReady } from "./GetReady";
+import { QuietBarNotice } from "./QuietBarNotice";
+import type { QuietEvery } from "./playalong/quietBars";
 import { HandednessContext } from "./HandednessContext";
 import { DEFAULT_SESSION_LOOPS, type PlayAlongSession } from "./playalong/session";
 import { ResultsPanel } from "./ResultsPanel";
@@ -92,6 +94,7 @@ export default function App() {
   const [exerciseId, setExerciseId] = useState<string | null>(saved.exerciseId ?? null);
   const exercise = exerciseId === null ? null : (findExercise(exerciseId) ?? null);
   const [sessionLoops, setSessionLoops] = useState(saved.sessionLoops ?? DEFAULT_SESSION_LOOPS);
+  const [quietEvery, setQuietEvery] = useState<QuietEvery>(saved.quietEvery ?? 0);
   const [getReadySec, setGetReadySec] = useState(saved.getReadySec ?? DEFAULT_GET_READY_SEC);
   /** For the kit renderer, which reads it every frame outside React. */
   const [accuracyMode, setAccuracyMode] = useState<AccuracyMode>(saved.accuracyMode ?? "partial");
@@ -164,6 +167,7 @@ export default function App() {
       exerciseId: exerciseId ?? undefined,
       accuracyMode,
       sessionLoops,
+      quietEvery: quietEvery || undefined,
       exerciseTempos,
       getReadySec,
       ...prefs.toSave,
@@ -178,6 +182,7 @@ export default function App() {
     exerciseId,
     accuracyMode,
     sessionLoops,
+    quietEvery,
     exerciseTempos,
     getReadySec,
     prefs.toSave,
@@ -254,6 +259,7 @@ export default function App() {
             results: session.results(),
             outcomes: session.outcomes(),
             trainerRunId: trainerRun.current?.id ?? null,
+            quietEvery: session.quietEvery,
           },
         );
         setLastSession(record);
@@ -572,7 +578,9 @@ export default function App() {
     closeLibrary();
     setGuideOpen(false);
     setSettingsOpen(false);
-    const settings = await coach.startSession(chosen, sessionLoops, bpm, countdown ? getReadySec : 0);
+    // Tempo-trainer rounds keep the click on every bar: their accuracy decides the next tempo.
+    const quiet = trainerRun.current ? 0 : quietEvery;
+    const settings = await coach.startSession(chosen, sessionLoops, bpm, countdown ? getReadySec : 0, quiet);
     setMetronome(settings);
     setRunning(true);
   };
@@ -783,6 +791,8 @@ export default function App() {
               onLoopsChange={setSessionLoops}
               getReadySec={getReadySec}
               onGetReadyChange={setGetReadySec}
+              quietEvery={quietEvery}
+              onQuietEveryChange={setQuietEvery}
               onPlay={() => void startSession(metronome.bpm)}
               onStop={trainer ? stopTrainer : stats.learn && !stats.learn.done ? () => coach.endLearn() : stopSession}
               onLearn={startLearn}
@@ -803,6 +813,7 @@ export default function App() {
             {prefs.showMetronome && <SmallMetronome coach={coach} ref={prefs.metronomeRef} />}
           </div>
           <GetReady coach={coach} />
+          <QuietBarNotice coach={coach} />
           {guideOpen && !calibrating && (
             <MetronomeGuide
               coach={coach}
