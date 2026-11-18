@@ -7,8 +7,12 @@ import type { NoteResult } from "./playalong/matcher";
 import { GET_READY_OPTIONS } from "./playalong/getReady";
 import { SESSION_LOOPS, type SessionPhase } from "./playalong/session";
 import { releasing } from "./releasing";
+import type { QuietEvery } from "./playalong/quietBars";
+import { QuietBarsSelect } from "./QuietBarsSelect";
 import { displayedExercise } from "./handedness";
 import { useHandedness } from "./HandednessContext";
+import { NoteTargets } from "./NoteTargets";
+import { StaffKey } from "./StaffKey";
 
 /** Pick the position one frame ahead, as the live count does: a frame is painted ~16 ms after it's chosen. */
 const PAINT_LOOKAHEAD_MS = 16;
@@ -47,6 +51,9 @@ interface Props {
   /** Seconds of get-ready countdown before a session; 0 for none. */
   getReadySec: number;
   onGetReadyChange: (seconds: number) => void;
+  /** One bar in this many has no click during a session (EDU-145); 0 for none. */
+  quietEvery: QuietEvery;
+  onQuietEveryChange: (every: QuietEvery) => void;
   onPlay: () => void;
   onStop: () => void;
   onTrain: () => void;
@@ -89,6 +96,8 @@ export function NotationStrip({
   onLoopsChange,
   getReadySec,
   onGetReadyChange,
+  quietEvery,
+  onQuietEveryChange,
   onPlay,
   onStop,
   onTrain,
@@ -267,6 +276,7 @@ export function NotationStrip({
                 </option>
               ))}
             </select>
+            <QuietBarsSelect value={quietEvery} onChange={onQuietEveryChange} />
           </>
         )}
         {busy && (
@@ -290,8 +300,10 @@ export function NotationStrip({
         <div className="notation-score" style={scoreStyle}>
           <div ref={hostRef} />
           <div ref={marksRef} className="marks" aria-hidden />
+          {layout && exercise && <NoteTargets key={exercise.id} exercise={exercise} layout={layout} />}
           <div ref={playheadRef} className="playhead" hidden />
         </div>
+        {status === "ready" && exercise && <StaffKey exercise={exercise} />}
         {status === "loading" && <p className="hint">Loading notation…</p>}
         {status === "error" && <p className="hint warn-note">The notation couldn't be drawn.</p>}
       </div>

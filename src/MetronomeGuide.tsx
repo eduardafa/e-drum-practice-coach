@@ -14,13 +14,15 @@ interface Props {
   basicsOpen: boolean;
   onApply: (settings: MetronomeSettings) => void;
   onToggleMetronome: () => void;
+  /** Opens the "Before you play" setup checks. */
+  onBeforeYouPlay: () => void;
   onClose: () => void;
 }
 
 /** The guide's steps as tabs: "Step 1", "Step 2"... */
 const GUIDE_TABS = METRONOME_GUIDE.map((s, i) => ({ id: s.id, label: `Step ${i + 1}` }));
 
-export function MetronomeGuide({ coach, running, basicsOpen, onApply, onToggleMetronome, onClose }: Props) {
+export function MetronomeGuide({ coach, running, basicsOpen, onApply, onToggleMetronome, onBeforeYouPlay, onClose }: Props) {
   const [stepId, setStepId] = useState<GuideStep["id"]>(METRONOME_GUIDE[0].id);
   const step = METRONOME_GUIDE.find((s) => s.id === stepId) ?? METRONOME_GUIDE[0];
 
@@ -63,6 +65,13 @@ export function MetronomeGuide({ coach, running, basicsOpen, onApply, onToggleMe
           ))}
         </dl>
       </details>
+      <div className="guide-before-you-play">
+        <p className="hint">New to the kit? Check your seat, grip and hi-hat pedal first.</p>
+        {/* Not releasing(): keyboard focus comes back here when the card closes. */}
+        <button className="secondary" onClick={onBeforeYouPlay}>
+          Before you play
+        </button>
+      </div>
 
       <Tabs tabs={GUIDE_TABS} selected={step.id} onSelect={setStepId} label="Steps" idPrefix="guide" />
 

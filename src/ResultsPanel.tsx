@@ -9,6 +9,7 @@ import { NoteToFixSection } from "./NoteToFixSection";
 import { useHandedness } from "./HandednessContext";
 import { Term } from "./Term";
 import { TogetherNote } from "./TogetherNote";
+import { QuietBarsNote } from "./QuietBarsNote";
 import { hihatTips } from "./playalong/hihatTips";
 import type { Exercise } from "./exercises/types";
 import { DEFAULT_PASS_MARK } from "./playalong/trainer";
@@ -118,6 +119,8 @@ export function ResultsPanel({ exercise, results, mode, bpm, loops, record, onRe
       </table>
 
       {record && <TogetherNote record={record} />}
+
+      {record && <QuietBarsNote record={record} accuracy={results.accuracy[mode]} />}
 
       {record && <DynamicsSummary record={record} />}
 

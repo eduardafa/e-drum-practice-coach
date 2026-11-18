@@ -16,6 +16,8 @@ describe("parseSettings", () => {
 
   it("keeps the First steps level", () => {
     expect(parseSettings({ skillLevel: "firstSteps" }).skillLevel).toBe("firstSteps");
+    expect(parseSettings({ kitTourDone: true }).kitTourDone).toBe(true);
+    expect(parseSettings({ kitTourDone: "yes" }).kitTourDone).toBeUndefined();
   });
 
   it("keeps an exercise that's in the library, and drops one that isn't", () => {
@@ -32,12 +34,24 @@ describe("parseSettings", () => {
     });
   });
 
+  it("keeps how often the click goes quiet, and nothing for a click on every bar (EDU-145)", () => {
+    expect(parseSettings({ quietEvery: 4 }).quietEvery).toBe(4);
+    expect(parseSettings({ quietEvery: 0 }).quietEvery).toBeUndefined();
+    expect(parseSettings({ quietEvery: 3 }).quietEvery).toBeUndefined();
+  });
+
   it("keeps the tempo of each exercise still in the library, within range", () => {
     expect(
       parseSettings({ exerciseTempos: { "rock-8ths": 72, paradiddle: 500, gone: 80, "six-eight": "fast" } }),
     ).toMatchObject({ exerciseTempos: { "rock-8ths": 72 } });
     expect(parseSettings({ exerciseTempos: { gone: 80 } }).exerciseTempos).toBeUndefined();
     expect(parseSettings({ exerciseTempos: [72] }).exerciseTempos).toBeUndefined();
+  });
+
+  it("remembers that the Before you play card was dismissed, only as true", () => {
+    expect(parseSettings({ beforeYouPlaySeen: true }).beforeYouPlaySeen).toBe(true);
+    expect(parseSettings({ beforeYouPlaySeen: false }).beforeYouPlaySeen).toBeUndefined();
+    expect(parseSettings({ beforeYouPlaySeen: "yes" }).beforeYouPlaySeen).toBeUndefined();
   });
 
   it("keeps a volume within the slider's range", () => {

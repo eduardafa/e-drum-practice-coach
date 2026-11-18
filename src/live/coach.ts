@@ -21,7 +21,9 @@ import { cueLeadMs, cuesAt, type PadCue } from "../playalong/cues";
 import { beepTimes, secondsLeft } from "../playalong/getReady";
 import { playCountdownBeep } from "../audio/voices";
 import { LearnSession } from "../playalong/learn";
+import { KitTour } from "./kitTour";
 import { PlayAlongSession } from "../playalong/session";
+import { isQuietBar } from "../playalong/quietBars";
 import type { MetronomeSettings } from "../audio/schedule";
 import { KitMapping, type CaptureResult, type KitMap } from "../kit/kitMap";
 import { lookupNote, NITRO_MAX_NOTE_MAP } from "../kit/nitroMax";
@@ -29,7 +31,7 @@ import { MidiConnection, type TimedMidiEvent } from "../midi/connection";
 import { DEFAULT_SCORING, scoreHit, TimingGrid, type ScoringOptions } from "../timing/grid";
 import type { SkillLevel } from "../profiles";
 import { calibrationSetup, CalibrationSession, type CalibrationProgress } from "./calibration";
-import { countAt } from "./counts";
+import { countAt, currentCount } from "./counts";
 import { LiveState } from "./liveState";
 
 /** The song's playback level: a little under full scale, leaving room for the click. */
@@ -161,6 +163,7 @@ export class Coach {
   private playAlong: PlayAlongSession | null = null;
   /** Wait mode: no clock, each step waits for its pads. Never runs together with the metronome. */
   private learning: LearnSession | null = null;
+  private touring: KitTour | null = null;
   /** When the session's get-ready countdown ends (performance.now() ms); 0 when there's none. */
   private countdownEndMs = 0;
   /** How far ahead the kit view lights the next pad: one beat at the session's tempo. */
@@ -176,7 +179,7 @@ export class Coach {
         const { beatsPerBar, subdivision } = this.metronome.currentSettings;
         if (step.beatInBar === 0 && step.subInBeat === 0) this.bar += 1;
         const count = countAt(step, beatsPerBar, subdivision);
-        this.live.addCount({ time: step.performanceTime, ...count, bar: Math.max(0, this.bar) });
+        this.live.addCount({ time: step.performanceTime, ...count, bar: Math.max(0, this.bar), quiet: step.quiet });
         // Bar 0 is the count-in; the exercise starts on the next downbeat, one bar later.
         if (this.bar === 0 && step.beatInBar === 0 && step.subInBeat === 0 && this.playAlong) {
           const beatMs = step.intervalSec * subdivision * 1000;
@@ -202,6 +205,7 @@ export class Coach {
     this.endMapping();
     this.stopSong();
     this.endLearn();
+    this.endTour();
     this.guide.stop();
     this.preview.stop();
     this.live.resetSession();
@@ -223,12 +227,20 @@ export class Coach {
    * Starts a play-along session at `bpm`: an optional get-ready countdown of
    * `countdownSec` seconds, a bar of count-in, then `loops` repetitions. Sets
    * the metronome's beats and subdivision to fit the exercise, and returns the
-   * settings used so the UI can show them. Call from a user gesture.
+   * settings used so the UI can show them. With `quietEvery` (2 or 4), the
+   * click goes quiet for one bar in that many (EDU-145). Call from a user gesture.
    */
-  async startSession(exercise: Exercise, loops: number, bpm: number, countdownSec = 0): Promise<MetronomeSettings> {
+  async startSession(
+    exercise: Exercise,
+    loops: number,
+    bpm: number,
+    countdownSec = 0,
+    quietEvery = 0,
+  ): Promise<MetronomeSettings> {
     this.endMapping();
     this.stopSong();
     this.endLearn();
+    this.endTour();
     this.preview.stop();
     this.metronome.stop();
     const settings = {
@@ -238,7 +250,7 @@ export class Coach {
       subdivision: subdivisionFor(exercise),
     };
     this.metronome.setSettings(settings);
-    this.playAlong = new PlayAlongSession(exercise, loops, settings.bpm, this.scoring);
+    this.playAlong = new PlayAlongSession(exercise, loops, settings.bpm, this.scoring, quietEvery);
     this.guide.stop();
     this.guidePlan = previewPlan(exercise, settings.bpm);
     // Read the wall clock once per session, for history only; timing never uses it.
@@ -247,6 +259,8 @@ export class Coach {
     this.bar = -1;
     // Cleared first: the metronome is already running for a moment before start() resolves.
     this.countdownEndMs = 0;
+    // The metronome's bar 0 is the count-in; the exercise's bars start at its bar 1.
+    this.metronome.quietBar = quietEvery ? (bar) => isQuietBar(bar - 1, quietEvery) : null;
     this.countdownEndMs = await this.metronome.start(countdownSec);
     return settings;
   }
@@ -259,6 +273,7 @@ export class Coach {
     this.preview.stop();
     this.endSession();
     this.metronome.stop();
+    this.endTour();
     this.live.resetSession();
     this.learning = new LearnSession(exercise, loops);
   }
@@ -270,6 +285,28 @@ export class Coach {
 
   endLearn(): void {
     this.learning = null;
+  }
+
+  /** Starts "Meet your kit" (step 0 of First steps): nothing else runs, and each hit answers the pad asked for. */
+  startTour(): KitTour {
+    this.endMapping();
+    this.stopSong();
+    this.preview.stop();
+    this.endSession();
+    this.endLearn();
+    this.metronome.stop();
+    this.live.resetSession();
+    this.touring = new KitTour();
+    return this.touring;
+  }
+
+  /** The "Meet your kit" run, active or finished, or null. */
+  get tour(): KitTour | null {
+    return this.touring;
+  }
+
+  endTour(): void {
+    this.touring = null;
   }
 
   /**
@@ -293,6 +330,7 @@ export class Coach {
     this.endSongPlayAlong();
     this.endMapping();
     this.endLearn();
+    this.endTour();
     this.endSession();
     this.preview.stop();
     this.metronome.stop();
@@ -316,6 +354,7 @@ export class Coach {
     if (this.calibrating || !this.song.loaded) return;
     this.endMapping();
     this.endLearn();
+    this.endTour();
     this.endSession();
     this.preview.stop();
     this.metronome.stop();
@@ -362,6 +401,12 @@ export class Coach {
     const loop = this.song.loop;
     if (loop && at < loop.start) at += loop.end - loop.start;
     return Math.max(0, at);
+  }
+
+  /** Whether the bar being heard at `now` is a quiet bar of a play-along session: no click, keep going. */
+  quietAt(now: number): boolean {
+    if (this.playAlong?.phase !== "playing" || !this.metronome.running) return false;
+    return currentCount(this.live.counts, now)?.quiet === true;
   }
 
   /** Whether the drummer is playing along to the song (countdown included). */
@@ -483,6 +528,7 @@ export class Coach {
     this.preview.stop();
     this.endSession();
     this.endLearn();
+    this.endTour();
     this.metronome.stop();
     this.stopSong();
     this.mappingRun = new KitMapping();
@@ -502,6 +548,7 @@ export class Coach {
   cuesAt(now: number): PadCue[] {
     const target = this.mappingRun?.current;
     if (target) return [{ pad: target.pad, strength: 1 }];
+    if (this.touring) return this.touring.cues();
     if (this.learning) return this.learning.cues();
     const tab = this.songTab;
     if (tab && this.song.playing) return songTabCues(tab, this.song.position(), this.song.loop);
@@ -553,6 +600,7 @@ export class Coach {
     this.endMapping();
     this.stopSong();
     this.endLearn();
+    this.endTour();
     this.endSession();
     this.metronome.stop();
     const ctx = await this.metronome.audioContext();
@@ -565,6 +613,7 @@ export class Coach {
     this.endMapping();
     this.stopSong();
     this.endLearn();
+    this.endTour();
     this.preview.stop();
     this.metronome.stop();
     this.restoreSettings();
@@ -635,6 +684,7 @@ export class Coach {
     const played = { pad: mapping?.pad ?? null, zone: mapping?.zone ?? null, time, velocity: event.velocity };
     this.playAlong?.hit(played);
     this.learning?.hit(played);
+    this.touring?.hit(played);
     this.songAlong?.hit(played);
     if (this.calibration) {
       this.calibration.addHit(time);

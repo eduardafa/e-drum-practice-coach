@@ -25,7 +25,8 @@ const LOOKAHEAD_SEC = 0.12;
 const START_DELAY_SEC = 0.1;
 
 export interface BeatListener {
-  (step: ScheduledStep & { performanceTime: number }): void;
+  /** `quiet`: the step's click was left out (a quiet bar). */
+  (step: ScheduledStep & { performanceTime: number; quiet: boolean }): void;
 }
 
 export class Metronome {
@@ -39,6 +40,14 @@ export class Metronome {
   private volumeValue = DEFAULT_VOLUME;
   /** Countdown beeps scheduled by start(), silenced if the metronome stops first. */
   private countdownBeeps: OscillatorNode[] = [];
+  /** Bars started since start(), from 0 (the first bar); -1 before the first downbeat. */
+  private bar = -1;
+  /**
+   * Which bars (counted from start(), from 0) have no click, or null for a
+   * click on every bar. Steps are still scheduled and put on the grid: only
+   * the sound is left out. Cleared by stop(), so it lasts one run.
+   */
+  quietBar: ((bar: number) => boolean) | null = null;
 
   constructor(
     private settings: MetronomeSettings,
@@ -109,6 +118,7 @@ export class Metronome {
 
     this.grid.clear();
     this.clock.reset();
+    this.bar = -1;
     const countdownStart = ctx.currentTime + START_DELAY_SEC;
     this.cursor = {
       nextTime: countdownStart + countdownSec,
@@ -131,6 +141,7 @@ export class Metronome {
 
   stop(): void {
     this.cursor = null;
+    this.quietBar = null;
     for (const beep of this.countdownBeeps) {
       try {
         beep.stop();
@@ -170,7 +181,9 @@ export class Metronome {
     for (const step of steps) {
       // A listener may stop the metronome mid-batch (calibration does after its last click).
       if (!this.cursor) break;
-      if (step.beat || this.settings.clickSubdivisions) {
+      if (step.beatInBar === 0 && step.subInBeat === 0) this.bar += 1;
+      const quiet = this.quietBar?.(this.bar) === true;
+      if (!quiet && (step.beat || this.settings.clickSubdivisions)) {
         playClick(ctx, bus, step.time, step.downbeat ? "downbeat" : step.beat ? "beat" : "sub", 1);
       }
       const performanceTime = this.clock.toPerformanceMs(step.time);
@@ -180,7 +193,7 @@ export class Metronome {
         beat: step.beat,
         downbeat: step.downbeat,
       });
-      for (const l of this.listeners) l({ ...step, performanceTime });
+      for (const l of this.listeners) l({ ...step, performanceTime, quiet });
     }
   }
 }

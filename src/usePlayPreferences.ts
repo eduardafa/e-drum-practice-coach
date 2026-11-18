@@ -30,7 +30,8 @@ export function usePlayPreferences() {
   }, [handedness, showNextPad]);
   const [renderer] = useState<Pick<RendererOptions, "getHandedness" | "getCues" | "getCornerOverlay">>(() => ({
     getHandedness: () => handednessRef.current,
-    getCues: (now) => (showNextPadRef.current ? coach.cuesAt(now) : []),
+    // "Meet your kit" is all about the lit pad, so it lights even with next-pad cues off.
+    getCues: (now) => (showNextPadRef.current || coach.tour ? coach.cuesAt(now) : []),
     getCornerOverlay: () => {
       const metronome = metronomeRef.current;
       return metronome ? { width: metronome.offsetLeft + metronome.offsetWidth + 8, height: metronome.offsetTop + metronome.offsetHeight + 8 } : null;
