@@ -67,6 +67,8 @@ interface Props {
   /** Songs opened before in this browser, newest first. */
   recentSongs: readonly RememberedSong[];
   onForgetSong: (fingerprint: string) => void;
+  /** Opens "How to read drum notation". */
+  onReadNotation: () => void;
   /** Starts "Meet your kit", step 0 of First steps. */
   onMeetKit: () => void;
   onClose: () => void;
@@ -91,6 +93,7 @@ export function LibraryPanel({
   songError,
   recentSongs,
   onForgetSong,
+  onReadNotation,
   onMeetKit,
   onClose,
 }: Props) {
@@ -144,6 +147,14 @@ export function LibraryPanel({
         ) : (
           <>
             <FilterNote filter={filter} />
+            {filter === "first-steps" && (
+              <div className="library-notation-help">
+                <p>New to drum notation? A short guide shows what the lines, notes and marks mean.</p>
+                <button className="secondary" onClick={onReadNotation}>
+                  How to read drum notation
+                </button>
+              </div>
+            )}
             <ul className="library-list">
               {(filter === "all" || filter === "first-steps") && (
                 <li className="library-card" aria-labelledby="library-meet-kit">
