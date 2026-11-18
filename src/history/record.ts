@@ -60,6 +60,12 @@ export interface SessionRecord extends RecordBase {
   extras: ExtraTuple[];
   /** Set when the session was a tempo-trainer round: the id of its TrainerRecord. */
   trainerRunId: string | null;
+  /**
+   * Set when the click went quiet for one bar in this many (EDU-145), so the
+   * results can compare quiet and clicked bars. Absent: a click on every bar
+   * (and every record saved before the option existed).
+   */
+  quietEvery?: number;
 }
 
 export interface TrainerRecord extends RecordBase {
@@ -137,6 +143,8 @@ export interface SessionInput {
   results: SessionResults;
   outcomes: { notes: readonly { note: ExpectedNote; result: NoteResult }[]; extraHits: readonly PlayedHit[] };
   trainerRunId: string | null;
+  /** One bar in this many had no click; 0 for none. */
+  quietEvery?: number;
 }
 
 export function sessionRecord(meta: RecordMeta, input: SessionInput): SessionRecord {
@@ -172,6 +180,7 @@ export function sessionRecord(meta: RecordMeta, input: SessionInput): SessionRec
     notes,
     extras: input.outcomes.extraHits.map((h) => [h.pad, h.velocity ?? null]),
     trainerRunId: input.trainerRunId,
+    ...(input.quietEvery ? { quietEvery: input.quietEvery } : {}),
   };
 }
 
@@ -237,7 +246,8 @@ function validSession(r: Rec): boolean {
     r.notes.every((n) => Array.isArray(n) && n.length === 4 && isNum(n[0]) && isNum(n[1]) && isNumOrNull(n[2]) && isNumOrNull(n[3])) &&
     Array.isArray(r.extras) &&
     r.extras.every((e) => Array.isArray(e) && e.length === 2 && isNumOrNull(e[1])) &&
-    (r.trainerRunId === null || isStr(r.trainerRunId))
+    (r.trainerRunId === null || isStr(r.trainerRunId)) &&
+    (r.quietEvery === undefined || (isNum(r.quietEvery) && r.quietEvery >= 2))
   );
 }
 

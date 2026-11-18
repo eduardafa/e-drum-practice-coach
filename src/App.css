@@ -1527,6 +1527,48 @@ fieldset.group.play {
   margin-top: 8px;
 }
 
+/* Keeping time on your own: the notice during a quiet bar, and how the quiet bars went on the results. */
+.quiet-bar {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: var(--panel);
+  border: 2px solid var(--accent);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.2);
+  text-align: center;
+  pointer-events: none;
+}
+
+.quiet-bar[hidden] {
+  display: none;
+}
+
+.quiet-bar strong {
+  display: block;
+  font-size: clamp(20px, 3vh, 28px);
+  color: var(--accent);
+}
+
+.quiet-bars-note {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--tint);
+}
+
+.quiet-bars-note h3 {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+}
+
+.quiet-bars-note p {
+  margin: 4px 0 0;
+}
+
 /* Tempo trainer: setup fields and the tempo-per-round chart. */
 .trainer .field > span:first-child {
   flex-basis: 110px;

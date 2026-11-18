@@ -32,6 +32,8 @@ export interface Count {
   label: string;
   /** Bars since the metronome started, from 0, so multi-bar exercises know which bar is playing. */
   bar: number;
+  /** The click is left out here: a quiet bar of a play-along (EDU-145). */
+  quiet?: boolean;
 }
 
 /** The count for a step at this position in the bar. */
