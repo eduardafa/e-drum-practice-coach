@@ -52,6 +52,10 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
   goes up a step (default 4 BPM) at 90% or more, down a step below 70%, and otherwise stays, until you pass a
   round at your target tempo. A short pause and a count-in at the new tempo separate the rounds, and a chart
   shows each round's tempo and accuracy.
+- Quiet bars: keep time on your own. Next to the session length, the click can go quiet for one bar in four (or
+  two) while the notes are still scored where they're written; the kit view says "Keep going" during a quiet bar.
+  The results, and the session in History, say whether you sped up or slowed down without the click, compared
+  with your timing when it was there. A good run late in First steps suggests trying it.
 - Practice history, on its own page at `/history`: every finished session and tempo-trainer run is saved in your
   browser (IndexedDB) and listed by day, with your streak (days in a row with practice), today's practice time and your longest streak. Signed out, nothing
   leaves the device.
