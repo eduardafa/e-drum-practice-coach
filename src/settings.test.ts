@@ -40,6 +40,12 @@ describe("parseSettings", () => {
     expect(parseSettings({ exerciseTempos: [72] }).exerciseTempos).toBeUndefined();
   });
 
+  it("remembers that the Before you play card was dismissed, only as true", () => {
+    expect(parseSettings({ beforeYouPlaySeen: true }).beforeYouPlaySeen).toBe(true);
+    expect(parseSettings({ beforeYouPlaySeen: false }).beforeYouPlaySeen).toBeUndefined();
+    expect(parseSettings({ beforeYouPlaySeen: "yes" }).beforeYouPlaySeen).toBeUndefined();
+  });
+
   it("keeps a volume within the slider's range", () => {
     expect(parseSettings({ volume: 1.5 }).volume).toBe(1.5);
     expect(parseSettings({ volume: 3 }).volume).toBeUndefined();
