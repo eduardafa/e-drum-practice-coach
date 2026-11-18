@@ -49,8 +49,7 @@ export interface KeyEntry {
 
 /** The key for the drums an exercise uses, from the top of the staff down, each drum once. */
 export function staffKey(pads: Iterable<PadId>): KeyEntry[] {
-  const used = new Set(pads);
-  return (Object.keys(STAFF_POSITIONS) as PadId[])
-    .filter((pad) => used.has(pad))
+  return [...new Set(pads)]
+    .toSorted((a, b) => STAFF_POSITIONS[b].step - STAFF_POSITIONS[a].step)
     .map((pad) => ({ pad, name: padTitle(pad), position: STAFF_POSITIONS[pad] }));
 }
