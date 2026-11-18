@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { MetronomeSettings } from "./audio/schedule";
+import { GLOSSARY } from "./glossary";
 import { GUIDE_COUNTS, GUIDE_START_BPM, METRONOME_GUIDE, type GuideStep } from "./guide/metronomeGuide";
 import type { Coach } from "./live/coach";
 import { LiveCount, useLiveCount } from "./LiveCount";
@@ -49,6 +50,18 @@ export function MetronomeGuide({ coach, running, basicsOpen, onApply, onToggleMe
         <p className="hint">
           Calibration is different: there you hit one pad, once per click, with nothing in between.
         </p>
+      </details>
+
+      <details className="guide-basics">
+        <summary>Drumming words</summary>
+        <dl className="glossary-list">
+          {GLOSSARY.map(({ word, definition }) => (
+            <div key={word}>
+              <dt>{word}</dt>
+              <dd>{definition}</dd>
+            </div>
+          ))}
+        </dl>
       </details>
 
       <Tabs tabs={GUIDE_TABS} selected={step.id} onSelect={setStepId} label="Steps" idPrefix="guide" />
