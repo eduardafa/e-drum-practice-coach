@@ -4,8 +4,10 @@ import { heatmap } from "./history/heatmap";
 import { formatLean } from "./history/limbs";
 import type { SessionRecord } from "./history/record";
 import type { AccuracyMode } from "./playalong/results";
+import { NoteToFixSection } from "./NoteToFixSection";
 import { PadHeatmap } from "./PadHeatmap";
 import { TimingSection } from "./TimingSection";
+import { TogetherNote } from "./TogetherNote";
 
 interface Props {
   record: SessionRecord;
@@ -109,6 +111,8 @@ export function SessionDialog({ record, mode, onClose }: Props) {
           </p>
         </div>
 
+        <NoteToFixSection record={record} />
+
         <dl className="session-counts" aria-label={`What happened to the ${counts.notes} notes`}>
           {tiles.map(([label, n, tone]) => (
             <div key={label} className={`session-count ${tone}`}>
@@ -119,6 +123,7 @@ export function SessionDialog({ record, mode, onClose }: Props) {
         </dl>
 
         <DynamicsSummary record={record} />
+        <TogetherNote record={record} />
 
         <div className="history-pair">
           <TimingSection records={records} from={null} />

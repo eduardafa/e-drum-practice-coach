@@ -5,7 +5,9 @@ import { NITRO_MAX_PADS } from "./kit/nitroMax";
 import { PadHeatmap } from "./PadHeatmap";
 import { pathAdvice } from "./exercises/path";
 import { mirrorText } from "./handedness";
+import { NoteToFixSection } from "./NoteToFixSection";
 import { useHandedness } from "./HandednessContext";
+import { TogetherNote } from "./TogetherNote";
 import { hihatTips } from "./playalong/hihatTips";
 import type { Exercise } from "./exercises/types";
 import { DEFAULT_PASS_MARK } from "./playalong/trainer";
@@ -63,6 +65,8 @@ export function ResultsPanel({ exercise, results, mode, bpm, loops, record, onRe
         {percent(results.accuracy[other])}.
       </p>
 
+      {record && <NoteToFixSection record={record} />}
+
       <dl className="stats">
         <dt>On time</dt>
         <dd>
@@ -109,6 +113,8 @@ export function ResultsPanel({ exercise, results, mode, bpm, loops, record, onRe
           ))}
         </tbody>
       </table>
+
+      {record && <TogetherNote record={record} />}
 
       {record && <DynamicsSummary record={record} />}
 
