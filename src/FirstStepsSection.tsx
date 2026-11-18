@@ -1,5 +1,5 @@
 import { PATHS, type Path } from "./exercises/path";
-import { firstStepsProgress, type StepProgress } from "./history/firstSteps";
+import { firstStepsProgress, meetKitDone, type StepProgress } from "./history/firstSteps";
 import type { HistoryRecord } from "./history/record";
 import type { AccuracyMode } from "./playalong/results";
 import { DEFAULT_PASS_MARK } from "./playalong/trainer";
@@ -28,11 +28,27 @@ function bestLabel(row: StepProgress): string {
  * run at the Next button's pass mark), which is up next, and the best run of
  * each. Over all of history, so it doesn't follow the Progress range.
  */
-export function FirstStepsSection({ records, accuracyMode }: { records: readonly HistoryRecord[]; accuracyMode: AccuracyMode }) {
+export function FirstStepsSection({
+  records,
+  accuracyMode,
+  kitTourDone,
+}: {
+  records: readonly HistoryRecord[];
+  accuracyMode: AccuracyMode;
+  /** "Meet your kit" was finished on this device. */
+  kitTourDone: boolean;
+}) {
   return (
     <>
-      {PATHS.map((path) => (
-        <PathProgress key={path.id} path={path} records={records} accuracyMode={accuracyMode} />
+      {PATHS.map((path, i) => (
+        <PathProgress
+          key={path.id}
+          path={path}
+          records={records}
+          accuracyMode={accuracyMode}
+          // Part 1 starts with step 0, "Meet your kit".
+          meetKit={i === 0 ? meetKitDone(records, kitTourDone) : null}
+        />
       ))}
     </>
   );
@@ -43,13 +59,16 @@ function PathProgress({
   path,
   records,
   accuracyMode,
+  meetKit,
 }: {
   path: Path;
   records: readonly HistoryRecord[];
   accuracyMode: AccuracyMode;
+  /** Whether step 0 is done, for part 1; null for the other parts. */
+  meetKit: boolean | null;
 }) {
   const progress = firstStepsProgress(records, accuracyMode, DEFAULT_PASS_MARK, path);
-  if (!progress.unlocked) return null;
+  if (!progress.unlocked && !meetKit) return null;
   const { rows, passedSteps, totalSteps, next } = progress;
   const titleId = `path-${path.id}-title`;
 
@@ -63,6 +82,18 @@ function PathProgress({
           : `. Every step and the ${rows.at(-1)?.exercise.name ?? "goal"} passed: play it a little faster each week.`}
       </p>
       <ol className="first-steps-list">
+        {meetKit !== null && (
+          <li className={meetKit ? "passed" : "next"}>
+            <span className="step-mark" aria-hidden>
+              {meetKit ? MARK.passed : MARK.next}
+            </span>
+            <span className="step-name">
+              Step 0: Meet your kit
+              <span className="step-best">Each pad's name and how it's written</span>
+            </span>
+            <span className="step-status">{meetKit ? "Done" : "Up next"}</span>
+          </li>
+        )}
         {rows.map((row) => (
           <li key={row.exercise.id} className={row.status}>
             <span className="step-mark" aria-hidden>

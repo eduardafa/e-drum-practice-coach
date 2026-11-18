@@ -16,6 +16,8 @@ describe("parseSettings", () => {
 
   it("keeps the First steps level", () => {
     expect(parseSettings({ skillLevel: "firstSteps" }).skillLevel).toBe("firstSteps");
+    expect(parseSettings({ kitTourDone: true }).kitTourDone).toBe(true);
+    expect(parseSettings({ kitTourDone: "yes" }).kitTourDone).toBeUndefined();
   });
 
   it("keeps an exercise that's in the library, and drops one that isn't", () => {

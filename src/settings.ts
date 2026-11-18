@@ -16,6 +16,8 @@ export interface SavedSettings {
   skillLevel?: SkillLevel;
   /** The drummer has opened the metronome guide at least once. */
   guideSeen?: boolean;
+  /** The drummer has finished "Meet your kit" (step 0 of First steps). */
+  kitTourDone?: boolean;
   /** The exercise shown as notation, if any. */
   exerciseId?: string;
   /** Which accuracy the play-along results lead with. */
@@ -94,6 +96,7 @@ export function parseSettings(raw: unknown): SavedSettings {
     scoring: parseScoring(raw.scoring),
     skillLevel: isSkillLevel(raw.skillLevel) ? raw.skillLevel : undefined,
     guideSeen: raw.guideSeen === true ? true : undefined,
+    kitTourDone: raw.kitTourDone === true ? true : undefined,
     // Only ids still in the library: an exercise removed in an update is simply forgotten.
     exerciseId: typeof raw.exerciseId === "string" && findExercise(raw.exerciseId) ? raw.exerciseId : undefined,
     accuracyMode: isAccuracyMode(raw.accuracyMode) ? raw.accuracyMode : undefined,

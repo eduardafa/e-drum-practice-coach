@@ -4,7 +4,7 @@
  * passed. Uses the same pass rule as the results screen's Next button, over
  * all of history: a passed step stays passed.
  */
-import { findExercise } from "../exercises/library";
+import { findExercise, FIRST_STEPS } from "../exercises/library";
 import { PATHS, type Path } from "../exercises/path";
 import type { Exercise } from "../exercises/types";
 import type { AccuracyMode } from "../playalong/results";
@@ -82,4 +82,15 @@ export function firstStepsProgress(
     started,
     unlocked: started || (leadIn !== null && leadIn.accuracy >= passMark),
   };
+}
+
+/**
+ * Whether step 0, "Meet your kit", counts as done: finished on this device,
+ * or any part 1 step has been played (someone already playing doesn't need
+ * the tour, and the tour itself isn't a saved session).
+ */
+export function meetKitDone(records: readonly HistoryRecord[], tourFinished: boolean): boolean {
+  if (tourFinished) return true;
+  const part1 = new Set(FIRST_STEPS.map((e) => e.id));
+  return records.some((r) => r.kind === "session" && part1.has(r.exerciseId));
 }
