@@ -2,6 +2,7 @@ import { useState } from "react";
 import { formatVolume, MAX_VOLUME, MIN_VOLUME } from "./audio/volume";
 import { isSubdivision, type MetronomeSettings } from "./audio/schedule";
 import { Tabs } from "./Tabs";
+import { Term } from "./Term";
 import { ThemeSetting } from "./ThemeSetting";
 import { SpokenCountField } from "./SpokenCountField";
 import type { SpokenCountSetting } from "./audio/spokenCount";
@@ -138,7 +139,9 @@ export function SettingsPanel({
               checked={metronome.clickSubdivisions}
               onChange={(e) => onMetronomeChange({ clickSubdivisions: e.target.checked })}
             />
-            <span>Click on subdivisions</span>
+            <span>
+              Click on <Term word="subdivision">subdivisions</Term>
+            </span>
           </label>
           <SpokenCountField
             spokenCount={spokenCount}
@@ -186,9 +189,13 @@ export function SettingsPanel({
               ))}
             </select>
           </label>
-          <label className="field">
-            <span>On-time window</span>
+          {/* htmlFor: the word is a button, which would otherwise take the label from the slider. */}
+          <label className="field" htmlFor="settings-on-time-window">
+            <span>
+              <Term word="on-time window">On-time window</Term>
+            </span>
             <input
+              id="settings-on-time-window"
               type="range"
               min={5}
               max={80}
@@ -202,9 +209,13 @@ export function SettingsPanel({
               ? `Custom window. ${SKILL_PROFILES[skillLevel].label} uses ±${SKILL_PROFILES[skillLevel].toleranceMs} ms.`
               : `${SKILL_PROFILES[windowLevel].label} window.`}
           </p>
-          <label className="field">
-            <span>Latency offset</span>
+          {/* htmlFor: the word is a button, which would otherwise take the label from the slider. */}
+          <label className="field" htmlFor="settings-latency-offset">
+            <span>
+              <Term word="latency offset">Latency offset</Term>
+            </span>
             <input
+              id="settings-latency-offset"
               type="range"
               min={-200}
               max={200}

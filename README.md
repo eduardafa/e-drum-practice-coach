@@ -74,6 +74,7 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
   browser (IndexedDB) and listed by day, with your streak (days in a row with practice), today's practice time and your longest streak. Signed out, nothing
   leaves the device.
 - Light and dark themes: follows the device's setting, or choose System, Light or Dark in Settings.
+- Drumming words explained: words like BPM, groove, fill, ghost note and on-time window show a one-line, plain-language definition when you focus, hover or tap them, and the metronome guide lists them all.
 - Sign in with GitHub or Google from the account button in the top bar, and history syncs across devices
   automatically: each finished session uploads right away, and other devices' sessions arrive when the app opens
   or you return to it. Offline, it catches up later. The server keeps the provider's account number, your name

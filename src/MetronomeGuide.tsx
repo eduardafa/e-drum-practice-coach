@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { MetronomeSettings } from "./audio/schedule";
+import { GLOSSARY } from "./glossary";
 import { GUIDE_COUNTS, GUIDE_START_BPM, METRONOME_GUIDE, type GuideStep } from "./guide/metronomeGuide";
 import type { Coach } from "./live/coach";
 import { LiveCount, useLiveCount } from "./LiveCount";
@@ -53,6 +54,17 @@ export function MetronomeGuide({ coach, running, basicsOpen, onApply, onToggleMe
         </p>
       </details>
 
+      <details className="guide-basics">
+        <summary>Drumming words</summary>
+        <dl className="glossary-list">
+          {GLOSSARY.map(({ word, definition }) => (
+            <div key={word}>
+              <dt>{word}</dt>
+              <dd>{definition}</dd>
+            </div>
+          ))}
+        </dl>
+      </details>
       <div className="guide-before-you-play">
         <p className="hint">New to the kit? Check your seat, grip and hi-hat pedal first.</p>
         {/* Not releasing(): keyboard focus comes back here when the card closes. */}

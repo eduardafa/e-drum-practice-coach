@@ -4,12 +4,14 @@ import { EXERCISES } from "./exercises/library";
 import { startingTempo } from "./exercises/practice";
 import { formatTimeSignature, tabOf, type TabCell } from "./exercises/tab";
 import type { Exercise } from "./exercises/types";
+import { define } from "./glossary";
 import { displayedExercise } from "./handedness";
 import { useHandedness } from "./HandednessContext";
 import { formatDuration, SONG_EXTENSIONS } from "./songs/song";
 import type { RememberedSong } from "./songs/songStore";
 import { TAB_FILE_ACCEPT } from "./songs/tabFile";
 import { tabId, tabPanelId, Tabs } from "./Tabs";
+import { Term } from "./Term";
 
 /** An exercise category, everything, or the songs opener. */
 type Filter = "all" | Exercise["category"] | "songs";
@@ -22,6 +24,27 @@ const FILTERS: readonly { id: Filter; label: string }[] = [
   { id: "rudiment", label: "Rudiments" },
   { id: "songs", label: "Songs" },
 ];
+
+/** What the chosen kind of exercise is, in plain words, above its cards. */
+function FilterNote({ filter }: { filter: Filter }) {
+  if (filter === "groove" || filter === "fill") return <p className="hint">{define(filter)}</p>;
+  if (filter === "rudiment") {
+    return (
+      <p className="hint">
+        {define("rudiment")} The Hands row shows the <Term word="sticking" />.
+      </p>
+    );
+  }
+  if (filter === "first-steps") {
+    return (
+      <p className="hint">
+        Start here: one simple <Term word="groove" />, built up one hand or foot at a time, then louder and softer notes
+        and a first <Term word="fill" />.
+      </p>
+    );
+  }
+  return null;
+}
 
 interface Props {
   selectedId: string | null;
@@ -120,6 +143,7 @@ export function LibraryPanel({
           />
         ) : (
           <>
+            <FilterNote filter={filter} />
             <ul className="library-list">
               {(filter === "all" || filter === "first-steps") && (
                 <li className="library-card" aria-labelledby="library-meet-kit">
