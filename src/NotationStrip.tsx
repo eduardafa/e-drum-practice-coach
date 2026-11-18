@@ -11,6 +11,8 @@ import type { QuietEvery } from "./playalong/quietBars";
 import { QuietBarsSelect } from "./QuietBarsSelect";
 import { displayedExercise } from "./handedness";
 import { useHandedness } from "./HandednessContext";
+import { NoteTargets } from "./NoteTargets";
+import { StaffKey } from "./StaffKey";
 
 /** Pick the position one frame ahead, as the live count does: a frame is painted ~16 ms after it's chosen. */
 const PAINT_LOOKAHEAD_MS = 16;
@@ -298,8 +300,10 @@ export function NotationStrip({
         <div className="notation-score" style={scoreStyle}>
           <div ref={hostRef} />
           <div ref={marksRef} className="marks" aria-hidden />
+          {layout && exercise && <NoteTargets key={exercise.id} exercise={exercise} layout={layout} />}
           <div ref={playheadRef} className="playhead" hidden />
         </div>
+        {status === "ready" && exercise && <StaffKey exercise={exercise} />}
         {status === "loading" && <p className="hint">Loading notation…</p>}
         {status === "error" && <p className="hint warn-note">The notation couldn't be drawn.</p>}
       </div>

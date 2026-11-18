@@ -97,9 +97,31 @@ function hookClicks() {
   };
 }
 
+/** Runs in the page before the app: starts a fresh browser with these settings, leaving saved ones alone on reloads. */
+function seedSettings(settings: Record<string, unknown>) {
+  const key = "edrum-coach:settings:v1";
+  if (localStorage.getItem(key) === null) localStorage.setItem(key, JSON.stringify(settings));
+}
+
 // Each fixture hands its value to the test with `provide` (Playwright's `use`, renamed so the React hooks lint rule
 // doesn't take it for React's use()).
-export const test = base.extend<{ drummer: Drummer; clickHook: void; noPageErrors: void }>({
+export const test = base.extend<{
+  drummer: Drummer;
+  clickHook: void;
+  noPageErrors: void;
+  /** Start with the "Before you play" card already dismissed (its own test turns this off). */
+  beforeYouPlaySeen: boolean;
+  setupSeen: void;
+}>({
+  beforeYouPlaySeen: [true, { option: true }],
+  // A fresh browser's first First steps exercise opens the card, which would cover the page in other tests.
+  setupSeen: [
+    async ({ page, beforeYouPlaySeen }, provide) => {
+      if (beforeYouPlaySeen) await page.addInitScript(seedSettings, { beforeYouPlaySeen: true });
+      await provide();
+    },
+    { auto: true },
+  ],
   // Before any page loads (a beforeEach may navigate before a test asks for the drummer).
   clickHook: [
     async ({ page }, provide) => {

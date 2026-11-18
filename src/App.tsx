@@ -15,8 +15,11 @@ import { SongPanel } from "./SongPanel";
 import { useSong } from "./useSong";
 import { PracticePlanBanner, PracticePlanPanel } from "./PracticePlan";
 import { MetronomeGuide } from "./MetronomeGuide";
+import { BeforeYouPlayDialog, useBeforeYouPlay } from "./BeforeYouPlay";
 import { NotationStrip, type SessionView } from "./NotationStrip";
 import { LearnSummary } from "./LearnSummary";
+import { KitTourPanel } from "./KitTourPanel";
+import { meetKitDone } from "./history/firstSteps";
 import type { AccuracyMode } from "./playalong/results";
 import { DEFAULT_GET_READY_SEC } from "./playalong/getReady";
 import { GetReady } from "./GetReady";
@@ -84,6 +87,7 @@ export default function App() {
   const [scoring, setScoring] = useState<ScoringOptions>(coach.scoring);
   const [running, setRunning] = useState(false);
   const prefs = usePlayPreferences();
+  const beforeYouPlay = useBeforeYouPlay();
   const [calibrating, setCalibrating] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -121,6 +125,12 @@ export default function App() {
   /** Set by Escape so the blur that follows throws the draft away instead of applying it. */
   const discardTempoDraft = useRef(false);
   const [guideSeen, setGuideSeen] = useState(saved.guideSeen === true);
+  /** "Meet your kit" finished on this device (step 0 of First steps). */
+  const [kitTourDone, setKitTourDone] = useState(saved.kitTourDone === true);
+  /** "Meet your kit" is open. */
+  const [touring, setTouring] = useState(false);
+  // Starting anything else (a session, wait mode, mapping) ends the coach's tour, and the panel with it.
+  const tourOpen = touring && coach.tour !== null;
   /** Whether this opening of the guide is the drummer's first. */
   const [guideFirstOpen, setGuideFirstOpen] = useState(false);
   const [skillLevel, setSkillLevel] = useState<SkillLevel>(saved.skillLevel ?? DEFAULT_SKILL_LEVEL);
@@ -153,6 +163,7 @@ export default function App() {
       scoring,
       skillLevel,
       guideSeen: guideSeen || undefined,
+      kitTourDone: kitTourDone || undefined,
       exerciseId: exerciseId ?? undefined,
       accuracyMode,
       sessionLoops,
@@ -160,12 +171,14 @@ export default function App() {
       exerciseTempos,
       getReadySec,
       ...prefs.toSave,
+      ...beforeYouPlay.toSave,
     });
   }, [
     metronome,
     scoring,
     skillLevel,
     guideSeen,
+    kitTourDone,
     exerciseId,
     accuracyMode,
     sessionLoops,
@@ -173,6 +186,7 @@ export default function App() {
     exerciseTempos,
     getReadySec,
     prefs.toSave,
+    beforeYouPlay.toSave,
   ]);
 
   // Remember the tempo of the exercise on the staff, however it changed (− / +, typed, a retry, the trainer).
@@ -455,6 +469,7 @@ export default function App() {
     if (showResults) return () => coach.endSession();
     if (showLearnSummary) return () => coach.endLearn();
     if (plan.open) return plan.close;
+    if (tourOpen) return endTour;
     if (kit.mapping) return kit.end;
     return null;
   };
@@ -466,7 +481,7 @@ export default function App() {
     const close = closeFront();
     if (!close) return;
     const onPointerDown = (e: PointerEvent) => {
-      if (e.target instanceof Element && e.target.closest(".overlay, .guide, .calibration, .account-menu, [aria-expanded]")) return;
+      if (e.target instanceof Element && e.target.closest(".overlay, .guide, .calibration, .account-menu, dialog, [aria-expanded]")) return;
       close();
     };
     document.addEventListener("pointerdown", onPointerDown);
@@ -475,15 +490,16 @@ export default function App() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // With a modal dialog open (a session's stats, Before you play), keys are the dialog's: Esc closes it.
+      if (document.querySelector("dialog:modal")) return;
       const close = e.code === "Escape" ? closeFront() : null;
       if (close) {
         close();
         return;
       }
       // On the History page, Esc goes back like its button; no drum or metronome keys there.
-      // With a modal dialog open (a session's stats), Esc is the dialog's: it closes that instead.
       if (view === "history") {
-        if (e.code === "Escape" && !document.querySelector("dialog:modal")) backToPractice();
+        if (e.code === "Escape") backToPractice();
         return;
       }
       // While browsing, keys move around the library: Space and Enter press its buttons, not the drums.
@@ -569,6 +585,21 @@ export default function App() {
     setRunning(true);
   };
 
+
+  /** "Meet your kit": each pad lit in turn, then a short quiz. Nothing else runs meanwhile. */
+  const startTour = () => {
+    if (coach.calibrating) return;
+    closePanels();
+    stopPreview();
+    coach.startTour();
+    setRunning(false);
+    setTouring(true);
+  };
+
+  const endTour = () => {
+    coach.endTour();
+    setTouring(false);
+  };
 
   /** Wait mode on the current exercise: no click, the kit view shows the pads to hit and waits for them. */
   const startLearn = () => {
@@ -790,6 +821,7 @@ export default function App() {
               basicsOpen={guideFirstOpen}
               onApply={(settings) => setMetronome(settings)}
               onToggleMetronome={() => void toggleMetronome()}
+              onBeforeYouPlay={beforeYouPlay.reopen}
               onClose={() => setGuideOpen(false)}
             />
           )}
@@ -829,13 +861,17 @@ export default function App() {
               previewingId={previewingId}
               onPreview={previewExercise}
               onStopPreview={stopPreview}
-              onSelect={selectExercise}
+              onSelect={(id) => {
+                selectExercise(id);
+                beforeYouPlay.offerFor(id);
+              }}
               onOpenSong={(file) => void songs.open(file)}
               onOpenTab={(file) => void songs.openTab(file)}
               songLoading={songs.loading}
               songError={songs.error}
               recentSongs={songs.remembered}
               onForgetSong={songs.forget}
+              onMeetKit={startTour}
               onClose={closeLibrary}
             />
           )}
@@ -868,6 +904,18 @@ export default function App() {
               onClose={plan.close}
             />
           )}
+          {tourOpen && coach.tour && view === "practice" && !calibrating && (
+            <KitTourPanel
+              tour={coach.tour}
+              onFinished={() => setKitTourDone(true)}
+              onNext={(next) => {
+                endTour();
+                selectExercise(next.id);
+              }}
+              onAgain={startTour}
+              onClose={endTour}
+            />
+          )}
           {showLearnSummary && exercise && coach.learn && (
             <LearnSummary
               exercise={exercise}
@@ -895,6 +943,7 @@ export default function App() {
               onClose={() => coach.endSession()}
             />
           )}
+          {beforeYouPlay.open && view === "practice" && <BeforeYouPlayDialog onClose={beforeYouPlay.close} />}
           {calibrating && (
             <CalibrationPanel
               coach={coach}
@@ -910,6 +959,14 @@ export default function App() {
 
         <aside className="controls" hidden={view === "history"}>
           <fieldset className="group play" disabled={calibrating}>
+            {!meetKitDone(history, kitTourDone) && !tourOpen && (
+              <output className="suggestion first-visit">
+                <p>New to drums? Start with step 0: learn each pad's name and how it's written.</p>
+                <button className="primary" onClick={releasing(startTour)}>
+                  Meet your kit
+                </button>
+              </output>
+            )}
             {!guideSeen && (
               <output className="suggestion first-visit">
                 <p>New to playing with a metronome? Learn to count and play along.</p>
@@ -1091,6 +1148,7 @@ export default function App() {
               onBack={backToPractice}
               signedIn={account.status === "signed-in"}
               insights={account.status === "signed-in" && account.insights}
+              kitTourDone={kitTourDone}
             />
           </main>
         )}
