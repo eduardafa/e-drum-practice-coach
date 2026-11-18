@@ -15,6 +15,7 @@ import { SongPanel } from "./SongPanel";
 import { useSong } from "./useSong";
 import { PracticePlanBanner, PracticePlanPanel } from "./PracticePlan";
 import { MetronomeGuide } from "./MetronomeGuide";
+import { BeforeYouPlayDialog, useBeforeYouPlay } from "./BeforeYouPlay";
 import { NotationStrip, type SessionView } from "./NotationStrip";
 import { LearnSummary } from "./LearnSummary";
 import type { AccuracyMode } from "./playalong/results";
@@ -82,6 +83,7 @@ export default function App() {
   const [scoring, setScoring] = useState<ScoringOptions>(coach.scoring);
   const [running, setRunning] = useState(false);
   const prefs = usePlayPreferences();
+  const beforeYouPlay = useBeforeYouPlay();
   const [calibrating, setCalibrating] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -156,6 +158,7 @@ export default function App() {
       exerciseTempos,
       getReadySec,
       ...prefs.toSave,
+      ...beforeYouPlay.toSave,
     });
   }, [
     metronome,
@@ -168,6 +171,7 @@ export default function App() {
     exerciseTempos,
     getReadySec,
     prefs.toSave,
+    beforeYouPlay.toSave,
   ]);
 
   // Remember the tempo of the exercise on the staff, however it changed (− / +, typed, a retry, the trainer).
@@ -460,7 +464,7 @@ export default function App() {
     const close = closeFront();
     if (!close) return;
     const onPointerDown = (e: PointerEvent) => {
-      if (e.target instanceof Element && e.target.closest(".overlay, .guide, .calibration, .account-menu, [aria-expanded]")) return;
+      if (e.target instanceof Element && e.target.closest(".overlay, .guide, .calibration, .account-menu, dialog, [aria-expanded]")) return;
       close();
     };
     document.addEventListener("pointerdown", onPointerDown);
@@ -469,15 +473,16 @@ export default function App() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // With a modal dialog open (a session's stats, Before you play), keys are the dialog's: Esc closes it.
+      if (document.querySelector("dialog:modal")) return;
       const close = e.code === "Escape" ? closeFront() : null;
       if (close) {
         close();
         return;
       }
       // On the History page, Esc goes back like its button; no drum or metronome keys there.
-      // With a modal dialog open (a session's stats), Esc is the dialog's: it closes that instead.
       if (view === "history") {
-        if (e.code === "Escape" && !document.querySelector("dialog:modal")) backToPractice();
+        if (e.code === "Escape") backToPractice();
         return;
       }
       // While browsing, keys move around the library: Space and Enter press its buttons, not the drums.
@@ -779,6 +784,7 @@ export default function App() {
               basicsOpen={guideFirstOpen}
               onApply={(settings) => setMetronome(settings)}
               onToggleMetronome={() => void toggleMetronome()}
+              onBeforeYouPlay={beforeYouPlay.reopen}
               onClose={() => setGuideOpen(false)}
             />
           )}
@@ -818,7 +824,10 @@ export default function App() {
               previewingId={previewingId}
               onPreview={previewExercise}
               onStopPreview={stopPreview}
-              onSelect={selectExercise}
+              onSelect={(id) => {
+                selectExercise(id);
+                beforeYouPlay.offerFor(id);
+              }}
               onOpenSong={(file) => void songs.open(file)}
               onOpenTab={(file) => void songs.openTab(file)}
               songLoading={songs.loading}
@@ -884,6 +893,7 @@ export default function App() {
               onClose={() => coach.endSession()}
             />
           )}
+          {beforeYouPlay.open && view === "practice" && <BeforeYouPlayDialog onClose={beforeYouPlay.close} />}
           {calibrating && (
             <CalibrationPanel
               coach={coach}
