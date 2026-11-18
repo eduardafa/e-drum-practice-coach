@@ -16,6 +16,9 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
   synthesizer and scheduled like the click, on by default in First steps, with or without the click.
 - A "How to play with the metronome" guide for new drummers: counting "1 & 2 &", and four steps to the money
   beat, each with a one-tap metronome setup and a live count that lights up in time with the clicks.
+- A "Before you play" card the first time you choose a First steps exercise: five one-line checks the app can't
+  measure (seat height, grip, hi-hat pedal held closed, loose wrists, module volume). "Got it" dismisses it for
+  good; the metronome guide opens it again.
 - Per-hit timing in ms, a per-pad timing strip over the last 5 s, and session stats.
 - A side panel with only what you need while playing, so it fits without scrolling: Start/Stop (<kbd>M</kbd>),
   the live count, tempo − / + buttons (hold Shift for 5 BPM steps), and on-time %, average and consistency.
@@ -25,6 +28,11 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
 - Latency calibration: play along to the click and the app measures your setup's delay and sets the
   offset. It adapts to your skill level (Beginner, Intermediate, Advanced) and keeps listening until the
   measurement is precise, so steadier playing finishes sooner.
+- Step 0, "Meet your kit", before First steps: each pad lights up on the kit view in turn with its name, what it's
+  for and which limb plays it, and how it's written on the staff, and you hit it (pads your kit doesn't have can be
+  skipped). Then a six-question quiz: the app names a drum without lighting it, and a wrong hit lights it as a hint. No
+  click and no timing, and nothing is saved to History; it counts as done once finished on this device, or once any
+  part 1 step has been played. Start it from the prompt beside the kit view or the library's First steps tab.
 - First steps, in three parts, for someone who has never played: part 1 builds the Money beat one limb at a time,
   part 2 moves the kick and the right hand and adds a first fill, and part 3 is about how a beat is played: loud and
   soft on the hi-hat, a ghost note, a fill on the toms into a crash, and the open hi-hat, leading to the open hi-hat

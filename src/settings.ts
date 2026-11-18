@@ -17,6 +17,8 @@ export interface SavedSettings {
   skillLevel?: SkillLevel;
   /** The drummer has opened the metronome guide at least once. */
   guideSeen?: boolean;
+  /** The drummer has finished "Meet your kit" (step 0 of First steps). */
+  kitTourDone?: boolean;
   /** The exercise shown as notation, if any. */
   exerciseId?: string;
   /** Which accuracy the play-along results lead with. */
@@ -25,6 +27,8 @@ export interface SavedSettings {
   sessionLoops?: number;
   /** The last tempo used for each exercise, by exercise id. */
   exerciseTempos?: Record<string, number>;
+  /** The "Before you play" setup card has been dismissed once, so it no longer opens on its own. */
+  beforeYouPlaySeen?: boolean;
   /** Metronome click volume, as a gain (see audio/volume). */
   volume?: number;
   /** Seconds of get-ready countdown before a play-along session; 0 for none. */
@@ -97,11 +101,13 @@ export function parseSettings(raw: unknown): SavedSettings {
     scoring: parseScoring(raw.scoring),
     skillLevel: isSkillLevel(raw.skillLevel) ? raw.skillLevel : undefined,
     guideSeen: raw.guideSeen === true ? true : undefined,
+    kitTourDone: raw.kitTourDone === true ? true : undefined,
     // Only ids still in the library: an exercise removed in an update is simply forgotten.
     exerciseId: typeof raw.exerciseId === "string" && findExercise(raw.exerciseId) ? raw.exerciseId : undefined,
     accuracyMode: isAccuracyMode(raw.accuracyMode) ? raw.accuracyMode : undefined,
     sessionLoops: SESSION_LOOPS.find((n) => n === raw.sessionLoops),
     exerciseTempos: parseExerciseTempos(raw.exerciseTempos),
+    beforeYouPlaySeen: raw.beforeYouPlaySeen === true ? true : undefined,
     volume: isVolume(raw.volume) ? raw.volume : undefined,
     getReadySec: isGetReadySec(raw.getReadySec) ? raw.getReadySec : undefined,
     handedness: isHandedness(raw.handedness) ? raw.handedness : undefined,
