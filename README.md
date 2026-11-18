@@ -46,6 +46,10 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
 - Drum notation: the chosen exercise appears as standard drum notation above the kit view, with a playhead
   that follows the metronome. The notation is engraved with [VexFlow](https://www.vexflow.com/), loaded only
   when an exercise is chosen.
+- Tap a note: tapping, hovering or tabbing to a note on the staff says which drum it is and which hand or foot
+  plays it ("Snare, left hand"; notes played together list each drum), using the exercise's sticking or the
+  usual setup, mirrored on a left-handed kit. The arrow keys move between notes. A small key under the staff,
+  which can be closed, shows which line or space is which drum for the drums the exercise uses.
 - Play along: start a session from the notation strip (2 to 16 loops, after a one-bar count-in). Each note is
   ringed with its result as you play, and a results screen shows your accuracy, notes on time, early, late and
   missed, extra hits, timing, consistency and a per-pad breakdown, with retry and 5 BPM slower/faster.

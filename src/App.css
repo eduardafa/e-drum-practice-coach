@@ -1272,6 +1272,134 @@ fieldset.group.play {
   transform: translate(-50%, -50%) rotate(-45deg);
 }
 
+/*
+ * Tap a note to see which drum and hand (NoteTargets): invisible buttons over
+ * each note's column, placed in % of the engraved staff by the component, and
+ * the label they open, under the notes. Over the result marks, under nothing.
+ */
+.note-targets {
+  position: absolute;
+  inset: 0;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  pointer-events: none;
+}
+
+.note-target {
+  position: absolute;
+  min-width: 22px;
+  min-height: 28px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  transform: translateX(-50%);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.note-target:hover,
+.note-target.shown {
+  background: var(--accent-soft);
+}
+
+.note-target:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.note-label {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 6px 20px var(--shadow);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+/* Near the ends of the staff the label grows inward, so it stays on screen. */
+.note-label.start {
+  transform: translateX(-12px);
+}
+
+.note-label.end {
+  transform: translateX(calc(-100% + 12px));
+}
+
+.note-label-count {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* The key under the staff: a tiny staff per drum the exercise uses. */
+.staff-key {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.staff-key summary {
+  width: fit-content;
+  cursor: pointer;
+}
+
+.staff-key ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.staff-key li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text);
+}
+
+.staff-key-staff {
+  width: 28px;
+  height: 38px;
+  flex: none;
+  stroke: var(--muted);
+  stroke-width: 0.7;
+}
+
+.staff-key-staff .ledger {
+  stroke: var(--text);
+}
+
+.staff-key-staff .head {
+  fill: var(--text);
+  stroke: none;
+}
+
+.staff-key-staff .head-x {
+  stroke: var(--text);
+  stroke-width: 1.4;
+}
+
+.staff-key-hint {
+  margin: 2px 0 0;
+}
+
 /* End-of-session results, in the calibration panel's place. */
 .calibration.results {
   max-height: calc(100% - 32px);
