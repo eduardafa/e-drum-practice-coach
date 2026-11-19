@@ -57,6 +57,7 @@ import { formatDelta, KitRenderer } from "./render/kitRenderer";
 import { SettingsPanel } from "./SettingsPanel";
 import { SmallMetronome } from "./SmallMetronome";
 import type { ScoringOptions } from "./timing/grid";
+import { randomId } from "./randomId";
 import { saveSettings } from "./settings";
 import { Term } from "./Term";
 
@@ -254,7 +255,7 @@ export default function App() {
     () =>
       coach.onSessionEnd((session, timing) => {
         const record = sessionRecord(
-          { id: crypto.randomUUID(), start: timing.start, durationMs: timing.durationMs, timeZone: timing.timeZone },
+          { id: randomId(), start: timing.start, durationMs: timing.durationMs, timeZone: timing.timeZone },
           {
             exercise: session.exercise,
             bpm: session.bpm,
@@ -354,7 +355,7 @@ export default function App() {
         if (!song || song.tab) return;
         saveRecordRef.current(
           songRecord(
-            { id: crypto.randomUUID(), start: end.start, durationMs: end.durationMs, timeZone: end.timeZone },
+            { id: randomId(), start: end.start, durationMs: end.durationMs, timeZone: end.timeZone },
             {
               title: song.title,
               fingerprint: song.fingerprint,
@@ -653,7 +654,7 @@ export default function App() {
 
   const startTrainer = (config: TrainerConfig) => {
     trainerRun.current = {
-      id: crypto.randomUUID(),
+      id: randomId(),
       start: Temporal.Now.instant(),
       timeZone: Temporal.Now.timeZoneId(),
       perf: performance.now(),
