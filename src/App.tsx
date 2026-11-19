@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { coach, historyStore, saved, SIGN_IN_RESULT } from "./appState";
 import { MidiPanel } from "./MidiPanel";
+import { NoKitOnApple } from "./NoKitOnApple";
 import { useMidiStatus, useStats } from "./useStats";
 import { usePlayPreferences } from "./usePlayPreferences";
 import { useKitMapping } from "./useKitMapping";
@@ -9,6 +10,7 @@ import { DEFAULT_METRONOME } from "./live/coach";
 import { MAX_BPM, MIN_BPM, parseBpm, stepBpm, type MetronomeSettings } from "./audio/schedule";
 import { CalibrationPanel } from "./CalibrationPanel";
 import { KeyboardHint } from "./KeyboardHint";
+import { thisAppleMobileDevice } from "./midi/appleDevice";
 import { LiveCount } from "./LiveCount";
 import { MapKitPanel } from "./MapKitPanel";
 import { SongPanel } from "./SongPanel";
@@ -80,6 +82,9 @@ const BETWEEN_ROUNDS_MS = 3000;
 /** The two pages: practice at /, history at /history. */
 type View = "practice" | "history";
 const viewOf = (path: string): View => (path.replace(/\/+$/, "") === "/history" ? "history" : "practice");
+
+/** An iPhone or iPad, where no browser can connect a kit (null elsewhere). It can't change while the page is open. */
+const appleDevice = thisAppleMobileDevice();
 
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -1184,8 +1189,12 @@ export default function App() {
             )}
           </fieldset>
 
-          {/* The keys, while no kit is playing. */}
-          {!(midi.state === "ready" && midi.selectedId) && <KeyboardHint />}
+          {/* The keys, while no kit is playing; on an iPhone or iPad (no keyboard, and no kit possible), why not. */}
+          {midi.state === "unsupported" && appleDevice ? (
+            <NoKitOnApple device={appleDevice} />
+          ) : (
+            !(midi.state === "ready" && midi.selectedId) && <KeyboardHint />
+          )}
         </aside>
 
         {view === "history" && (

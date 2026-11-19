@@ -1,15 +1,20 @@
 import { coach } from "./appState";
+import { thisAppleMobileDevice } from "./midi/appleDevice";
 import type { MidiStatus } from "./midi/connection";
 
 /** The top bar's kit connection: connect, permission states, and the device picker. */
 export function MidiPanel({ status }: { status: MidiStatus }) {
   switch (status.state) {
-    case "unsupported":
+    case "unsupported": {
+      // On an iPhone or iPad no browser has Web MIDI, so "use Chrome" would be wrong; the side panel explains.
+      const device = thisAppleMobileDevice();
+      if (device) return <div className="midi warn">Kit can't connect on {device}</div>;
       return (
         <div className="midi warn">
           This browser doesn't support Web MIDI. Use Chrome, Edge or Firefox.
         </div>
       );
+    }
     case "idle":
       return (
         <button className="primary" onClick={() => void coach.midi.connect()}>

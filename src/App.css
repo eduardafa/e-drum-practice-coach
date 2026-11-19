@@ -4344,3 +4344,13 @@ span.song-drift-bar {
   background: var(--raised);
   color: var(--text);
 }
+
+/* On an iPhone or iPad, why the kit can't connect (src/NoKitOnApple.tsx), in place of the keyboard hint. */
+.suggestion.no-kit {
+  margin-top: auto;
+  border-color: var(--warn);
+}
+
+.suggestion.no-kit p:last-child {
+  margin-bottom: 0;
+}
