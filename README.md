@@ -110,6 +110,17 @@ sample-accurate metronome, and tells you how early or late each hit was, in mill
   sound different enough.
 - Keyboard fallback for trying the app without a kit.
 
+## Browsers
+
+Playing with the kit needs Web MIDI: Chrome, Edge or Firefox on a computer, or Chrome on Android. Safari doesn't
+have Web MIDI, and every iPhone browser (Chrome and Brave included) runs on Safari's engine, so on an iPhone the app
+opens for lessons, notation and History but can't hear the kit.
+
+Safari's engine also lacks Temporal, which the app uses for dates and times. A polyfill
+([temporal-polyfill](https://github.com/fullcalendar/temporal-polyfill)) loads before the app where Temporal is
+missing; browsers that have it never download it. If the app fails to load or crashes while drawing, it shows a
+message with the error instead of a blank page.
+
 ## Running it
 
 Requires Node 26 (see `.nvmrc`), pnpm 12 (pinned in `packageManager`) and Chrome or Edge.
@@ -127,7 +138,8 @@ pnpm test:e2e      # browser tests, on the build (run pnpm build first)
 The browser tests (`e2e/`, Playwright) open the production build in Google Chrome, served with the site's real
 headers, and a simulated drummer plays along: it presses the keyboard's drum keys when each click is heard. They
 cover a scored session and its results, the tempo trainer, playing along to a song, looping a section, and MIDI and
-Guitar Pro tabs. The song and tab files are generated in code. Chrome is muted. A test fails if the page logs any
+Guitar Pro tabs, and loading in a browser without Temporal (as on an iPhone). The song and tab files are generated
+in code. Chrome is muted. A test fails if the page logs any
 error, including a Content-Security-Policy violation. CI runs them after the checks, on the same build, and a failed
 run keeps its screenshots and traces as the `playwright-report` artifact.
 
