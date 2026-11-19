@@ -3,6 +3,7 @@ import type { Coach } from "./live/coach";
 import type { BeatGrid } from "./songs/beats";
 import { nextLoopSpeed, passAccuracy, startSpeed, type LoopRound } from "./songs/loopTrainer";
 import type { SongLoop } from "./songs/player";
+import { randomId } from "./randomId";
 
 /** Seconds of countdown before each round after the first: time to reset, with the beeps as the cue. */
 const BETWEEN_ROUNDS_SEC = 3;
@@ -43,7 +44,7 @@ export function useLoopTrainer({
   /** Bumped by every start and stop, so a round from an old run never carries on. */
   const runId = useRef(0);
   /** A random tag per page load, so run ids don't repeat across reloads or devices. */
-  const runTag = useRef(crypto.randomUUID().slice(0, 8));
+  const runTag = useRef(randomId().slice(0, 8));
 
   const clear = () => {
     if (timer.current !== null) clearInterval(timer.current);
