@@ -4252,3 +4252,31 @@ span.song-drift-bar {
     transition: none;
   }
 }
+
+/* Shown instead of the app when it crashes (src/CrashScreen.tsx). */
+.crash {
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 48px 16px;
+  line-height: 1.5;
+}
+
+.crash h1 {
+  font-size: 22px;
+  margin: 0 0 8px;
+}
+
+.crash details {
+  margin-top: 24px;
+  color: var(--muted);
+}
+
+.crash pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--raised);
+  color: var(--text);
+}

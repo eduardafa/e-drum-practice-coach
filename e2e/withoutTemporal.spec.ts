@@ -1,3 +1,4 @@
+import { test as base } from "@playwright/test";
 import { chooseExercise, expect, test } from "./fixtures";
 
 /** Runs in the page before the app: a browser like Safari today (every iPhone browser), without Temporal or Web MIDI. */
@@ -28,6 +29,19 @@ test("without Temporal, the polyfill loads and a session is saved to History", a
   await results.getByRole("button", { name: "Close" }).click();
   await page.getByRole("button", { name: "History" }).click();
   await expect(page.locator(".history-open").first()).toContainText("Step 1: Hi-hat on every click");
+});
+
+// Plain Playwright: the shared fixtures fail any test whose page logs an error, and this one makes it.
+base("if the app can't load, it says so instead of showing a blank page", async ({ page }) => {
+  await page.addInitScript(likeSafari);
+  await page.route(POLYFILL, (route) => route.abort());
+  await page.goto("/");
+
+  const crash = page.getByRole("alert");
+  await expect(crash.getByRole("heading")).toHaveText("Something went wrong");
+  await expect(crash.getByRole("button", { name: "Reload" })).toBeVisible();
+  await crash.getByText("Details").click();
+  await expect(crash.locator("pre")).toContainText(/import|fetch|module/i);
 });
 
 test("a browser with Temporal doesn't download the polyfill", async ({ page }) => {
