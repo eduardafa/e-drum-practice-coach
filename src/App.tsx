@@ -15,6 +15,8 @@ import { SongPanel } from "./SongPanel";
 import { useSong } from "./useSong";
 import { PracticePlanBanner, PracticePlanPanel } from "./PracticePlan";
 import { MetronomeGuide } from "./MetronomeGuide";
+import { NotationGuide } from "./NotationGuide";
+import { NOTATION_GUIDE_TRY_ID } from "./guide/notationGuide";
 import { BeforeYouPlayDialog, useBeforeYouPlay } from "./BeforeYouPlay";
 import { NotationStrip, type SessionView } from "./NotationStrip";
 import { LearnSummary } from "./LearnSummary";
@@ -92,6 +94,7 @@ export default function App() {
   const beforeYouPlay = useBeforeYouPlay();
   const [calibrating, setCalibrating] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
+  const [notationGuideOpen, setNotationGuideOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [exerciseId, setExerciseId] = useState<string | null>(saved.exerciseId ?? null);
   const exercise = exerciseId === null ? null : (findExercise(exerciseId) ?? null);
@@ -404,7 +407,26 @@ export default function App() {
     setAccountOpen(false);
     setSettingsOpen(false);
     setGuideOpen(false);
+    closeNotationGuide();
     setLibraryOpen(true);
+  };
+
+  const closeNotationGuide = () => {
+    if (notationGuideOpen) stopPreview();
+    setNotationGuideOpen(false);
+  };
+
+  /** Opens "How to read drum notation", from the notation strip or the library's First steps. */
+  const toggleNotationGuide = () => {
+    if (notationGuideOpen) {
+      closeNotationGuide();
+      return;
+    }
+    closeLibrary();
+    setAccountOpen(false);
+    setSettingsOpen(false);
+    setGuideOpen(false);
+    setNotationGuideOpen(true);
   };
 
   /** Plays one loop; the metronome stops so the two don't clash. */
@@ -438,12 +460,13 @@ export default function App() {
     }
   };
 
-  const panelOpen = settingsOpen || guideOpen || libraryOpen || accountOpen;
+  const panelOpen = settingsOpen || guideOpen || libraryOpen || accountOpen || notationGuideOpen;
   const closePanels = () => {
     setAccountOpen(false);
     setSettingsOpen(false);
     setGuideOpen(false);
     closeLibrary();
+    closeNotationGuide();
   };
   const closeTrainer = () => {
     coach.endSession();
@@ -504,8 +527,8 @@ export default function App() {
         if (e.code === "Escape") backToPractice();
         return;
       }
-      // While browsing, keys move around the library: Space and Enter press its buttons, not the drums.
-      if (libraryOpen) return;
+      // While browsing or reading the notation guide, keys move around the panel: Space and Enter press its buttons, not the drums.
+      if (libraryOpen || notationGuideOpen) return;
       if (e.repeat || e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
       if (e.code === "KeyM") {
         void toggleMetronome();
@@ -557,6 +580,7 @@ export default function App() {
   // Only one panel is open over the kit view at a time.
   const openGuide = () => {
     closeLibrary();
+    closeNotationGuide();
     setAccountOpen(false);
     setSettingsOpen(false);
     setGuideFirstOpen(!guideSeen);
@@ -566,6 +590,7 @@ export default function App() {
 
   const toggleSettings = () => {
     closeLibrary();
+    closeNotationGuide();
     setAccountOpen(false);
     setGuideOpen(false);
     setSettingsOpen((open) => !open);
@@ -578,6 +603,7 @@ export default function App() {
   const startSession = async (bpm: number, countdown = true, chosen: Exercise | null = exercise) => {
     if (!chosen || coach.calibrating) return;
     closeLibrary();
+    closeNotationGuide();
     setGuideOpen(false);
     setSettingsOpen(false);
     // Tempo-trainer rounds keep the click on every bar: their accuracy decides the next tempo.
@@ -607,6 +633,7 @@ export default function App() {
   const startLearn = () => {
     if (!exercise || coach.calibrating) return;
     closeLibrary();
+    closeNotationGuide();
     setGuideOpen(false);
     setSettingsOpen(false);
     stopPreview();
@@ -682,6 +709,7 @@ export default function App() {
 
   const startCalibration = async () => {
     closeLibrary();
+    closeNotationGuide();
     coach.endSession();
     setGuideOpen(false);
     setSettingsOpen(false);
@@ -803,6 +831,8 @@ export default function App() {
                 coach.endSession();
                 setTrainer({ kind: "setup" });
               }}
+              notationGuideOpen={notationGuideOpen}
+              onToggleNotationGuide={toggleNotationGuide}
               trainerStatus={
                 trainer?.kind === "round" || trainer?.kind === "between"
                   ? `Tempo trainer, round ${trainerRounds.length + 1}${trainerConfig ? ` (target ${trainerConfig.targetBpm} BPM)` : ""} · `
@@ -825,6 +855,18 @@ export default function App() {
               onToggleMetronome={() => void toggleMetronome()}
               onBeforeYouPlay={beforeYouPlay.reopen}
               onClose={() => setGuideOpen(false)}
+            />
+          )}
+          {notationGuideOpen && !calibrating && (
+            <NotationGuide
+              previewingId={previewingId}
+              onPreview={previewExercise}
+              onStopPreview={stopPreview}
+              onTry={() => {
+                closeNotationGuide();
+                selectExercise(NOTATION_GUIDE_TRY_ID);
+              }}
+              onClose={closeNotationGuide}
             />
           )}
           {settingsOpen && !calibrating && (
@@ -877,6 +919,7 @@ export default function App() {
               songError={songs.error}
               recentSongs={songs.remembered}
               onForgetSong={songs.forget}
+              onReadNotation={toggleNotationGuide}
               onMeetKit={startTour}
               onClose={closeLibrary}
             />

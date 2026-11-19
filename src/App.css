@@ -1272,6 +1272,70 @@ fieldset.group.play {
   transform: translate(-50%, -50%) rotate(-45deg);
 }
 
+/* How to read drum notation: a page at a time, under the notation header like the library. */
+.notation-header button.notation-guide-button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.overlay.notation-guide {
+  top: 54px;
+  left: 16px;
+  max-height: calc(100% - 70px);
+  width: min(520px, calc(100% - 32px));
+}
+
+.notation-guide-progress {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.notation-guide-page h3 {
+  /* A page title reads as a heading, not as a small section label. */
+  font-size: 15px;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text);
+  margin: 10px 0 6px;
+}
+
+.notation-guide-page p {
+  margin: 0 0 8px;
+}
+
+.notation-guide-score {
+  margin: 8px auto;
+}
+
+.notation-guide-count {
+  font-variant-numeric: tabular-nums;
+}
+
+.notation-guide-nav {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* The library's First steps tab points to the guide. */
+.library-notation-help {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--tint);
+}
+
+.library-notation-help p {
+  flex: 1 1 240px;
+  margin: 0;
+}
+
 /*
  * Tap a note to see which drum and hand (NoteTargets): invisible buttons over
  * each note's column, placed in % of the engraved staff by the component, and
