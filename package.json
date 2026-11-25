@@ -16,15 +16,15 @@
     "types:worker": "wrangler types --strict-vars=false worker/worker-configuration.d.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^1.8.0",
+    "@anthropic-ai/sdk": "^1.10.0",
     "@coderline/alphatab": "1.9.0",
     "@vexflow-fonts/academico": "1.0.1",
     "@vexflow-fonts/bravura": "1.0.2",
-    "openai": "^7.55.0",
+    "openai": "^7.60.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "temporal-polyfill": "^1.0.8",
-    "vexflow": "5.0.0"
+    "vexflow": "5.2.0"
   },
   "devDependencies": {
     "@playwright/test": "1.65.1",
@@ -32,12 +32,12 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.3.0",
-    "oxlint": "^1.93.0",
-    "oxlint-tsgolint": "^7.0.2006",
+    "oxlint": "^1.94.0",
+    "oxlint-tsgolint": "^7.0.2007",
     "typescript": "^7.0.2",
     "vite": "^8.3.8",
-    "vitest": "^5.1.0",
-    "wrangler": "4.160.1"
+    "vitest": "^5.1.1",
+    "wrangler": "4.164.0"
   },
   "packageManager": "pnpm@12.18.0"
 }
